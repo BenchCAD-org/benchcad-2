@@ -1,0 +1,43 @@
+name: label-issues
+# Auto-label issues from their [prefix] title tag, so issues opened via the API
+# (which skip the issue-form labels) still get the right label, and downstream
+# jobs gated on those labels (welcome.yml, category checklists) still fire.
+# Idempotent — only adds missing labels.
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.issue.title || '';
+            const m = title.match(/^\s*\[([a-zA-Z]+)\]/);
+            if (!m) return;
+            const map = {
+              family:     ['family'],
+              proposal:   ['family', 'proposal'],
+              bug:        ['bug'],
+              feat:       ['enhancement'],
+              roadmap:    ['roadmap'],
+              workstream: ['workstream'],
+              category:   ['category'],
+            };
+            const want = map[m[1].toLowerCase()];
+            if (!want) return;
+            const have = (context.payload.issue.labels || []).map(l => l.name);
+            const add = want.filter(l => !have.includes(l));
+            if (add.length) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: add,
+              });
+            }

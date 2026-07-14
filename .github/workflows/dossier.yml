@@ -1,0 +1,54 @@
+name: dossier-closeout
+# Station 7 of the lifecycle (CONTRIBUTING.md): when a family PR merges, post the acceptance
+# evidence (previews + validate summary) back to the family issue, so the
+# issue reads as the complete dossier.
+
+on:
+  pull_request:
+    types: [closed]
+    paths: ["designs/**"]
+
+jobs:
+  closeout:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: post close-out comment on the linked issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const m = body.match(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/i);
+            if (!m) { core.info('no linked issue'); return; }
+            const issue = Number(m[1]);
+            // family dir from the diff
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number, per_page: 100 });
+            const fam = (files.map(f => f.filename.match(/^designs\/([^/]+)\//))
+                              .find(Boolean) || [])[1];
+            if (!fam) { core.info('no designs/ change'); return; }
+            // blob?raw=true renders the acceptance images in the issue
+            const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/designs/${fam}`;
+            const sha = context.payload.pull_request.merge_commit_sha.slice(0, 7);
+            const comment = [
+              `## ✅ Merged — acceptance evidence (dossier close-out)`,
+              ``,
+              `Family \`${fam}\` landed in ${sha} via #${context.payload.pull_request.number}.`,
+              ``,
+              `| Benchmark 4-views | Extremes (min & max draw) |`,
+              `|---|---|`,
+              `| ![views](${raw}/preview_views.png?raw=true) | ![extremes](${raw}/preview_extremes.png?raw=true) |`,
+              ``,
+              `Overview grid: [preview.png](${raw}/preview.png?raw=true) · gates: \`bench2 validate ${fam}\` PASS (checked in CI on the PR).`,
+              ``,
+              `Next stations: factory batch → release — track on [STATUS.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/STATUS.md).`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: issue, body: comment });

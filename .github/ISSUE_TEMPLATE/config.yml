@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Roadmap & workstreams (路线图)"
+    url: "https://github.com/BenchCAD-org/benchcad-2/issues?q=is%3Aissue+label%3Aroadmap"
+    about: "Public roadmap issues and their workstreams."
+  - name: "New here? / 新人指南"
+    url: "https://github.com/BenchCAD-org/benchcad-2/blob/main/docs/GETTING_STARTED.md"
+    about: "Step-by-step contributor guide (English & 中文), including the zero-code path."

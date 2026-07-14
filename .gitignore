@@ -1,0 +1,9 @@
+.venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+*.step
+.DS_Store
+eval_out/

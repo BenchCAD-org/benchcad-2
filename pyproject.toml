@@ -1,0 +1,42 @@
+[project]
+name = "benchcad2"
+version = "0.1.0"
+description = "BenchCAD 2.0 contributor framework (bench2: new / validate / preview)"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+dependencies = [
+    # CAD execution — pinned to match the scoring engine (BenchCAD-main)
+    "cadquery==2.3.0",
+    "cadquery-ocp==7.9.3.0",
+    # cadquery 2.3.0 imports these but doesn't declare them in its PyPI metadata:
+    "multimethod>=2.0.2",
+    "typish>=1.9.3",
+    "nptyping>=2.5.0",
+    "ezdxf>=1.4.3",
+    "nlopt>=2.9",
+    "casadi>=3.7.2",
+    # numeric + rendering
+    "numpy==1.26.4",
+    "vtk>=9.3",
+    "pillow>=10.0",
+]
+
+[project.scripts]
+bench2 = "bench2.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["framework/bench2"]
+
+[dependency-groups]
+dev = ["ruff>=0.8"]
+
+[tool.uv]
+# cadquery 2.3's dep chain still uses np.bool8 (removed in numpy 2) — force 1.26.
+override-dependencies = ["numpy==1.26.4"]
+
+[tool.ruff]
+line-length = 100

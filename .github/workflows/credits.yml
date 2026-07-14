@@ -1,0 +1,32 @@
+name: credits-board
+# Station 7 of the lifecycle (CONTRIBUTING.md, 📒): after a family PR merges, regenerate
+# CONTRIBUTORS.md from the actual issue/PR provenance records.
+
+on:
+  pull_request:
+    types: [closed]
+    paths: ["designs/**"]
+  workflow_dispatch:
+
+jobs:
+  credits:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: regenerate CONTRIBUTORS.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/gen_credits.py
+      - name: commit if changed
+        run: |
+          git config user.name "benchcad-bot"
+          git config user.email "actions@github.com"
+          git add CONTRIBUTORS.md
+          git diff --cached --quiet || (git commit -m "credits: refresh provenance board [skip ci]" && git pull --rebase origin main && git push)

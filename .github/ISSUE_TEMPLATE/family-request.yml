@@ -1,0 +1,55 @@
+name: "Family request"
+description: "Propose a mechanical part family for the benchmark (standard + pictures required)"
+title: "[family] <part_name>"
+labels: ["family"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A good family issue lets anyone implement and review the part without
+        guessing. Two things are non-negotiable: **a real source** (standard /
+        datasheet) and **a picture** of the part. Guide:
+        [EN](../blob/main/docs/GETTING_STARTED.md) · [中文](../blob/main/docs/GETTING_STARTED.zh.md)
+  - type: input
+    id: name
+    attributes:
+      label: Family name (snake_case)
+      placeholder: "my_family"
+    validations:
+      required: true
+  - type: input
+    id: anchor
+    attributes:
+      label: Standard / datasheet link
+      description: ISO/DIN/ASME table, or a manufacturer catalog page (norelem, Misumi, McMaster…)
+      placeholder: "https://…"
+    validations:
+      required: true
+  - type: textarea
+    id: pictures
+    attributes:
+      label: Part pictures (drag images here)
+      description: "REQUIRED: drag in a datasheet engineering drawing and/or a photo of the part. Reviewers compare the preview renders against these."
+      placeholder: "Drag & drop the drawing / photo into this box."
+    validations:
+      required: true
+  - type: textarea
+    id: table
+    attributes:
+      label: Key rows of the standard table
+      description: "Paste a screenshot of the dimension table, or type the key rows. The design's sampling must COVER this table (the validator checks it)."
+      placeholder: |
+        e.g. row A: d=12, D=28, L=40 / row B: d=20, D=45, L=70 / …
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Engineering constraints you already know (optional)
+      description: One per line with the reason; the claimer completes the rest.
+      placeholder: "hub wall ≥ 0.3×bore each side — set-screw needs material"
+  - type: markdown
+    attributes:
+      value: |
+        **Claiming this issue?** Self-assign, and if the pictures/table above are
+        incomplete, complete them *before* writing code — they are the review evidence.

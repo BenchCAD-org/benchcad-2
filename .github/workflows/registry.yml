@@ -1,0 +1,33 @@
+name: registry
+# Keep registry.json (the duplicate-check index) fresh: every family/category
+# issue change and every designs/ merge regenerates it.
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened]
+  push:
+    branches: [main]
+    paths: ["designs/**"]
+  workflow_dispatch:
+
+jobs:
+  regen:
+    if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'family') || contains(github.event.issue.labels.*.name, 'category')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: regenerate registry.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/gen_registry.py
+      - name: commit if changed
+        run: |
+          git config user.name "benchcad-bot"
+          git config user.email "actions@github.com"
+          git add registry.json
+          git diff --cached --quiet || (git pull --rebase origin main && git commit -m "registry: refresh [skip ci]" && git push)

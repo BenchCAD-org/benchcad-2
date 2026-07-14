@@ -1,0 +1,39 @@
+name: "Feature request"
+description: "Propose an improvement to the framework, CLI, gates, or docs (NOT a new part family — use Family request)"
+title: "[feat] <short description>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a **new part family** use the *Family request* form instead.
+        Big items usually belong to a roadmap workstream — check the pinned
+        [roadmap](https://github.com/BenchCAD-org/benchcad-2/issues?q=is%3Aissue+label%3Aroadmap) first;
+        if your idea fits an existing `[workstream]` issue, comment there instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - "bench2 CLI / framework"
+        - "validate gates"
+        - "geomlib (shared curves)"
+        - "agent harness"
+        - "factory / release"
+        - "docs / guides / website"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: "What can't you do today, or what costs too much effort?"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: "What you'd change. A sketch is enough — triage refines it."
+    validations:
+      required: true

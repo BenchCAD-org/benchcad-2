@@ -1,0 +1,58 @@
+name: "Part proposal (no code)"
+description: "Contribute a part with engineering knowledge only — we write the code, you get the credit."
+title: "[proposal] <part name>"
+labels: ["family", "proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        You know parts, standards, and catalogs — that's the valuable half.
+        Fill in what you know; a maintainer turns it into code and **both of you
+        are credited** (dataset card + paper co-authorship). No GitHub knowledge
+        needed beyond this form. Guide: [English](../blob/main/docs/GETTING_STARTED.md) ·
+        [中文](../blob/main/docs/GETTING_STARTED.zh.md)
+  - type: input
+    id: part
+    attributes:
+      label: Part name
+      placeholder: "e.g. a catalog mounting component"
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Datasheet / catalog / standard link
+      description: norelem, Misumi, McMaster, an ISO/DIN table — anything real
+      placeholder: "https://…"
+    validations:
+      required: true
+  - type: textarea
+    id: params
+    attributes:
+      label: Parameter table
+      description: Which dimensions vary, units, and rough ranges. Paste a table or list.
+      placeholder: |
+        body diameter D: 30–80 mm (catalog rows)
+        length L: 20–70 mm
+        bore d: 8–30 mm
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Engineering constraints (plain words)
+      description: The "a machinist would reject this because…" rules — the most valuable part. One per line, with the reason.
+      placeholder: |
+        bolt hole center ≥ 1.5×d from the edge — tear-out
+        hub wall ≥ 0.3×bore each side — set screw needs material
+        ...
+    validations:
+      required: true
+  - type: input
+    id: credit
+    attributes:
+      label: How to credit you
+      placeholder: "GitHub handle, or name + affiliation for the paper"
+    validations:
+      required: true

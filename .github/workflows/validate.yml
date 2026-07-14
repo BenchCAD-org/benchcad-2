@@ -1,0 +1,116 @@
+name: validate-designs
+
+on:
+  pull_request:
+    paths: ["designs/**", "framework/**", "pyproject.toml"]
+  push:
+    branches: [main]
+    paths: ["designs/**", "framework/**", "pyproject.toml"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need history to diff against the base for changed-family detection
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync
+      # Only validate the families this change actually touches — a framework or
+      # pyproject change re-validates every family (it can affect any of them),
+      # but a family PR validates just that family. Keeps CI fast + scoped as the
+      # dataset grows to hundreds of families.
+      - name: pick families to validate
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch -q origin "${{ github.base_ref }}"
+            DIFF=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            DIFF=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
+          else
+            DIFF=""
+          fi
+          if [ -z "$DIFF" ] || echo "$DIFF" | grep -qE '^(framework/|pyproject\.toml)'; then
+            find designs -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort > /tmp/fams.txt
+            echo "framework/tooling change (or no diff) -> validating all families"
+          else
+            echo "$DIFF" | grep -oE '^designs/[^/]+/' | cut -d/ -f2 | sort -u > /tmp/fams.txt
+          fi
+          echo "families to validate:"; cat /tmp/fams.txt
+      - name: validate the changed families (same gates as `bench2 validate`)
+        id: validate
+        run: |
+          set -o pipefail
+          {
+            echo "## bench2 validate"
+            echo
+            fail=0
+            if [ ! -s /tmp/fams.txt ]; then echo "_(no design families touched by this change)_"; fi
+            while read -r fam; do
+              [ -d "designs/$fam" ] || continue
+              echo "### $fam"
+              echo '```'
+              uv run bench2 validate "$fam" --seeds 4 || fail=1
+              echo '```'
+            done < /tmp/fams.txt
+            exit $fail
+          } | tee report.md
+      - name: render previews
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          while read -r fam; do
+            [ -d "designs/$fam" ] && (uv run bench2 preview "$fam" --per-diff 3 || true)
+          done < /tmp/fams.txt
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: previews
+          path: designs/*/preview.png
+          if-no-files-found: ignore
+      - name: post validate report as PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '<!-- bench2-validate-report -->\n';
+            try { body += fs.readFileSync('report.md', 'utf8'); }
+            catch { body += 'validate report missing — check the job log.'; }
+            body += '\n_Previews: see the `previews` artifact on this run._';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, per_page: 100 });
+            const mine = comments.find(c =>
+              c.body.startsWith('<!-- bench2-validate-report -->'));
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body });
+            }
+
+  status-board:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: regenerate STATUS.md
+        run: |
+          python3 -c "import sys; sys.path.insert(0,'framework'); from pathlib import Path; from bench2.status import main; main(Path('.'))"
+      - name: commit if changed
+        run: |
+          git config user.name "benchcad-bot"
+          git config user.email "actions@github.com"
+          git add STATUS.md
+          git diff --cached --quiet || (git commit -m "status: refresh board [skip ci]" && git push)

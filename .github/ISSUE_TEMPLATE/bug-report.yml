@@ -1,0 +1,44 @@
+name: "Bug report"
+description: "Something is wrong — a design, the framework, CI, or the docs"
+title: "[bug] <short description>"
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - "a design family (designs/<family>/)"
+        - "framework / bench2 CLI (validate, preview, new)"
+        - "CI workflows"
+        - "docs / guides"
+        - "website / dataset"
+    validations:
+      required: true
+  - type: input
+    id: family
+    attributes:
+      label: Family name (if a design)
+      placeholder: "my_family"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: "Paste the command you ran and the full output. For a design: which parameters / difficulty / seed, and why the result is wrong (an engineering reason beats a screenshot)."
+      placeholder: |
+        uv run bench2 validate my_family
+        → ✗ ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Whoever picks this up reproduces it first (can't reproduce → they'll
+        ask, label `needs-evidence`). Fixes follow the normal PR flow — a fix
+        PR links this issue with `Closes #N`.
