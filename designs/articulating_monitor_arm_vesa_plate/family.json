@@ -1,0 +1,8 @@
+{
+  "family": "articulating_monitor_arm_vesa_plate",
+  "standard": "VESA FDMI (MIS-D / MIS-E / MIS-F)",
+  "base_plane": "XY",
+  "description": "VESA monitor-arm adapter plate: a rectangular plate with the standard 75/100/200/400 mm bolt pattern (round holes or outward adjustment slots), a central arm-interface boss, and a bore through the boss for the arm fixing.",
+  "source": "VESA FDMI MIS-D/E/F pattern + clearance holes; plate/boss/bore proportions from adapter-plate manufacturers (Ergotron, VIVO, Ergomart)",
+  "contributor": "BenchCAD-org"
+}
