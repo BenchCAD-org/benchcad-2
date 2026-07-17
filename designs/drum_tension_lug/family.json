@@ -1,0 +1,8 @@
+{
+  "family": "drum_tension_lug",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "Drum-shell tension lug: a radiused cast body that bolts to the shell with two centreline screws and receives the tension rod in a threaded insert bore at the head end (both ends for a double-ended tube lug).",
+  "source": "SD Sparedrum L-series lug catalogue (body, hole spacing, mount + rod bores); Pearl spare-parts catalogue rod threads; proportion for corner radius",
+  "contributor": "BenchCAD-org"
+}
