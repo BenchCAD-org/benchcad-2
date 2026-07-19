@@ -71,6 +71,11 @@ the code.
    The files created by `bench2 new` contain annotated TODOs for every required
    field. Fill `family.json` (labels) and use `NOTES.md` to map source symbols
    to formulas for table- or equation-driven families.
+   `build()` must bind `result`, use only `cq`/`math`/your own `_helpers` (no
+   other imports), and return one solid — or a compound / `cq.Assembly` for a
+   multi-body part (then set `"solids": N` in `family.json`). Full rules:
+   [`DESIGN_SPEC.md`](DESIGN_SPEC.md). If a raw CadQuery script errors with
+   `HashCode`, see [`DEBUGGING.md`](DEBUGGING.md) → Gotchas.
 9. Check yourself — two commands, on your machine, instant:
    ```bash
    uv run bench2 validate my_family   # PASS = your code works. That's the rule.
