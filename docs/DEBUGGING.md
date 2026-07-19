@@ -3,6 +3,28 @@
 `bench2 preview` gives you PNGs. To *rotate, section, and tweak* a part live, use a
 3D viewer. Two ways, pick one.
 
+## Gotchas (the pinned environment bites in specific ways)
+
+- **`AttributeError: 'TopoDS_*' object has no attribute 'HashCode'`** — you ran
+  CadQuery *outside* bench2 (a REPL, your own test script). The pinned
+  `cadquery 2.3.0` calls `HashCode`, which `cadquery-ocp 7.9.3` removed. bench2
+  and `debug_family.py` apply a one-time shim for you; to poke geometry in your
+  own script, apply it first:
+  ```python
+  import sys; sys.path.insert(0, "framework")
+  from bench2.render import _ocp_hashcode_fix; _ocp_hashcode_fix()
+  import cadquery as cq          # now .faces()/.solids()/export work
+  ```
+- **`build()` may return more than one solid.** A multi-body part (a telescoping
+  slide's members) is fine — `a.union(b)` of separate bodies,
+  `cq.Compound.makeCompound([...])`, or a `cq.Assembly` (folded to a compound on
+  export). Declare the count with `"solids": N` in `family.json`, and `validate`
+  will fail if a member silently vanishes. Every body must have real volume.
+- **CQ-editor runs CadQuery 2.8, not the pinned 2.3.0.** Geometry can render
+  there yet behave differently under `bench2 validate` (the HashCode quirk is
+  2.3-specific). Prefer **ocp-vscode** (below): it runs the repo env, so what you
+  see is what `validate` scores.
+
 ## A. `tools/debug_family.py` (recommended — one command)
 
 ```bash

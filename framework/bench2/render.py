@@ -64,6 +64,24 @@ def step_to_normalized_mesh(step_path: Path):
     return verts, tris
 
 
+def step_solid_report(step_path: Path):
+    """(n_solids, min_volume, max_volume) for a STEP file.
+
+    Multi-body families (an assembly folded to a compound) legitimately export
+    several solids; this lets the validator confirm each one is a real,
+    non-degenerate body (catching the silent class where a boolean no-ops and a
+    member vanishes to ~0 volume while the whole shape still meshes)."""
+    _ocp_hashcode_fix()
+    import cadquery as cq
+
+    shape = cq.importers.importStep(str(step_path))
+    solids = shape.solids().vals()
+    vols = [s.Volume() for s in solids]
+    if not vols:
+        return 0, 0.0, 0.0
+    return len(vols), min(vols), max(vols)
+
+
 def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     """One off-screen VTK render (teal + dark feature edges) -> PIL Image."""
     import vtk
