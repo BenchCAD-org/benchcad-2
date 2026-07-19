@@ -33,12 +33,22 @@ def execute_cq_to_step(code: str, step_path: Path, timeout: int = 300) -> None:
     if step_path.exists():
         step_path.unlink()
     out_lit = str(step_path).replace("\\", "\\\\")
-    patched = (
-        _OCP_HASHCODE_FIX
-        + "\n"
-        + code
-        + f'\n(result.val() if hasattr(result, "val") else result).exportStep("{out_lit}")\n'
+    # `result` may be a Workplane, a bare Shape/Compound, or a cq.Assembly
+    # (multi-body families). Normalize all three to a Shape before exporting:
+    # an Assembly has no .val()/.exportStep(), so fold it to a compound first.
+    export_tail = (
+        "\n_r = result\n"
+        "try:\n"
+        "    import cadquery as _cq\n"
+        "    if isinstance(_r, _cq.Assembly):\n"
+        "        _r = _r.toCompound()\n"
+        "except Exception:\n"
+        "    pass\n"
+        "if hasattr(_r, 'val'):\n"
+        "    _r = _r.val()\n"
+        f'_r.exportStep("{out_lit}")\n'
     )
+    patched = _OCP_HASHCODE_FIX + "\n" + code + export_tail
     with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
         f.write(patched)
         tmp = f.name
