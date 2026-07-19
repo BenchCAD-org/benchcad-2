@@ -48,8 +48,13 @@ Rules:
 - **named parameters** — every argument must be declared in `spec.py`'s `PARAM_SPEC`
 - bind `result`; use only `cq` / `math` / geomlib helpers / your own module-level
   `_helpers` and constants (no I/O, no randomness, no other imports)
-- deterministic: same arguments ⇒ same geometry, one non-degenerate solid, in
-  the pinned environment (`cadquery==2.3.0`)
+- deterministic: same arguments ⇒ same geometry, in the pinned environment
+  (`cadquery==2.3.0`)
+- `result` is a single non-degenerate solid **or** a multi-body part — a compound
+  (`a.union(b)` of separate bodies, or `cq.Compound.makeCompound([...])`) or a
+  `cq.Assembly` (folded to a compound on export). Every body must be a real,
+  non-degenerate solid; a multi-body family declares its body count with
+  `"solids"` in `family.json` so a silently-vanished member is caught
 - a heterogeneous family branches on a `feature` param (`if has_holes: …`) in
   ordinary `if`/`else` — the derived program keeps the branch, evaluated against
   that instance's values
@@ -138,7 +143,11 @@ Families with no coupled parameters omit `refine()` entirely.
 
 `standard` is the anchoring specification or `null`; `base_plane` ∈
 `XY|XZ|YZ` is the natural sketch plane. A family that calls geomlib helpers
-lists their registered names in a `"geomlib"` array.
+lists their registered names in a `"geomlib"` array. An optional `"solids": N`
+declares how many separate bodies each instance must produce (a 3-member
+telescoping slide → `3`); `bench2 validate` then fails any instance whose body
+count differs — a body vanished or unexpectedly merged. Single-solid families
+omit it (the validator still rejects a degenerate/empty body).
 
 ## Shared geometry helpers: `bench2.geomlib`
 
@@ -187,7 +196,8 @@ and `family.json`.
    is declared in `PARAM_SPEC`
 3. per difficulty × N seeds: the sampler draws params that pass `check`, the
    sampled value stays inside its declared `range` (the contract), and the
-   derived program executes to a non-degenerate solid
+   derived program executes to non-degenerate geometry — every body has real
+   volume, and the body count matches `"solids"` when declared
 4. determinism: same seed ⇒ byte-identical derived program
 5. difficulty separation: the three difficulties don't produce identical programs
 6. geometry-hash report: duplicate rate within the sample batch
