@@ -6,14 +6,17 @@ name: family-pr-checks
 # complete package: its three source files AND the three committed renders
 # (the easy/medium/hard grid, the four benchmark views, and the min/max
 # extremes). Requirements a human used to eyeball are now red/green.
+#
+# It runs on EVERY PR (no `paths` filter) and passes immediately for a non-family
+# PR, so it is safe to add to the repo ruleset's required checks (context name:
+# `family-pr-checks`) without leaving docs/CI-only PRs stuck "Expected — waiting".
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
-    paths: ["designs/**"]
 
 jobs:
-  gate:
+  family-pr-checks:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,9 +30,16 @@ jobs:
           DIFF=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           echo "Changed files:"; echo "$DIFF" | sed 's/^/  /'
 
-          # 1) exactly one designs/<family>/ touched
           FAMS=$(echo "$DIFF" | grep -oE '^designs/[^/]+/' | cut -d/ -f2 | sort -u || true)
           NF=$(echo "$FAMS" | grep -c . || true)
+
+          # non-family PR (nothing under designs/): nothing to gate — pass
+          if [ "$NF" -eq 0 ]; then
+            echo "Not a family PR (no designs/ changes) — family-pr-checks passes as a no-op."
+            exit 0
+          fi
+
+          # 1) exactly one designs/<family>/ touched
           if [ "$NF" -ne 1 ]; then
             echo "::error::A family PR must touch exactly ONE designs/<family>/ (found ${NF}: $(echo $FAMS)). One family = one PR — split it."
             exit 1
