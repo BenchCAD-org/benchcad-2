@@ -79,6 +79,15 @@ licensing permits, with the original source linked in the issue.
 - Preview views and extremes match the reference evidence.
 - `family.json` labels and contributor information are accurate.
 
+**Hard gates (red ✗ = cannot merge)** — so review spends its time on *truth*, not
+structure. A family PR must pass all three:
+
+| Gate | Enforces |
+|---|---|
+| `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
+| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open) |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one) and the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png` |
+
 ## Issue taxonomy
 
 | Title | Purpose |
