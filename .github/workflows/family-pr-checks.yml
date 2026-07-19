@@ -1,0 +1,67 @@
+name: family-pr-checks
+# Hard structural gates for a family PR, on top of:
+#   validate.yml            — the design actually runs (bench2 validate)
+#   require-issue-link.yml  — the body links its family issue (Closes #N)
+# This job enforces the "one family = one PR" scope and that the family ships a
+# complete package: its three source files AND the three committed renders
+# (the easy/medium/hard grid, the four benchmark views, and the min/max
+# extremes). Requirements a human used to eyeball are now red/green.
+#
+# It runs on EVERY PR (no `paths` filter) and passes immediately for a non-family
+# PR, so it is safe to add to the repo ruleset's required checks (context name:
+# `family-pr-checks`) without leaving docs/CI-only PRs stuck "Expected — waiting".
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  family-pr-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need the base to diff changed files
+      - name: one-family scope + required files
+        run: |
+          git fetch -q origin "${{ github.base_ref }}"
+          DIFF=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          echo "Changed files:"; echo "$DIFF" | sed 's/^/  /'
+
+          FAMS=$(echo "$DIFF" | grep -oE '^designs/[^/]+/' | cut -d/ -f2 | sort -u || true)
+          NF=$(echo "$FAMS" | grep -c . || true)
+
+          # non-family PR (nothing under designs/): nothing to gate — pass
+          if [ "$NF" -eq 0 ]; then
+            echo "Not a family PR (no designs/ changes) — family-pr-checks passes as a no-op."
+            exit 0
+          fi
+
+          # 1) exactly one designs/<family>/ touched
+          if [ "$NF" -ne 1 ]; then
+            echo "::error::A family PR must touch exactly ONE designs/<family>/ (found ${NF}: $(echo $FAMS)). One family = one PR — split it."
+            exit 1
+          fi
+          FAM="$FAMS"
+
+          # 2) nothing outside that family dir (a new geomlib helper is the one exception)
+          STRAY=$(echo "$DIFF" | grep -vE "^designs/${FAM}/" | grep -vE '^framework/bench2/geomlib/' || true)
+          if [ -n "$STRAY" ]; then
+            echo "::error::A family PR touches only designs/${FAM}/ (adding a bench2.geomlib helper is the sole exception). Remove from this PR: $(echo $STRAY)"
+            exit 1
+          fi
+
+          # 3) the family ships all six required files (3 source + 3 renders)
+          MISSING=""
+          for f in part.py spec.py family.json preview.png preview_views.png preview_extremes.png; do
+            [ -f "designs/${FAM}/${f}" ] || MISSING="${MISSING} ${f}"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::designs/${FAM}/ is missing required file(s):${MISSING}"
+            echo "::error::Source (part.py/spec.py/family.json) is required; run 'uv run bench2 preview ${FAM}' and commit preview.png + preview_views.png + preview_extremes.png (the easy/medium/hard grid, the four benchmark views, and the min/max extremes)."
+            exit 1
+          fi
+
+          echo "OK — family='${FAM}': one-family scope clean, all six required files present."

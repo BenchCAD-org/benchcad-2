@@ -9,9 +9,12 @@ design *runs*; your job is to judge whether it is *true*. Budget: ~15 minutes.
 `bench2 validate` in CI: file structure, `part.py` + `spec.py` exist, every
 difficulty × seed samples within constraints **and within the declared
 PARAM_SPEC ranges** (spec-contract), programs execute to non-degenerate
-solids, same seed ⇒ byte-identical program, difficulties distinct, geometry
-novelty, table `coverage`, geomlib declared + inlined. CI red = stop, back to
-the author. CI green = start here.
+geometry — **every body has real volume, and the body count matches
+`family.json` `"solids"`** when a multi-body family declares it — same seed ⇒
+byte-identical program, difficulties distinct, geometry novelty, table
+`coverage`, geomlib declared + inlined. Two more gates: `require-issue-link`
+(body has `Closes #N`) and `family-pr-checks` (one family per PR + all three
+renders committed). CI red = stop, back to the author. CI green = start here.
 
 ## Review order
 
