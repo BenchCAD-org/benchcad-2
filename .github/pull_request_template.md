@@ -10,10 +10,11 @@
 
 - [ ] `uv run bench2 validate <family>` **passes locally** (CI re-runs it)
 - [ ] I ran `uv run bench2 preview <family>`, **looked at every image**, and
-      **committed all three renders** — `preview.png` (easy/medium/hard grid),
-      `preview_views.png` (the four benchmark views), `preview_extremes.png`
-      (min & max draw). The part matches the issue's reference drawing across
-      all tiers, and both extremes — including the hard/largest draw — are sane
+      **committed all four renders** — `preview.png` (easy/medium/hard grid),
+      `preview_views.png` (the four benchmark views), `preview_hard_zoom.png`
+      (front/side/top/iso of a hard example), `preview_extremes.png` (min & max
+      draw). The part matches the issue's reference drawing across all tiers, and
+      both extremes — including the hard/largest draw — are sane
 - [ ] Multi-body part? `family.json` declares `"solids": N` (single-solid: omit)
 - [ ] Every `PARAM_SPEC.source` and every `check()` constraint cites a real
       rule/table, or honestly says `"proportion"` — **nothing fabricated**
