@@ -110,6 +110,10 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
     # -- 3-6. sampling, determinism, execution, hashes -----------------------
     programs: dict[str, list[str]] = {diff: [] for diff in DIFFS}
     hashes: list[str] = []
+    # optional: a family may declare its solid count (a multi-body assembly
+    # declares e.g. 3); if present, every sampled instance must match it.
+    want_solids = meta.get("solids")
+    solid_counts: set[int] = set()
     with tempfile.TemporaryDirectory() as td:
         for diff in DIFFS:
             n_ok = 0
@@ -149,8 +153,23 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
                     if geometry:
                         step = Path(td) / f"{diff}_{seed}.step"
                         from .execute import execute_cq_to_step
+                        from .render import step_solid_report
 
                         execute_cq_to_step(prog, step)
+                        # every solid the instance produces must be a real body
+                        # (>0 volume): catches a member silently vanishing while
+                        # the overall shape still meshes.
+                        n_solids, min_vol, _ = step_solid_report(step)
+                        if n_solids == 0 or min_vol <= 1e-6:
+                            bad(f"{diff}/seed{seed}: degenerate/empty solid "
+                                f"(solids={n_solids}, min_volume={min_vol:.3g})")
+                            continue
+                        if want_solids is not None and n_solids != want_solids:
+                            bad(f"{diff}/seed{seed}: produced {n_solids} solid(s) but "
+                                f"family.json declares solids={want_solids} "
+                                "(a body vanished or unexpectedly merged?)")
+                            continue
+                        solid_counts.add(n_solids)
                         hashes.append(_geom_hash(step))  # raises if degenerate
                     n_ok += 1
                 except Exception as e:  # noqa: BLE001
@@ -207,5 +226,10 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
             f"geometry novelty: {len(set(hashes))}/{len(hashes)} unique shapes "
             f"({dup:.0%} duplicate{' — too clone-heavy' if dup > 0.5 else ''})"
         )
+    if solid_counts:
+        cnt = sorted(solid_counts)
+        detail = str(cnt[0]) if len(cnt) == 1 else str(cnt)
+        note = f" (declares solids={want_solids})" if want_solids is not None else ""
+        ok(f"solids: every instance non-degenerate, {detail} solid(s) each{note}")
 
     return all(passed for passed, _ in log), log
