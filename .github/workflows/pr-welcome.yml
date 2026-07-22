@@ -1,7 +1,7 @@
 name: pr-welcome
-# One canned orientation comment when a family PR opens, so contributors can
-# self-serve instead of waiting for a maintainer to explain the process.
-# Uses `pull_request_target` so the token can comment on FORK PRs too.
+# One short orientation comment when a FIRST-TIME contributor opens a family PR
+# (vLLM's new_pr_bot pattern: returning contributors get no bot noise).
+# Uses `pull_request_target` so the token can comment on fork PRs too.
 # SECURITY: this job must never check out or execute PR code — it only reads
 # PR metadata and posts a comment. Keep it that way.
 
@@ -19,6 +19,11 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
+            // returning contributor (has a merged PR here) -> stay quiet
+            const { data: prior } = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} type:pr is:merged author:${pr.user.login}`,
+              per_page: 1 });
+            if (prior.total_count > 0) { core.info('returning contributor — no welcome'); return; }
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner, repo: context.repo.repo,
               pull_number: pr.number, per_page: 100 });
@@ -27,20 +32,13 @@ jobs:
             }
             const R = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main`;
             const body = [
-              `Thanks for the family PR! This repo is designed so the checks — not a maintainer — tell you what to fix. The short version:`,
+              `Welcome, and thanks for the family PR! Three things that answer most questions:`,
               ``,
-              `- **Three hard gates** re-run on every push: \`validate\` (re-runs \`bench2 validate\`), \`require-issue-link\` (\`Closes #N\`), \`family-pr-checks\` (one family per PR, complete package). A red ✗ blocks merge; click **Details** on the check, or read the **bench2 validate report** that lands as a comment here after each run.`,
-              `- **Red \`validate\`?** Reproduce locally in the pinned env — \`uv sync && uv run bench2 validate <family>\` — fix, push again. Debug help: [docs/DEBUGGING.md](${R}/docs/DEBUGGING.md).`,
-              `- **First PR to this repo?** A maintainer must click *Approve workflows* once before CI runs — if you see no checks yet, that's why (you're not being ignored).`,
-              `- **The PR checklist** in the description must be fully ticked, and true — CI cross-checks it.`,
-              `- **\`designs/<family>/\` contains only the package**: \`part.py\`, \`spec.py\`, \`family.json\`, \`NOTES.md\`, and the committed renders. Reference PDFs/photos belong in the family **issue**, not the PR.`,
-              `- **Not done yet?** Mark the PR as a GitHub **Draft** — red gates on a Draft are expected and fine.`,
+              `- **No checks running?** A maintainer must click *Approve workflows* once for your first PR — pending, not ignored.`,
+              `- **Red gate?** The message tells you the fix: click **Details**, or read the \`bench2 validate\` report comment posted after each run. Reproduce locally with \`uv sync && uv run bench2 validate <family>\` ([debug help](${R}/docs/DEBUGGING.md)).`,
+              `- **Scope:** \`designs/<family>/\` holds only the package files (reference drawings/photos go in the family issue), and the PR checklist must be fully ticked. Not done yet? Mark the PR as a **Draft**.`,
               ``,
-              `Docs: [CONTRIBUTING](${R}/CONTRIBUTING.md) · [DESIGN_SPEC](${R}/docs/DESIGN_SPEC.md) · [REVIEWING](${R}/REVIEWING.md) · [walkthrough](${R}/docs/WALKTHROUGH.md)`,
-              ``,
-              `---`,
-              ``,
-              `谢谢提交!本仓库的流程设计是**让 CI 告诉你要改什么**:红 ✗ 点 Details 看原因,\`validate\` 的完整报告会以评论形式出现在本 PR 里;本地复现用 pinned 环境 \`uv sync && uv run bench2 validate <family>\`。首次贡献需维护者批准一次 CI 运行,没看到 checks 不是被忽略。PR 描述里的 checklist 需全部如实勾选;\`designs/<family>/\` 只放家族文件包,参考图纸/照片放到 family issue 里。还没做完请用 **Draft** 状态。中文入门: [GETTING_STARTED.zh](${R}/docs/GETTING_STARTED.zh.md)`,
+              `中文:红 ✗ 点 Details 或看 validate 报告评论;本地 \`uv run bench2 validate <family>\` 复现;参考图放 issue 不放 PR;没做完用 Draft。入门 → [GETTING_STARTED.zh](${R}/docs/GETTING_STARTED.zh.md)`,
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
