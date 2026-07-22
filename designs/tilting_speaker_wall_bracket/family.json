@@ -1,0 +1,8 @@
+{
+  "family": "tilting_speaker_wall_bracket",
+  "standard": "B-Tech BT77 / BT-series tilt+swivel speaker wall mount",
+  "base_plane": "YZ",
+  "description": "Tilt-adjustable loudspeaker wall mount: a wall plate with a bolt pattern, a standoff arm, a tilt-pivot knuckle, and a speaker-side plate held at a set tilt with fixing holes; optional arm gusset. One connected bracket.",
+  "source": "B-Tech BT77 spec sheet (wall-plate holes, arm reach, tilt); BT1/BT15/BT332 line (reach/tilt ranges); plate/arm proportions",
+  "contributor": "BenchCAD-org"
+}
