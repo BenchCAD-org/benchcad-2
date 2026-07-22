@@ -24,10 +24,11 @@ ROWS_BY_DIFF = {
     "hard": [6004, 6005],
 }
 
-# Internal construction values. Only 6000 is image-derived from the provided
-# TraceParts 6000 axial wireframe PNGs. Rows 6001-6005 are proportion estimates:
+# Internal construction values. Only the 6000 ball count, ball diameter, and
+# pitch diameter are calibrated from the provided TraceParts 6000 reference PNGs.
+# All raceway/cage values and all 6001-6005 internal values are proportions:
 # separate per designation, mechanically spaced, but not claimed as SKF/ISO
-# internal data.
+# or manufacturer-measured internal data.
 INTERNAL_ROWS = {
     # designation: ball_d, ball_count, pitch_d, groove_depth, cage_t, cage_width
     6000: (4.83, 7, 18.04, 1.43, 0.96, 1.18),
@@ -81,7 +82,7 @@ PARAM_SPEC = {
         desc="proportion-based rolling ball diameter",
         unit="mm",
         range={"easy": (4.75, 5.00), "medium": (4.30, 4.75), "hard": (5.45, 5.80)},
-        source="6000 image-derived from provided TraceParts axial PNGs; 6001-6005 are per-designation proportion estimates, not SKF internal data",
+        source="proportion: 6000 baseline calibrated from TraceParts reference-image geometry; 6001-6005 are per-designation proportion estimates, not manufacturer-measured internal data",
         refine=True,
         askable=True,
     ),
@@ -98,7 +99,7 @@ PARAM_SPEC = {
         desc="ball pitch-circle diameter",
         unit="mm",
         range={"easy": (17.9, 19.6), "medium": (22.2, 24.8), "hard": (31.1, 36.7)},
-        source="6000 image-derived from provided TraceParts axial PNGs; 6001-6005 are per-designation proportion estimates",
+        source="proportion: 6000 baseline calibrated from TraceParts reference-image geometry; 6001-6005 are per-designation proportion estimates, not manufacturer-measured internal data",
         refine=True,
         askable=True,
     ),
@@ -106,7 +107,7 @@ PARAM_SPEC = {
         desc="radial overlap of each ball into the simplified deep race grooves",
         unit="mm",
         range={"easy": (1.36, 1.52), "medium": (1.28, 1.52), "hard": (1.58, 1.76)},
-        source="6000 image-derived/proportion from TraceParts views; 6001-6005 are per-designation proportion estimates",
+        source="proportion: simplified raceway depth constrained by ring-wall continuity and ball-envelope clearance; not manufacturer-measured internal data",
         refine=True,
     ),
     "cage_t": dict(
@@ -144,9 +145,9 @@ def refine(p: dict, difficulty: str, rng) -> None:
     p["width"] = width
 
     ball_d, ball_count, pitch_d, groove_depth, cage_t, cage_width = INTERNAL_ROWS[designation]
-    # Small deterministic sample-to-sample variation stays within the measured
-    # pixel uncertainty for 6000 and within explicitly proportion-based
-    # estimates for 6001-6005. It is not a claim of manufacturer tolerance.
+    # Small benchmark perturbations around the image-calibrated 6000 baseline
+    # and the proportion rows for 6001-6005. They represent dataset variation,
+    # not image-fit uncertainty or manufacturer tolerance.
     if designation == 6000:
         ball_jitter, pitch_jitter, groove_jitter = 0.04, 0.12, 0.03
         cage_jitter = 0.04
