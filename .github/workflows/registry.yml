@@ -30,4 +30,7 @@ jobs:
           git config user.name "benchcad-bot"
           git config user.email "actions@github.com"
           git add registry.json
-          git diff --cached --quiet || (git pull --rebase origin main && git commit -m "registry: refresh [skip ci]" && git push)
+          # commit BEFORE pulling: `git pull --rebase` aborts on a dirty index
+          # (staged registry.json), so staging then rebasing exits 128 and the
+          # refresh is never pushed. Same order as credits.yml.
+          git diff --cached --quiet || (git commit -m "registry: refresh [skip ci]" && git pull --rebase origin main && git push)
