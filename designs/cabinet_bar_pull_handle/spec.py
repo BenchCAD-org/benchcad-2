@@ -81,13 +81,14 @@ def check(p: dict) -> list[str]:
     """Engineering constraints (empty = valid). Each cites its rule."""
     bad = []
 
-    # finger clearance: the bar must stand clear of the face
-    if p["projection"] < p["bar_d"] + 3.0:
-        bad.append("projection < bar_d+3: no finger clearance under the bar")
+    # finger clearance under the bar (projection is to the bar's outer face, so
+    # the clear gap below the bar is projection - bar_d)
+    if p["projection"] - p["bar_d"] < 8.0:
+        bad.append("projection - bar_d < 8: too little finger clearance under the bar")
 
-    # the mounting screw must not bottom out through the post into the bar
-    if p["tap_depth"] > p["projection"] - 3.0:
-        bad.append("tap_depth > projection-3: tap would bottom into the bar")
+    # the mounting tap must fit within the post (post rises to z = projection - bar_d/2)
+    if p["tap_depth"] > p["projection"] - p["bar_d"] / 2.0 - 2.0:
+        bad.append("tap_depth exceeds the post height (projection - bar_d/2 - 2): tap would break through")
 
     # the tap hole must leave a post wall
     if p["tap_d"] > p["post_d"] - 2.5:

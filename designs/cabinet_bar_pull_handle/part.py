@@ -15,19 +15,23 @@ def build(center_to_center, overhang, projection, bar_d, post_d, tap_d, tap_dept
     length = center_to_center + 2.0 * overhang  # overall bar length
 
     # two posts standing off the cabinet face, each tapped from the base
+    # projection is the standoff to the bar's OUTER face, so the bar axis sits
+    # half a bar-diameter below it and the posts rise to meet that axis
+    z_bar = projection - bar_d / 2.0
+
     result = None
     for sx in (-1.0, 1.0):
         post = (
             cq.Workplane("XY")
             .circle(post_d / 2.0)
-            .extrude(projection)
+            .extrude(z_bar)
             .translate((sx * center_to_center / 2.0, 0.0, 0.0))
         )
         post = post.faces("<Z").workplane(centerOption="CenterOfBoundBox").hole(tap_d, depth=tap_depth)
         result = post if result is None else result.union(post)
 
-    # round bar across the top of the posts (along X), centred at the post tops
-    bar = cq.Workplane("YZ").circle(bar_d / 2.0).extrude(length).translate((-length / 2.0, 0.0, projection))
+    # round bar across the top of the posts (along X), its axis at z_bar
+    bar = cq.Workplane("YZ").circle(bar_d / 2.0).extrude(length).translate((-length / 2.0, 0.0, z_bar))
     if chamfer_ends:
         bar = bar.faces(">X").chamfer(bar_d * 0.1)
         bar = bar.faces("<X").chamfer(bar_d * 0.1)
