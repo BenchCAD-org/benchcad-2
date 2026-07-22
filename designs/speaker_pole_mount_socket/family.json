@@ -1,0 +1,8 @@
+{
+  "family": "speaker_pole_mount_socket",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "A drawn-steel closed-bottom speaker-pole socket with a circular four-hole cabinet flange.",
+  "source": "Penn Elcom M1551/M1552/M1553/M1555 drawings and Adam Hall SM701 size data; documented proportion rule for the bottom radius",
+  "contributor": "songmingqing36-lang"
+}
