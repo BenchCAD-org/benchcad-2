@@ -1,4 +1,8 @@
-<!-- Family PR: one PR = one family, touching only designs/<family>/ -->
+<!-- Family PR: one PR = one family, touching only designs/<family>/.
+     Open this PR AFTER `uv run bench2 validate <family>` passes locally and you
+     looked at the previews; for early feedback open it as a GitHub Draft.
+     First PR here? A maintainer must approve CI once — no checks = pending, not ignored.
+     Reference drawings/photos/datasheets go in the family ISSUE, not designs/. -->
 
 ## Family
 
