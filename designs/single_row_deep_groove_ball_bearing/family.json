@@ -1,0 +1,8 @@
+{
+  "family": "single_row_deep_groove_ball_bearing",
+  "standard": "ISO 15:2017 boundary dimensions, 6000-series open deep groove bearing rows",
+  "base_plane": "XY",
+  "description": "Open single-row deep groove ball bearing with coupled 6000-6005 boundary dimensions, distinct inner ring, outer ring, ball row, and simplified cage.",
+  "source": "ISO 15:2017 boundary-dimension basis; provided 6000-series d/D/B table; SKF 6000 dimension sheet and TraceParts 6000 CAD metadata; internal balls/raceways/cage are proportion-based",
+  "contributor": "a1423150775-dotcom"
+}
