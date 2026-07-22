@@ -4,54 +4,64 @@ import cadquery as cq
 
 
 def build(rail_length, rail_width, rail_height, rail_thickness, slot_width,
-          slot_length, slot_count, lip_height, side_relief):
-    center_width = rail_width * 0.54
-    side_width = (rail_width - center_width) / 2.0
+          slot_length, slot_count, profile_inner_width, slot_end_margin,
+          side_relief):
+    return_width = (rail_width - profile_inner_width) / 2.0
+    wall_height = rail_height - rail_thickness
 
-    # Simplified TH35 top-hat section: base flange, raised center, and edge lips.
-    result = (
-        cq.Workplane("XY")
-        .box(rail_length, rail_width, rail_thickness)
-        .translate((0.0, 0.0, rail_thickness / 2.0))
-    )
-    result = result.union(
-        cq.Workplane("XY")
-        .box(rail_length, center_width, rail_height)
-        .translate((0.0, 0.0, rail_height / 2.0))
-    )
-    result = result.union(
-        cq.Workplane("XY")
-        .box(rail_length, side_width, lip_height)
-        .translate((0.0, rail_width / 2.0 - side_width / 2.0, lip_height / 2.0))
-    )
-    result = result.union(
-        cq.Workplane("XY")
-        .box(rail_length, side_width, lip_height)
-        .translate((0.0, -rail_width / 2.0 + side_width / 2.0, lip_height / 2.0))
-    )
+    # TH35-7.5 is a bent sheet profile: a slotted center web with side returns.
+    result = _box(rail_length, profile_inner_width, rail_thickness,
+                  0.0, 0.0, rail_thickness / 2.0)
 
-    usable = max(rail_length - slot_length, slot_length)
-    pitch = usable / (slot_count + 1)
-    for i in range(int(slot_count)):
-        x = -rail_length / 2.0 + pitch * (i + 1)
-        cutter = (
-            cq.Workplane("XY")
-            .box(slot_length, slot_width, rail_height * 3.0)
-            .translate((x, 0.0, rail_height / 2.0))
+    centers = _slot_centers(rail_length, slot_length, slot_count, slot_end_margin)
+    if centers:
+        result = (
+            result.faces(">Z").workplane()
+            .pushPoints([(x, 0.0) for x in centers])
+            .slot2D(slot_length, slot_width, 0)
+            .cutThruAll()
         )
-        result = result.cut(cutter)
 
-    if side_relief:
-        relief_w = rail_thickness * 1.5
-        result = result.cut(
-            cq.Workplane("XY")
-            .box(rail_length * 0.92, relief_w, rail_height * 2.0)
-            .translate((0.0, center_width / 2.0, rail_height / 2.0))
+    for sign in (-1.0, 1.0):
+        y_inner = sign * profile_inner_width / 2.0
+        y_wall = y_inner - sign * rail_thickness / 2.0
+        y_flange = sign * (profile_inner_width / 2.0 + return_width / 2.0)
+
+        result = result.union(
+            _box(rail_length, rail_thickness, wall_height,
+                 0.0, y_wall, rail_thickness + wall_height / 2.0)
         )
-        result = result.cut(
-            cq.Workplane("XY")
-            .box(rail_length * 0.92, relief_w, rail_height * 2.0)
-            .translate((0.0, -center_width / 2.0, rail_height / 2.0))
+        result = result.union(
+            _box(rail_length, return_width, rail_thickness,
+                 0.0, y_flange, rail_height - rail_thickness / 2.0)
         )
+
+        if side_relief:
+            lip_height = min(rail_thickness * 1.8, rail_height - rail_thickness)
+            y_lip = sign * (rail_width / 2.0 - rail_thickness / 2.0)
+            result = result.union(
+                _box(rail_length, rail_thickness, lip_height,
+                     0.0, y_lip, rail_height - rail_thickness - lip_height / 2.0)
+            )
 
     return result
+
+
+def _box(length, width, height, x, y, z):
+    return (
+        cq.Workplane("XY")
+        .box(length, width, height)
+        .translate((x, y, z))
+    )
+
+
+def _slot_centers(rail_length, slot_length, slot_count, slot_end_margin):
+    count = int(slot_count)
+    if count <= 0:
+        return []
+    if count == 1:
+        return [0.0]
+    first = -rail_length / 2.0 + slot_end_margin + slot_length / 2.0
+    last = rail_length / 2.0 - slot_end_margin - slot_length / 2.0
+    pitch = (last - first) / (count - 1)
+    return [first + pitch * i for i in range(count)]

@@ -3,13 +3,17 @@
 
 MODEL_ROWS = [
     dict(model="DN-R35S-050-4", rail_length=50.0, rail_width=35.0, rail_height=7.5,
-         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=2),
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=2,
+         profile_inner_width=27.0, slot_end_margin=6.7),
     dict(model="DN-R35S-100-4", rail_length=100.0, rail_width=35.0, rail_height=7.5,
-         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=4),
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=4,
+         profile_inner_width=27.0, slot_end_margin=6.7),
     dict(model="DN-R35S-300-4", rail_length=300.0, rail_width=35.0, rail_height=7.5,
-         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=12),
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=12,
+         profile_inner_width=27.0, slot_end_margin=6.7),
     dict(model="DN-R35S-600-4", rail_length=600.0, rail_width=35.0, rail_height=7.5,
-         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=24),
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=24,
+         profile_inner_width=27.0, slot_end_margin=6.7),
 ]
 
 DIFFICULTY_ROWS = {
@@ -42,12 +46,18 @@ def _selected_row(p):
 
 PARAM_SPEC = {
     "model_index": dict(
-        desc="source table row selector: 0=DN-R35S-050-4, 1=DN-R35S-100-4, 2=DN-R35S-300-4, 3=DN-R35S-600-4",
+        desc=(
+            "source table row selector: 0=DN-R35S-050-4, 1=DN-R35S-100-4, "
+            "2=DN-R35S-300-4, 3=DN-R35S-600-4"
+        ),
         unit="",
         range=_index_range(),
         choices=DIFFICULTY_ROWS,
         integer=True,
-        source="AutomationDirect DN-R35S precut slotted rail table; each draw selects one complete catalog row",
+        source=(
+            "AutomationDirect DN-R35S precut slotted rail table; each draw "
+            "selects one complete catalog row"
+        ),
         askable=True,
     ),
     "rail_length": dict(
@@ -107,17 +117,27 @@ PARAM_SPEC = {
         refine=True,
         askable=True,
     ),
-    "lip_height": dict(
-        desc="raised DIN rail lip/profile height used in the simplified TH35 section",
+    "profile_inner_width": dict(
+        desc="inside span between TH35 side returns",
         unit="mm",
-        range={"easy": (3.0, 4.0), "medium": (2.5, 4.5), "hard": (2.0, 5.0)},
-        source="modeling proportion inside the sourced 7.5 mm TH35 envelope; not a catalog row dimension",
+        range=_row_range("profile_inner_width"),
+        source="AutomationDirect DN-R35S steel precut rail cross-section drawing, 27.0 mm",
+        refine=True,
+        askable=True,
+    ),
+    "slot_end_margin": dict(
+        desc="end land from rail end to nearest rounded slot end",
+        unit="mm",
+        range=_row_range("slot_end_margin"),
+        source="AutomationDirect DN-R35S steel precut rail slot layout drawing, 6.7 mm TYP",
+        refine=True,
+        askable=True,
     ),
     "side_relief": dict(
-        desc="visible side relief grooves between center hat and edge lips",
+        desc="modeled downturned outer edge return lips",
         unit="",
         range={"easy": (0, 0), "medium": (0, 1), "hard": (1, 1)},
-        source="visual relief from the DN-R35S top-hat drawing",
+        source="proportion from the DN-R35S top-hat side return detail",
         choices={"easy": [0], "medium": [0, 1], "hard": [1]},
         feature=True,
     ),
@@ -132,6 +152,8 @@ SOURCE_ROW_KEYS = (
     "slot_width",
     "slot_length",
     "slot_count",
+    "profile_inner_width",
+    "slot_end_margin",
 )
 
 
@@ -156,13 +178,19 @@ def _row_consistency_errors(p):
 
 def check(p):
     bad = _row_consistency_errors(p)
-    if p["slot_length"] >= p["rail_length"] * 0.55:
-        bad.append("slot_length too large for short rail: slot must leave end material")
-    pitch = (p["rail_length"] - p["slot_length"]) / (p["slot_count"] + 1)
-    if pitch < p["slot_length"] * 0.45:
-        bad.append("slot pitch too tight: DN-R35S repeated slots need web between slots")
-    if p["slot_width"] >= p["rail_width"] * 0.4:
-        bad.append("slot_width too wide: slot must remain a center mounting slot")
-    if p["lip_height"] >= p["rail_height"]:
-        bad.append("lip_height >= rail_height: lip cannot exceed TH35 profile height")
+    side_return = (p["rail_width"] - p["profile_inner_width"]) / 2.0
+    if abs(side_return - 4.0) > 1e-9:
+        bad.append("side return must be 4.0 mm symmetric: DN-R35S cross-section drawing")
+    if p["profile_inner_width"] <= p["slot_width"]:
+        bad.append("slot_width exceeds center web: DN-R35S slot must fit within 27.0 mm web")
+    if p["rail_thickness"] * 2.0 >= p["rail_height"]:
+        bad.append("rail_thickness too large: 1.0 mm sheet must fit inside 7.5 mm TH35 height")
+    first = -p["rail_length"] / 2.0 + p["slot_end_margin"] + p["slot_length"] / 2.0
+    last = p["rail_length"] / 2.0 - p["slot_end_margin"] - p["slot_length"] / 2.0
+    if first > last:
+        bad.append("slot_end_margin leaves no slot span: DN-R35S drawing requires end land")
+    if p["slot_count"] > 1:
+        pitch = (last - first) / (p["slot_count"] - 1)
+        if pitch <= p["slot_length"]:
+            bad.append("slot pitch leaves no web between slots: DN-R35S repeated M-slot layout")
     return bad
