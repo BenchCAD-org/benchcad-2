@@ -203,3 +203,16 @@ def compose_grid(rows: list[list], row_labels: list[str], out_png: Path,
 def render_bench_views(verts, tris, img_size: int = 320):
     """The four diagonal views exactly as the benchmark renders them."""
     return [render_iso(verts, tris, img_size, front=f) for f in BENCH_FRONTS]
+
+
+# front / side / top / iso for a human three-view. `up` is hard-coded (0,0,1), so
+# a pure top front=(0,0,1) collapses the camera basis; the top view uses a small
+# forward tilt instead (a near-plan view).
+THREE_VIEW_FRONTS = [(0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (0.0, -0.12, 1.0), (1.0, -1.0, 1.0)]
+
+
+def render_three_view(verts, tris, img_size: int = 380):
+    """front / side / top(near-plan) / iso — the orthographic three-view + iso a
+    reviewer needs to reconstruct the part (the four benchmark views are all
+    diagonal isos and hide axis-aligned features)."""
+    return [render_iso(verts, tris, img_size, front=f) for f in THREE_VIEW_FRONTS]

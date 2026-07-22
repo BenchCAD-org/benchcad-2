@@ -130,8 +130,22 @@ def cmd_preview(family: str, per_diff: int) -> int:
                   + ", ".join(f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
                               if e.get("askable") and k in p))
     out3 = render.compose_grid(ex_rows, ex_labels, fam_dir / "preview_extremes.png")
+
+    # three-view + iso of a hard example — the four benchmark views are all
+    # diagonal isos, so ship a real front/side/top a reviewer can reconstruct from.
+    with tempfile.TemporaryDirectory() as td:
+        hp = sample_params(spec, "hard", np.random.default_rng(0))
+        step = Path(td) / "hard_zoom.step"
+        execute_cq_to_step(derive_program(part, hp), step)
+        verts, tris = render.step_to_normalized_mesh(step)
+        hz = render.render_three_view(verts, tris)
+    out4 = render.compose_grid(
+        [hz], [f"hard example (front · side · top · iso)\n{_param_caption(spec, hp)}"],
+        fam_dir / "preview_hard_zoom.png", cell=380, label_w=300)
+
     print(f"preview → {out}")
     print(f"benchmark views (what the model sees) → {out2}")
+    print(f"three-view + iso (hard example) → {out4}")
     print(f"extremes (smallest & largest draw) → {out3}")
     return 0
 

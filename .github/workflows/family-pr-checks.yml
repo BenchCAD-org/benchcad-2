@@ -55,12 +55,12 @@ jobs:
 
           # 3) the family ships all six required files (3 source + 3 renders)
           MISSING=""
-          for f in part.py spec.py family.json preview.png preview_views.png preview_extremes.png; do
+          for f in part.py spec.py family.json preview.png preview_views.png preview_hard_zoom.png preview_extremes.png; do
             [ -f "designs/${FAM}/${f}" ] || MISSING="${MISSING} ${f}"
           done
           if [ -n "$MISSING" ]; then
             echo "::error::designs/${FAM}/ is missing required file(s):${MISSING}"
-            echo "::error::Source (part.py/spec.py/family.json) is required; run 'uv run bench2 preview ${FAM}' and commit preview.png + preview_views.png + preview_extremes.png (the easy/medium/hard grid, the four benchmark views, and the min/max extremes)."
+            echo "::error::Source (part.py/spec.py/family.json) is required; run 'uv run bench2 preview ${FAM}' and commit preview.png + preview_views.png + preview_hard_zoom.png + preview_extremes.png (the easy/medium/hard grid, the four benchmark views, the three-view+iso of a hard example, and the min/max extremes)."
             exit 1
           fi
 

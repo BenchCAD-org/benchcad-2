@@ -204,8 +204,9 @@ and `family.json`.
 7. coverage: every value in a `coverage=[...]` list appears across a 120-draw pass
 8. geomlib: declared helpers exist in the registry and are inlined in the program
 
-`bench2 preview <family>` renders three PNGs: `preview.png` (difficulty × seed
+`bench2 preview <family>` renders four PNGs: `preview.png` (difficulty × seed
 overview), `preview_views.png` (the four diagonal benchmark views — what the
-model sees), and `preview_extremes.png` (smallest & largest sampled draw —
-acceptance evidence that both ends of your declared ranges produce sane
-geometry).
+model sees), `preview_hard_zoom.png` (front/side/top/iso three-view of a hard
+example — the axis-aligned views the diagonal isos hide), and
+`preview_extremes.png` (smallest & largest sampled draw — acceptance evidence
+that both ends of your declared ranges produce sane geometry).
