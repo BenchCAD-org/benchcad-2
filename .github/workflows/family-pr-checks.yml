@@ -20,11 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # need the base to diff changed files
-      - name: one-family scope + required files
+      - name: one-family scope + required files + package whitelist
         run: |
           git fetch -q origin "${{ github.base_ref }}"
           DIFF=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
@@ -64,4 +66,50 @@ jobs:
             exit 1
           fi
 
-          echo "OK — family='${FAM}': one-family scope clean, all six required files present."
+          # 4) nothing but the package goes into designs/<family>/ — reference
+          # PDFs/photos/scans belong in the family ISSUE, not the repo. Checked
+          # on the files this PR adds/modifies (deletions are fine).
+          ADDED=$(git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" | grep -E "^designs/${FAM}/" | sed "s|^designs/${FAM}/||" || true)
+          JUNK=$(echo "$ADDED" | grep -vE '^(part\.py|spec\.py|family\.json|NOTES\.md|preview\.png|preview_views\.png|preview_extremes\.png|preview_parts\.png)$' | grep . || true)
+          if [ -n "$JUNK" ]; then
+            echo "::error::designs/${FAM}/ must contain only the family package (part.py, spec.py, family.json, NOTES.md, preview.png, preview_views.png, preview_extremes.png, and preview_parts.png for assemblies). Reference drawings/photos/datasheets go in the family issue instead. Remove from this PR: $(echo $JUNK)"
+            exit 1
+          fi
+
+          echo "OK — family='${FAM}': one-family scope clean, all six required files present, no stray files."
+      # Two things a human used to catch by hand, now red/green with an exact
+      # fix in the message: the PR checklist actually completed, and the family
+      # dir named the same as the family issue it closes.
+      - name: checklist completed + issue/family name coherence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number, per_page: 100 });
+            const fams = [...new Set(files.filter(f => f.filename.startsWith('designs/'))
+              .map(f => f.filename.split('/')[1]).filter(Boolean))];
+            if (fams.length !== 1) { core.info('not a single-family PR — handled by the scope step'); return; }
+            const fam = fams[0];
+            const body = context.payload.pull_request.body || '';
+            const unchecked = (body.match(/^\s*-\s*\[ \]/gm) || []).length;
+            if (unchecked > 0) {
+              core.setFailed(
+                `The PR checklist has ${unchecked} unchecked item(s). Complete every item (honestly — CI re-runs validate) ` +
+                `and tick it by editing the PR description; no new push needed. Not done yet? Mark the PR as a Draft. ` +
+                `/ PR 描述里的 checklist 还有 ${unchecked} 项未勾选:如实完成后直接编辑 PR 描述勾上即可,不用重新 push;尚未完成请转为 Draft。`);
+            }
+            const m = body.match(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/i);
+            if (m) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(m[1]) });
+                const t = (issue.title || '').match(/\[(?:family|proposal)\]\s*([a-z0-9_]+)/i);
+                if (t && t[1] !== fam) {
+                  core.setFailed(
+                    `This PR changes designs/${fam}/ but links issue #${m[1]} ("${t[1]}"). The family dir, ` +
+                    `family.json "family", and the issue name must match exactly — rename one side or fix the Closes line. ` +
+                    `/ 目录名 ${fam} 与所关联 issue 的家族名 ${t[1]} 不一致,请统一命名。`);
+                }
+              } catch (e) { core.info('issue lookup skipped: ' + e.message); }
+            }

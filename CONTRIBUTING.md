@@ -45,8 +45,8 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 | 1 | Claim | Self-assign and verify the evidence before coding |
 | 2 | Build | Implement the three family files; add `NOTES.md` for equation-heavy designs |
 | 3 | Validate | Run `bench2 validate` and inspect `bench2 preview` output |
-| 4 | PR | Submit one scoped PR with `Closes #N` |
-| 5 | CI | CI reruns validation and posts the report and previews |
+| 4 | PR | Submit one scoped PR with `Closes #N` — **after** `bench2 validate` passes locally and you inspected the previews. Want early feedback before that? Open the PR as a GitHub **Draft** |
+| 5 | CI | CI reruns validation and posts the report and previews. **Your first PR here:** a maintainer must click *Approve workflows* once before CI runs — no checks yet just means that click is pending |
 | 6 | Review | A non-author audits the evidence, renders, equations, constraints, and labels |
 | 7 | Merge | The issue closes and provenance/status automation runs |
 | 8 | Release | Qualified families enter the next versioned manifest |
@@ -86,7 +86,7 @@ structure. A family PR must pass all three:
 |---|---|
 | `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
 | `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open) |
-| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one) and the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png` |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`; **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; and the dir name matches the linked issue's family name |
 
 ## Issue taxonomy
 
