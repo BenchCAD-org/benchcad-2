@@ -76,25 +76,14 @@ PARAM_SPEC = {
         refine=True,
         askable=True,
     ),
-    "slot_depth": dict(
-        desc="Visible radial screwdriver slot relief depth on the screw side",
-        unit="mm",
-        range={"easy": (1.2, 2.2), "medium": (1.5, 3.5), "hard": (1.0, 5.0)},
-        source="proportion: shallow relief used only to show the slotted set screw side",
-    ),
-    "face_chamfer": dict(
-        desc="Small edge chamfer on bore and outer faces",
-        unit="mm",
-        range={"easy": (0.2, 0.6), "medium": (0.3, 0.9), "hard": (0.2, 1.2)},
-        source="proportion: small chamfer typical for machined shaft collars",
-        askable=True,
-    ),
-    "screw_head_d": dict(
-        desc="Diameter of shallow screw-side circular recess",
-        unit="mm",
-        range={"easy": (4.5, 9), "medium": (7, 15), "hard": (4.5, 18)},
-        source="proportion: about 1.45 times the set screw diameter for visual counterbore relief",
+    "second_screw": dict(
+        desc="Second set screw on the largest GN 705 table rows, placed at 135 degrees per drawing cue",
+        unit="",
+        range={"easy": (0, 0), "medium": (0, 0), "hard": (0, 1)},
+        source="JW Winco GN 705 note: second grub screw for d1 > 70 mm",
+        choices={"easy": [0], "medium": [0], "hard": [0, 1]},
         refine=True,
+        feature=True,
     ),
 }
 
@@ -115,7 +104,7 @@ def refine(p: dict, difficulty: str, rng) -> None:
     p["screw_d"] = float(screw_d)
     p["screw_len"] = float(screw_len)
     p["width"] = float(width)
-    p["screw_head_d"] = round(float(screw_d) * 1.45, 2)
+    p["second_screw"] = 1 if d1 > 70 else 0
 
 
 def check(p: dict) -> list[str]:
@@ -125,10 +114,8 @@ def check(p: dict) -> list[str]:
         bad.append("wall <= 0.65*screw_d: collar needs material around the radial set screw")
     if p["width"] < p["screw_d"] * 1.45:
         bad.append("width < 1.45*screw_d: catalog proportions leave axial support for the tapped screw")
-    if p["slot_depth"] >= wall * 0.75:
-        bad.append("slot_depth >= 0.75*wall: relief slot must not break through most of the collar wall")
-    if p["face_chamfer"] >= min(wall, p["width"] / 2.0) * 0.35:
-        bad.append("face_chamfer too large: chamfer would consume the bore wall or collar width")
-    if p["screw_head_d"] >= p["outer_d"] - p["bore_d"] * 0.15:
-        bad.append("screw_head_d too large: visual recess would dominate the collar outside face")
+    if p["second_screw"] and p["bore_d"] <= 70:
+        bad.append("second_screw set below d1 > 70: GN 705 large-size note limits the opposed second screw")
+    if (not p["second_screw"]) and p["bore_d"] > 70:
+        bad.append("second_screw missing above d1 > 70: GN 705 large-size note calls for an opposed second screw")
     return bad

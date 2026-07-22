@@ -19,6 +19,7 @@
 | d2 | `outer_d` | Outside collar diameter |
 | d3 | `screw_d`, `screw_len` | Set screw nominal thread and length |
 | b js14 | `width` | Axial collar width |
+| catalog note | `second_screw` | Second set screw at 135 degrees for d1 > 70 mm |
 
 ## Catalog Rows Used
 
@@ -45,5 +46,6 @@ The spec uses discrete catalog rows so generated dimensions remain table-based.
 ## Deliberate Deviations
 
 - Threads are represented as clean cylindrical holes; helical thread geometry is omitted.
-- The shallow screw-side recess and slotted relief are visual/mechanical cues based on the GN 705 drawing. Their sizes are proportional because the table gives the set screw size, not a separate recess diameter.
+- Small edge chamfers and shallow screw-side recesses are computed internally from catalog dimensions because the table does not publish separate values for these minor manufacturing details.
+- The catalog note for d1 > 70 mm is represented by a second radial screw hole/recess at 135 degrees using the same d3 dimensions as the main screw.
 - Material and finish variants are metadata-only; they do not alter geometry.
