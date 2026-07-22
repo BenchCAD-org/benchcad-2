@@ -28,15 +28,24 @@ def build(
         result = (result.faces(">Z").workplane()
                   .circle(rim_diameter / 2.0).extrude(rim_height))
 
-    # The drive recess is visible on the panel face.  0 is the PZ cross-slot
-    # shown in the catalog; 1 is the alternative straight-slot variant.
-    result = (result.faces(">Z").workplane()
-              .rect(body_diameter * 0.52, drive_slot_width)
-              .cutBlind(-pocket_depth))
+    # The unlisted top cam pocket is a shallow circular recess.  It leaves a
+    # rimmed annular face like the catalogue photo rather than a plain cylinder.
+    top_height = housing_height + (rim_height if has_rim else 0.0)
+    recess_depth = min(0.8, pocket_depth / 3.0)
+    top_recess = (cq.Workplane("XY").circle(body_diameter * 0.29)
+                  .extrude(recess_depth)
+                  .translate((0.0, 0.0, top_height - recess_depth)))
+    result = result.cut(top_recess)
+
+    # The drive recess is visible on the recessed cam face.  0 is the PZ
+    # cross-slot shown in the catalogue; 1 is the alternative straight slot.
+    slot_x = (cq.Workplane("XY").box(body_diameter * 0.52, drive_slot_width, pocket_depth)
+              .translate((0.0, 0.0, top_height - pocket_depth / 2.0)))
+    result = result.cut(slot_x)
     if drive_style == 0:
-        result = (result.faces(">Z").workplane()
-                  .rect(drive_slot_width, body_diameter * 0.52)
-                  .cutBlind(-pocket_depth))
+        slot_y = (cq.Workplane("XY").box(drive_slot_width, body_diameter * 0.52, pocket_depth)
+                  .translate((0.0, 0.0, top_height - pocket_depth / 2.0)))
+        result = result.cut(slot_y)
 
     # X - A is the catalogued depth below the bolt axis.  A round side opening
     # represents the cam hook's entry path for the Ø7/Ø8 connecting-bolt hole.
