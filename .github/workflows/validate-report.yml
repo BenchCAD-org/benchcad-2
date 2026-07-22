@@ -1,0 +1,63 @@
+name: validate-report
+# Companion to validate.yml: posts the bench2 validate report back onto the PR
+# as a comment. This is a separate `workflow_run` workflow because on FORK PRs
+# the `pull_request` event token is read-only — posting the comment from
+# validate.yml itself silently failed with "Resource not accessible by
+# integration" for every external contributor, i.e. exactly the audience the
+# report is for. `workflow_run` executes in base-repo context with a write
+# token; it never checks out or runs PR code (comment-only), so it is safe.
+
+on:
+  workflow_run:
+    workflows: [validate-designs]
+    types: [completed]
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: fetch report artifact from the validate run
+        id: art
+        continue-on-error: true  # no artifact = no-op validate (docs/CI-only PR)
+        uses: actions/download-artifact@v4
+        with:
+          name: validate-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: upsert the report comment on the PR
+        if: steps.art.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const pr = Number(fs.readFileSync('pr.txt', 'utf8').trim());
+            if (!pr) { core.setFailed('pr.txt missing/empty in validate-report artifact'); return; }
+            const run = context.payload.workflow_run;
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}`;
+            let body = '<!-- bench2-validate-report -->\n';
+            if (run.conclusion === 'failure') {
+              body += '❌ **validate failed** — fix locally, then push again:\n' +
+                '`uv sync && uv run bench2 validate <family>` (the pinned env matters — ' +
+                'see [docs/DEBUGGING.md](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/main/docs/DEBUGGING.md)).\n' +
+                '/ validate 未通过——请在本地用 pinned 环境复现并修复后重新 push。\n\n';
+            }
+            body += fs.readFileSync('report.md', 'utf8');
+            body += `\n_Previews: the \`previews\` artifact on [this run](${runUrl})._`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: pr, per_page: 100 });
+            const mine = comments.find(c =>
+              c.body.startsWith('<!-- bench2-validate-report -->'));
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: pr, body });
+            }
