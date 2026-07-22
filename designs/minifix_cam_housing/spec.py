@@ -1,0 +1,52 @@
+"""minifix_cam_housing — the benchmark generator spec.
+
+PARAM_SPEC declares every parameter build() takes: meaning, unit, per-difficulty
+range, and WHERE THE RANGE COMES FROM. check() is the engineering truth
+reviewers audit. The framework samples from this declaration (bench2.sampling) —
+you write a refine() hook ONLY when some parameters are COUPLED (computed from
+others). Spec: docs/DESIGN_SPEC.md
+"""
+
+
+# ── 1. PARAM_SPEC ────────────────────────────────────────────────────────────
+# One entry per build() parameter. Every entry: desc, unit, per-difficulty
+# range, and source (the standard table / engineering rule / proportion the
+# range comes from). Optional keys select how the framework draws it:
+#     integer=True                      draw as an int in range
+#     choices={"easy": [0], ...}        pick from a discrete set per difficulty
+#     refine=True                       value is COMPUTED in refine(), not drawn
+#     feature=True                      marks an on/off feature (edit derivation)
+#     coverage=[...]                    every listed value must be reachable
+PARAM_SPEC = {
+    "length": dict(
+        desc="TODO: what this parameter physically is",
+        unit="mm",
+        range={"easy": (40.0, 80.0), "medium": (40.0, 120.0), "hard": (30.0, 160.0)},
+        source="TODO: e.g. 'manufacturer table section 2' or 'proportion'",
+        askable=True,  # numeric QA may target this parameter
+    ),
+    # TODO: add the rest.
+}
+
+
+# ── 2. check ─────────────────────────────────────────────────────────────────
+def check(p: dict) -> list[str]:
+    """Inter-parameter engineering constraints (empty list = valid). Cite the
+    rule or standard in every message — THIS is the part humans review."""
+    bad = []
+    # if p["wall_t"] > p["height"] / 4:
+    #     bad.append("wall_t > height/4: must stay plate-like (structural convention)")
+    return bad
+
+
+# ── 3. refine (OPTIONAL) — delete this whole block if nothing is coupled ──────
+# Fill parameters marked `refine=True` after the framework draws the rest.
+# Plain code, in place, using ONLY `rng` for randomness. Raise bench2.Resample
+# to reject an infeasible base draw (the framework then resamples).
+#
+# from bench2 import Resample
+#
+# def refine(p: dict, difficulty: str, rng) -> None:
+#     usable_d = 0.55 * p["outer_d"]
+#     lo, hi = PARAM_SPEC["bore_d"]["range"][difficulty]
+#     p["bore_d"] = round(float(rng.uniform(lo, min(hi, usable_d))), 1)
