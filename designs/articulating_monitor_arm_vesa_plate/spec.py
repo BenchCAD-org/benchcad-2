@@ -1,4 +1,4 @@
-"""articulating_monitor_arm_vesa_plate — the benchmark generator spec.
+"""articulating_monitor_arm_vesa_plate - the benchmark generator spec.
 
 The part is a VESA display adapter plate (FDMI MIS-D/E/F). PARAM_SPEC declares
 every build() parameter; check() holds the engineering rules a reviewer audits.
@@ -19,7 +19,7 @@ from bench2 import Resample
 _VESA_PARTNERS = {75.0: [75.0], 100.0: [100.0, 200.0], 200.0: [200.0, 400.0], 400.0: [400.0]}
 
 
-# ── 1. PARAM_SPEC ────────────────────────────────────────────────────────────
+# -- 1. PARAM_SPEC ------------------------------------------------------------
 PARAM_SPEC = {
     "pattern_x": dict(
         desc="VESA horizontal hole spacing (FDMI pattern X)",
@@ -101,7 +101,7 @@ PARAM_SPEC = {
 }
 
 
-# ── 2. check ─────────────────────────────────────────────────────────────────
+# -- 2. check -----------------------------------------------------------------
 def check(p: dict) -> list[str]:
     """Engineering constraints (empty = valid). Each cites its rule."""
     import math
@@ -113,7 +113,7 @@ def check(p: dict) -> list[str]:
     if py not in _VESA_PARTNERS.get(px, []):
         bad.append(f"pattern {px}x{py} is not a VESA FDMI pair: legal Y for X={px} are {_VESA_PARTNERS.get(px, [])}")
 
-    # MIS-F (>=200 mm span) uses M6/M8, not M4 — larger displays need shear area
+    # MIS-F (>=200 mm span) uses M6/M8, not M4 - larger displays need shear area
     if min(px, py) >= 200.0 and hd < 7.0:
         bad.append("MIS-F pattern (>=200 mm) requires M6/M8 (hole_d>=7): M4 lacks shear area (VESA FDMI)")
 
@@ -126,7 +126,7 @@ def check(p: dict) -> list[str]:
     if p["bore_d"] > p["boss_d"] - 4.0:
         bad.append("bore_d > boss_d-4: boss wall < 2 mm around the arm bore (would tear out)")
 
-    # hole (or slot end) needs edge material to the plate border — tear-out
+    # hole (or slot end) needs edge material to the plate border - tear-out
     reach = hd / 2.0 + (p["slot_len"] if p["slotted"] else 0.0)
     if p["margin"] < reach + 3.0:
         bad.append("margin too small: <3 mm of material past the hole/slot to the plate edge (tear-out)")
@@ -138,7 +138,7 @@ def check(p: dict) -> list[str]:
     return bad
 
 
-# ── 3. refine ────────────────────────────────────────────────────────────────
+# -- 3. refine ----------------------------------------------------------------
 def refine(p: dict, difficulty: str, rng) -> None:
     """pattern_y is coupled to pattern_x: pick a legal VESA partner (Y >= X)."""
     partners = _VESA_PARTNERS.get(p["pattern_x"])

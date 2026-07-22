@@ -1,4 +1,4 @@
-"""articulating_monitor_arm_vesa_plate — the parametric part.
+"""articulating_monitor_arm_vesa_plate - the parametric part.
 
 A VESA display-mount adapter plate: a flat rectangular plate carrying the four
 standard VESA bolt holes (or outward adjustment slots), a central raised boss
@@ -12,7 +12,7 @@ import cadquery as cq
 
 
 def _hole_centers(pattern_x, pattern_y):
-    """The four VESA hole centres, at (±X/2, ±Y/2)."""
+    """The four VESA hole centres, at (+/-X/2, +/-Y/2)."""
     return [(sx * pattern_x / 2.0, sy * pattern_y / 2.0) for sx in (-1, 1) for sy in (-1, 1)]
 
 
@@ -33,7 +33,7 @@ def build(pattern_x, pattern_y, hole_d, plate_t, margin, boss_d, boss_h, bore_d,
 
     result = cq.Workplane("XY").box(outer_x, outer_y, plate_t)
 
-    # VESA fixing holes — round, or obround adjustment slots running outward
+    # VESA fixing holes - round, or obround adjustment slots running outward
     top = result.faces(">Z").workplane()
     if slotted:
         result = (
