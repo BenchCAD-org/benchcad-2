@@ -2,7 +2,7 @@
   "family": "minifix_cam_housing",
   "standard": null,
   "base_plane": "XY",
-  "description": "TODO: one sentence \u2014 what the part is and its main features",
-  "source": "TODO: standard table / engineering rule / proportion convention",
-  "contributor": "TODO: your-github-handle"
+  "description": "Häfele Minifix 15 die-cast eccentric-cam connector housing with optional seating rim, face drive, and side bolt-hook entry.",
+  "source": "Häfele UK catalogue 14CFC294.pdf and 14CFC295.pdf, pp. 294--295; unlisted cam-pocket dimensions are proportion.",
+  "contributor": "snowy-void"
 }
