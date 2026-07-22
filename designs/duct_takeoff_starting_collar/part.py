@@ -2,8 +2,8 @@
 
 A round-duct takeoff / starting collar: a short galvanized sheet-metal round
 collar (barrel) that starts a round branch off a plenum or main duct. A rolled
-bead stiffens the top (slip-fit) end, the base carries a ring of trapezoidal
-tabs that bend flat onto the duct, and an optional butterfly damper sits on a
+bead stiffens the top (slip-fit) end, the base carries a ring of rectangular tabs
+(the real trapezoidal tabs are simplified to rectangles) that bend flat, and an optional butterfly damper sits on a
 diametral shaft inside the barrel. The barrel axis is Z; the tabs lie in the
 mounting plane at z=0.
 
@@ -36,7 +36,7 @@ def build(collar_d, collar_h, wall, bead_proj, tab_h, tab_w, tab_count, damper):
     )
     result = result.union(bead)
 
-    # base tabs: flat trapezoidal tabs bent out into the mounting plane
+    # base tabs: flat rectangular tabs (real ones trapezoidal) bent out into the mounting plane
     for ang in _tab_angles(tab_count):
         tab = (
             cq.Workplane("XY")
@@ -46,10 +46,13 @@ def build(collar_d, collar_h, wall, bead_proj, tab_h, tab_w, tab_count, damper):
         )
         result = result.union(tab)
 
-    # optional butterfly damper: a blade disc on a diametral shaft, mid-barrel
+    # optional butterfly damper: a blade disc on a diametral shaft, mid-barrel.
+    # The blade runs a running clearance inside the bore (not bore-sized) so its
+    # union is not a fragile coincident-face touch; the shaft ties it to the barrel.
     if damper:
         z_mid = collar_h / 2.0
-        blade = cq.Workplane("XY").circle(r_in).extrude(wall, both=True).translate((0.0, 0.0, z_mid))
+        blade_gap = max(1.0, wall)
+        blade = cq.Workplane("XY").circle(r_in - blade_gap).extrude(wall, both=True).translate((0.0, 0.0, z_mid))
         shaft_l = collar_d + 20.0
         shaft = cq.Workplane("YZ").circle(3.0).extrude(shaft_l).translate((-shaft_l / 2.0, 0.0, z_mid))
         result = result.union(blade).union(shaft)
