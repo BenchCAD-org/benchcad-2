@@ -1,0 +1,8 @@
+{
+  "family": "round_duct_butterfly_damper",
+  "standard": "Ruskin MDRS25 / CDR94 (round manual balancing / control damper)",
+  "base_plane": "XY",
+  "description": "Round HVAC manual balancing (butterfly) damper in the closed position: a rolled sheet-metal frame spool, a circular blade filling the bore on a diametral through-shaft, and a shaft extension for the locking hand quadrant. Axle is round or square.",
+  "source": "Ruskin MDRS25 (light quadrant) + CDR94 (heavy control) round-damper datasheets; frame depth / blade / shaft ranges from their published size tables",
+  "contributor": "BenchCAD-org"
+}
