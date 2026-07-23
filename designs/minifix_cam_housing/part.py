@@ -500,4 +500,9 @@ def build(
     drive_z = -face_thickness - 0.03
     drive = _combined_drive_cutter(body_diameter, drive_z)
     result = result.cut(drive)
+
+    # In service the operating face sits above the panel while the cage drops
+    # into the bore.  Keep the installation plane at z=0 and orient the final
+    # solid to match the catalogue and product photographs.
+    result = result.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 180.0)
     return result
