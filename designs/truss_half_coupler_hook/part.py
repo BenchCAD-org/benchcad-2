@@ -19,7 +19,7 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
 
     # ring closed around the barrel (tube axis = Y), centred at the origin
     ring = cq.Workplane("XZ").circle(r_out).circle(r_in).extrude(body_w)
-    result = ring.translate((0.0, -body_w / 2.0, 0.0))
+    result = ring.translate((0.0, body_w / 2.0, 0.0))  # XZ extrude runs -Y; recentre on y=0
 
     # closure lug across the top: a block over the ring crown with the M12
     # closing-bolt cross-hole (axis X)
@@ -46,10 +46,10 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
 
     if stud:
         # hook-clamp variant: protruding M12 hanging stud out of the tang base
-        stud_len = 34.0
+        stud_len = 34.0  # Doughty T57200: M12 x 50 stud protruding 34
         s = (
             cq.Workplane("XY")
-            .circle(hang_d / 2.0)
+            .circle(6.0)  # M12 stud is catalog-fixed, independent of the eye size
             .extrude(-stud_len)
             .translate((0.0, 0.0, -base_drop))
         )

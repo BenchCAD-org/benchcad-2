@@ -28,20 +28,20 @@ PARAM_SPEC = {
         desc="ring wall thickness around the barrel",
         unit="mm",
         range={"easy": (5.0, 7.0), "medium": (4.0, 8.0), "hard": (4.0, 9.0)},
-        source="proportion (cast AW6082-T6 clamp body)",
+        source="proportion (extruded AW6082-T6 clamp body)",
         askable=True,
     ),
     "body_w": dict(
         desc="body width along the tube axis",
         unit="mm",
-        range={"easy": (45.0, 50.0), "medium": (30.0, 50.0), "hard": (28.0, 51.0)},
+        range={"easy": (45.0, 50.0), "medium": (30.0, 50.0), "hard": (30.0, 51.0)},
         source="Doughty width 50 (standard/lightweight) vs 30 (slimline); Riggatec 30-51",
         askable=True,
     ),
     "base_drop": dict(
         desc="tube centre to the tang base plane",
         unit="mm",
-        range={"easy": (50.0, 55.0), "medium": (40.0, 58.0), "hard": (38.0, 62.0)},
+        range={"easy": (50.0, 55.0), "medium": (40.0, 55.0), "hard": (40.0, 55.0)},
         source="Doughty tube-centre->base 40-55 mm across the range",
         askable=True,
     ),
@@ -84,16 +84,16 @@ def check(p: dict) -> list[str]:
 
     # the tang must reach below the ring far enough to carry the eye with edge material
     tang_h = p["base_drop"] - p["bore_d"] / 2.0
-    if tang_h < 2.2 * p["hang_d"]:
-        bad.append("base_drop - bore/2 < 2.2*hang_d: no room for the fixing eye plus edge material in the tang")
+    if not p["stud"] and tang_h < 2.2 * p["hang_d"]:
+        bad.append("base_drop - bore/2 < 2.2*hang_d: no room for the fixing eye plus edge material in the tang (eye variant)")
 
     # the eye/bolt hole must leave wall in the closure lug (lug block is 2.6*hang_d wide)
     if p["lug_h"] < p["hang_d"] + 3.0:
         bad.append("lug_h < hang_d+3: closing-bolt hole would break out of the lug block")
 
     # cast body, not sheet: ring wall carries the rated load (WLL up to 750 kg)
-    if p["wall_t"] < p["bore_d"] / 13.0:
-        bad.append("wall_t < bore/13: ring wall too thin for a rated clamp body (cast AW6082)")
+    if p["wall_t"] < p["bore_d"] / 11.0:
+        bad.append("wall_t < bore/11: ring wall too thin for a rated clamp body (extruded AW6082, WLL to 750 kg)")
 
     # tang thinner than the body is a plate, not a block
     if p["tang_t"] > 0.5 * p["body_w"]:
