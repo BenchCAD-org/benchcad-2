@@ -4,8 +4,7 @@ import cadquery as cq
 
 
 def build(rail_length, rail_width, rail_height, rail_thickness, slot_width,
-          slot_length, slot_count, profile_inner_width, slot_pitch,
-          side_relief):
+          slot_length, slot_count, profile_inner_width, slot_pitch):
     return_width = (rail_width - profile_inner_width) / 2.0
     wall_height = rail_height - rail_thickness
 
@@ -35,14 +34,6 @@ def build(rail_length, rail_width, rail_height, rail_thickness, slot_width,
             _box(rail_length, return_width, rail_thickness,
                  0.0, y_flange, rail_height - rail_thickness / 2.0)
         )
-
-        if side_relief:
-            lip_height = min(rail_thickness * 1.8, rail_height - rail_thickness)
-            y_lip = sign * (rail_width / 2.0 - rail_thickness / 2.0)
-            result = result.union(
-                _box(rail_length, rail_thickness, lip_height,
-                     0.0, y_lip, rail_height - rail_thickness - lip_height / 2.0)
-            )
 
     return result
 
