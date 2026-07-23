@@ -136,6 +136,14 @@ PARAM_SPEC = {
         refine=True,
         askable=True,
     ),
+    "side_relief": dict(
+        desc="modeled downturned outer edge return lips",
+        unit="",
+        range={"easy": (0, 0), "medium": (0, 1), "hard": (1, 1)},
+        source="proportion from the DN-R35S top-hat side return detail",
+        choices={"easy": [0], "medium": [0, 1], "hard": [1]},
+        feature=True,
+    ),
 }
 
 
