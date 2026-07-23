@@ -1,0 +1,8 @@
+{
+  "family": "truss_half_coupler_hook",
+  "standard": "Doughty T57000 / T57200 half coupler & hook clamp (Ø48-51 barrel)",
+  "base_plane": "XZ",
+  "description": "Stage-rigging half coupler / hook clamp closed around the standard 48-51 mm barrel: ring body, closing-bolt lug over the crown, and a hanging tang with a Ø12.7 fixing eye — or, on the hook-clamp variant, a protruding M12 hanging stud. One solid.",
+  "source": "Doughty T57000/T57010/T58080/T58100/T57200 datasheets (bore, width, eye, base drop, stud); cross-checked vs Riggatec/Global Truss/Kupo; wall/tang/lug proportions",
+  "contributor": "BenchCAD-org"
+}
