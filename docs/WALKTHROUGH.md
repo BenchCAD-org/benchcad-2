@@ -77,7 +77,10 @@ See [`DEBUGGING.md`](DEBUGGING.md) for viewer options.
 
 ## 5. Submit and review
 
-Commit with DCO sign-off and open one PR touching only the family directory:
+Commit with DCO sign-off and open one PR touching only the family directory,
+which holds **only the package** (`part.py`, `spec.py`, `family.json`, an
+optional `NOTES.md`, and the `preview_*.png`). Reference drawings, photos, and
+datasheets stay in the **issue** — CI rejects them inside `designs/`.
 
 ```bash
 git add designs/my_family
