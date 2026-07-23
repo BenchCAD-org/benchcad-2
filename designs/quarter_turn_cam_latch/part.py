@@ -32,19 +32,15 @@ def build(head_d, head_h, body_d, afl, body_l, grip, cam_l, cam_w, cam_t, slotte
     body = body.intersect(flats)
     result = result.union(body)
 
-    # cam arm: a flat plate whose top face clamps at the grip depth, reaching
-    # out one side (rounded tip), retained by the M6 cam screw at the axis
+    # cam arm: a flat slotted plate of OVERALL length cam_l whose top face
+    # clamps at the grip depth. The pivot sits near mid-length (Southco E5:
+    # 45 long / tip offset 23 is near-symmetric), so centre the slot on the axis.
     cam = (
         cq.Workplane("XY")
-        .slot2D(2.0 * cam_l, cam_w, 0)
+        .slot2D(cam_l, cam_w, 0)
         .extrude(-cam_t)
-        .translate((cam_l - cam_w / 2.0, 0.0, -grip))
+        .translate((0.0, 0.0, -grip))
     )
-    # keep only the forward half of the slot so the arm starts at the axis
-    keep = cq.Workplane("XY").box(2.0 * cam_l + cam_w, cam_w + 2.0, cam_t + 2.0).translate(
-        (cam_l + cam_w / 2.0 - (cam_w / 2.0), 0.0, -grip - cam_t / 2.0)
-    )
-    cam = cam.intersect(keep)
     result = result.union(cam)
 
     return result

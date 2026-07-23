@@ -102,16 +102,16 @@ def check(p: dict) -> list[str]:
         bad.append("head_d < body_d+3: head would fall through the panel cutout")
 
     # the flats must actually cut the circle (double-D, not a plain round)
-    if not (0.6 * p["body_d"] <= p["afl"] <= 0.95 * p["body_d"]):
-        bad.append("afl outside 0.6-0.95*body_d: flats must truncate the circle (anti-rotation double-D)")
+    if not (0.85 * p["body_d"] <= p["afl"] <= 0.93 * p["body_d"]):
+        bad.append("afl outside 0.85-0.93*body_d: double-D flats must pair with the circle as in the E5 cutouts (20.1/22.5, 14.1/16.3)")
 
     # the cam must clamp within the housing length
     if p["grip"] + p["cam_t"] > p["body_l"]:
-        bad.append("grip + cam_t > body_l: cam would clamp past the end of the housing")
+        bad.append("grip + cam_t > body_l: flat cam clamps within the housing (offset/deep-offset cams not modelled)")
 
     # the cam must reach past the body to catch the frame
-    if p["cam_l"] < p["body_d"]:
-        bad.append("cam_l < body_d: cam does not reach past the housing to the frame")
+    if p["cam_l"] / 2.0 < p["body_d"] / 2.0 + 4.0:
+        bad.append("cam_l/2 < body_d/2+4: cam tip does not reach past the housing to catch the frame")
 
     # a flat cam, not a block
     if p["cam_t"] > 0.5 * p["cam_w"]:
@@ -127,4 +127,6 @@ def refine(p: dict, difficulty: str, rng) -> None:
     hi = min(hi, p["body_l"] - p["cam_t"])
     if hi <= lo:
         raise Resample
-    p["grip"] = round(float(rng.uniform(lo, hi)), 2)
+    # catalog grips run in 2 mm steps
+    n_steps = int((hi - lo) // 2.0)
+    p["grip"] = round(lo + 2.0 * int(rng.integers(n_steps + 1)), 2)
