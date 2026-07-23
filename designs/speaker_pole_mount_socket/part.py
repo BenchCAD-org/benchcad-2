@@ -28,6 +28,24 @@ def build(
     flange = cq.Workplane("XY").circle(flange_od / 2.0).extrude(flange_t)
     result = cup.union(flange)
 
+    # Drawn-steel sockets flare into the flange instead of meeting it at a
+    # sharp corner. The drawing does not dimension this transition, so size
+    # the root radius from the sheet thickness (an explicit proportion rule).
+    root_radius = 2.0 * flange_t
+    arc_mid = root_radius * (1.0 - 2.0**-0.5)
+    root_fillet = (
+        cq.Workplane("XZ")
+        .moveTo(outer_r, 0.0)
+        .lineTo(outer_r + root_radius, 0.0)
+        .threePointArc(
+            (outer_r + arc_mid, -arc_mid),
+            (outer_r, -root_radius),
+        )
+        .close()
+        .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
+    )
+    result = result.union(root_fillet)
+
     # Leave a flange-thick closed bottom, while opening the cup through the top.
     cavity = (
         cq.Workplane("XY")
