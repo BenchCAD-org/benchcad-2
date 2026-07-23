@@ -4,16 +4,16 @@
 MODEL_ROWS = [
     dict(model="DN-R35S-050-4", rail_length=50.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=2,
-         profile_inner_width=27.0, slot_end_margin=6.7),
+         profile_inner_width=27.0, slot_pitch=25.0),
     dict(model="DN-R35S-100-4", rail_length=100.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=4,
-         profile_inner_width=27.0, slot_end_margin=6.7),
+         profile_inner_width=27.0, slot_pitch=25.0),
     dict(model="DN-R35S-300-4", rail_length=300.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=12,
-         profile_inner_width=27.0, slot_end_margin=6.7),
+         profile_inner_width=27.0, slot_pitch=25.0),
     dict(model="DN-R35S-600-4", rail_length=600.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=24,
-         profile_inner_width=27.0, slot_end_margin=6.7),
+         profile_inner_width=27.0, slot_pitch=25.0),
 ]
 
 DIFFICULTY_ROWS = {
@@ -125,11 +125,14 @@ PARAM_SPEC = {
         refine=True,
         askable=True,
     ),
-    "slot_end_margin": dict(
-        desc="end land from rail end to nearest rounded slot end",
+    "slot_pitch": dict(
+        desc="center-to-center pitch between repeated mounting slots",
         unit="mm",
-        range=_row_range("slot_end_margin"),
-        source="AutomationDirect DN-R35S steel precut rail slot layout drawing, 6.7 mm TYP",
+        range=_row_range("slot_pitch"),
+        source=(
+            "AutomationDirect DN-R35S precut length table: slot count scales "
+            "one slot per 25 mm segment"
+        ),
         refine=True,
         askable=True,
     ),
@@ -153,7 +156,7 @@ SOURCE_ROW_KEYS = (
     "slot_length",
     "slot_count",
     "profile_inner_width",
-    "slot_end_margin",
+    "slot_pitch",
 )
 
 
@@ -185,12 +188,13 @@ def check(p):
         bad.append("slot_width exceeds center web: DN-R35S slot must fit within 27.0 mm web")
     if p["rail_thickness"] * 2.0 >= p["rail_height"]:
         bad.append("rail_thickness too large: 1.0 mm sheet must fit inside 7.5 mm TH35 height")
-    first = -p["rail_length"] / 2.0 + p["slot_end_margin"] + p["slot_length"] / 2.0
-    last = p["rail_length"] / 2.0 - p["slot_end_margin"] - p["slot_length"] / 2.0
-    if first > last:
-        bad.append("slot_end_margin leaves no slot span: DN-R35S drawing requires end land")
+    if abs(p["rail_length"] - p["slot_count"] * p["slot_pitch"]) > 1e-9:
+        bad.append("rail_length must equal slot_count * 25 mm pitch: DN-R35S table")
     if p["slot_count"] > 1:
-        pitch = (last - first) / (p["slot_count"] - 1)
-        if pitch <= p["slot_length"]:
-            bad.append("slot pitch leaves no web between slots: DN-R35S repeated M-slot layout")
+        if p["slot_pitch"] <= p["slot_length"]:
+            bad.append("slot_pitch leaves no web between slots: DN-R35S repeated M-slot layout")
+    end_land = (p["rail_length"] - (p["slot_count"] - 1) * p["slot_pitch"]
+                - p["slot_length"]) / 2.0
+    if end_land < 0.0:
+        bad.append("slot pattern overruns rail end: DN-R35S centered repeated slots")
     return bad

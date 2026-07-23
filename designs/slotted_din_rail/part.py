@@ -4,7 +4,7 @@ import cadquery as cq
 
 
 def build(rail_length, rail_width, rail_height, rail_thickness, slot_width,
-          slot_length, slot_count, profile_inner_width, slot_end_margin,
+          slot_length, slot_count, profile_inner_width, slot_pitch,
           side_relief):
     return_width = (rail_width - profile_inner_width) / 2.0
     wall_height = rail_height - rail_thickness
@@ -13,7 +13,7 @@ def build(rail_length, rail_width, rail_height, rail_thickness, slot_width,
     result = _box(rail_length, profile_inner_width, rail_thickness,
                   0.0, 0.0, rail_thickness / 2.0)
 
-    centers = _slot_centers(rail_length, slot_length, slot_count, slot_end_margin)
+    centers = _slot_centers(slot_count, slot_pitch)
     if centers:
         result = (
             result.faces(">Z").workplane()
@@ -55,13 +55,11 @@ def _box(length, width, height, x, y, z):
     )
 
 
-def _slot_centers(rail_length, slot_length, slot_count, slot_end_margin):
+def _slot_centers(slot_count, slot_pitch):
     count = int(slot_count)
     if count <= 0:
         return []
     if count == 1:
         return [0.0]
-    first = -rail_length / 2.0 + slot_end_margin + slot_length / 2.0
-    last = rail_length / 2.0 - slot_end_margin - slot_length / 2.0
-    pitch = (last - first) / (count - 1)
-    return [first + pitch * i for i in range(count)]
+    first = -slot_pitch * (count - 1) / 2.0
+    return [first + slot_pitch * i for i in range(count)]
