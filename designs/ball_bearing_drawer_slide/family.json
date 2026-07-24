@@ -1,0 +1,9 @@
+{
+  "family": "ball_bearing_drawer_slide",
+  "standard": "Accuride 3832 / Knape & Vogt 8400 full-extension side-mount slide",
+  "base_plane": "XY",
+  "description": "Full-extension ball-bearing drawer slide (closed): three telescoping members — cabinet, intermediate, and drawer — stacked across the width with ball-race running clearance, mounting holes (round or slotted) on the outer members. Three separate bodies.",
+  "source": "Accuride 3832 full-extension slide datasheet (length/height/width/hole pattern); load-class height/width from Knape & Vogt 8400 / Hettich KA",
+  "contributor": "BenchCAD-org",
+  "solids": 3
+}
