@@ -1,0 +1,8 @@
+{
+  "family": "duct_takeoff_starting_collar",
+  "standard": "GreenSeam / ECCO / M&M round-duct start collar (SMACNA)",
+  "base_plane": "XY",
+  "description": "Round-duct takeoff/starting collar: a rolled sheet-metal barrel with a stiffening top bead, a ring of rectangular base tabs (the real trapezoidal tabs simplified) that bend flat onto the duct, and an optional integral butterfly damper on a diametral shaft. One solid.",
+  "source": "GreenSeam tabbed/spin-in start-collar spec sheets + ECCO / M&M submittals (diameter, body, bead, tabs, damper); gauge per ASTM A653 / SMACNA; tab count/width proportion",
+  "contributor": "BenchCAD-org"
+}
