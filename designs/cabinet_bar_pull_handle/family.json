@@ -1,0 +1,8 @@
+{
+  "family": "cabinet_bar_pull_handle",
+  "standard": "Berenson SS bar-pull series (7068-7072) / Richelieu BP305",
+  "base_plane": "XY",
+  "description": "Cabinet/drawer bar pull: a straight round bar on two standoff posts that stand it off the cabinet face, each post tapped from the base for the mounting screw; bar ends optionally chamfered. One solid.",
+  "source": "Berenson 7068-7072 + Richelieu BP305 dimensioned drawings (C-C, overall length, bar/post diameter, projection, tap); bar/post/projection cross-checked constant across Amerock + Hickory",
+  "contributor": "BenchCAD-org"
+}
