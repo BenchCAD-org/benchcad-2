@@ -28,7 +28,8 @@ PARAM_SPEC = {
         unit="",
         range={"easy": (0, 6), "medium": (0, 6), "hard": (0, 6)},
         choices={
-            "easy": [1],
+            # The easy tier is the sole SKU anchored by the official STEP.
+            "easy": [3],
             "medium": [0, 1, 2, 3, 4],
             "hard": [0, 1, 2, 3, 4, 5, 6],
         },
@@ -53,7 +54,7 @@ PARAM_SPEC = {
         desc="Minimum panel thickness for the selected order-table row",
         unit="mm",
         range={
-            "easy": (12.0, 16.0),
+            "easy": (19.0, 19.0),
             "medium": (12.0, 23.0),
             "hard": (12.0, 34.0),
         },
@@ -96,7 +97,7 @@ PARAM_SPEC = {
         desc="Dim. A, panel-face to connecting-bolt axis distance",
         unit="mm",
         range={
-            "easy": (6.0, 8.0),
+            "easy": (9.5, 9.5),
             "medium": (6.0, 11.5),
             "hard": (6.0, 17.0),
         },
@@ -109,7 +110,7 @@ PARAM_SPEC = {
         desc="Nominal drilling depth X used to scale the axial envelope",
         unit="mm",
         range={
-            "easy": (9.5, 12.5),
+            "easy": (14.5, 14.5),
             "medium": (9.5, 16.5),
             "hard": (9.5, 22.5),
         },
@@ -139,17 +140,6 @@ PARAM_SPEC = {
             + PROPORTION
         ),
     ),
-    "cam_web_thickness": dict(
-        desc="Nominal reconstructed cage-wall and cam-web thickness",
-        unit="mm",
-        range={
-            "easy": (0.99, 0.99),
-            "medium": (0.77, 1.10),
-            "hard": (0.77, 1.21),
-        },
-        refine=True,
-        source=OEM_CAD_SOURCE + "; cross-SKU scaling is " + PROPORTION,
-    ),
 }
 
 
@@ -166,7 +156,6 @@ def refine(p: dict, difficulty: str, rng) -> None:
         p["bolt_axis_height"],
         p["housing_height"],
     ) = row
-    p["cam_web_thickness"] = round(0.22 * (p["housing_height"] - p["bolt_axis_height"]), 2)
 
 
 def check(p: dict) -> list[str]:
@@ -202,9 +191,4 @@ def check(p: dict) -> list[str]:
         bad.append("unrimmed order rows have no seating rim: catalogue p. 294")
     if p["bolt_hole_diameter"] not in (7.0, 8.0):
         bad.append("bolt drill hole is not Ø7 or Ø8 mm: catalogue pp. 294--295")
-    expected_web = round(0.22 * hook_depth, 2)
-    if p["cam_web_thickness"] != expected_web:
-        bad.append("cage wall does not follow the declared OEM-calibrated proportion")
-    if not 0 < p["cam_web_thickness"] < 0.10 * p["body_diameter"]:
-        bad.append("cage wall is not a thin die-cast web (OEM CAD/proportion)")
     return bad

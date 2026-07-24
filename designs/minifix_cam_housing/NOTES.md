@@ -31,6 +31,20 @@ B-rep does not pass OpenCascade's strict validity check. It is used only for
 measurements and topology inspection; it is not imported by `build()` and is
 not included in the PR.
 
+## Baseline reconstruction method
+
+Item 262.25.035 is reconstructed from the main solid in the official STEP
+using 27 horizontal sections. At each documented Z plane, the largest closed
+section wire is reduced to an ordered 32-point contour after one documented
+axis transform. The explicit contour coordinates are rebuilt as ordinary
+CadQuery wires and joined by a ruled loft; readable CadQuery booleans then add
+the operating-face recesses and the open bolt-entry clearance.
+
+`build()` does not import the manufacturer's STEP at runtime. No STEP, BREP,
+encoded BREP, or serialized OpenCascade topology is embedded in this family or
+included in the PR. The result is a section-derived approximation of the
+manufacturer geometry, not a copy of the original B-rep or its exact topology.
+
 ## How it is parameterized
 
 For the baseline row `(t, A, X) = (19, 9.5, 14.5)`:
@@ -41,15 +55,14 @@ body end       = X - 0.65 = 13.85 mm
 rim OD         = nominal rim Ø - 0.20 = 16.30 mm
 face projection= 0.80 × nominal rim height = 0.80 mm
 bolt slot      = centred directly at z = A
-cage wall      = 0.22 × (X - A) = 1.10 mm
 ```
 
-The measured transverse cage, offset cam, C-plate, combination-drive, and
-direction-arrow landmarks are normalized by the fixed Ø15 bore. For the other
-six catalogue rows, `A` moves the bolt window and `X` extends the axial cage.
-The wall formula, Ø7/Ø8 capture-clearance adjustment, and all cross-SKU cage
-deformations are explicitly **proportion** rules because the single OEM CAD
-file does not prove the internal geometry of every SKU.
+The unscaled 27-section loft is calibrated only to item 262.25.035, the 19 mm
+catalogue row. It is the sole OEM-CAD baseline in this family. For the other six
+rows, the sampled Z stations are mapped piecewise around the installation
+plane, bolt-axis landmark `A`, and the casting end derived from `X`. The Ø7/Ø8
+entry-clearance adjustment and every cross-SKU deformation remain explicitly
+labelled **proportion** because one OEM file does not prove the other SKUs.
 
 `has_rim`, `rim_diameter`, and `rim_height` come from the selected catalogue
 row. The operating socket is not sampled as three fictitious variants: the
@@ -58,8 +71,8 @@ and SW4.
 
 ## Deliberate deviations
 
-- The code rebuilds the OEM topology as readable, valid CadQuery geometry; it
-  does not copy the manufacturer's invalid B-rep.
+- The 27-section loft preserves sampled horizontal silhouettes, not the exact
+  OEM NURBS surfaces, edge topology, blends, draft, or tolerances.
 - Small casting draft, local blends, ejector marks, and sub-millimetre edge
   treatments are omitted or simplified.
 - Direction arrows reproduce the visible recessed form but not every spline
@@ -69,6 +82,20 @@ and SW4.
 - The family is not intended for fit, tolerance, kinematic, or production use.
 
 ## Verification
+
+The OEM values below refer only to the real 262.25.035 solid; the near-zero
+CADClick translator artefact is excluded.
+
+| Metric | OEM STEP target | Reconstructed baseline | Difference |
+|---|---:|---:|---:|
+| Bounding box X | 16.300000 mm | 16.300000 mm | < 0.000001 mm |
+| Bounding box Y | 16.300000 mm | 16.300000 mm | < 0.000001 mm |
+| Bounding box Z | 14.650000 mm | 14.650000 mm | < 0.000001 mm |
+| Volume | 801.707894 mm³ | 768.897300 mm³ | -32.810594 mm³ (-4.093%) |
+
+The reconstructed baseline is one valid, meshable solid. The volume difference
+mainly reflects polygonal section reduction plus omitted casting blends and
+sub-millimetre surface details.
 
 `bench2 validate minifix_cam_housing` checks catalogue-row coverage,
 constraints, deterministic derived programs, geometry novelty, and one
