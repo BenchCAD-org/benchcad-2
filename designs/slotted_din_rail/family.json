@@ -1,0 +1,8 @@
+{
+  "family": "slotted_din_rail_th35_7_5",
+  "standard": "EN 60715 TH35 top-hat rail, AutomationDirect DN-R35S slotted rail",
+  "base_plane": "XY",
+  "description": "A 35 x 7.5 mm slotted top-hat DIN rail segment with repeated 6.3 x 18.0 mm mounting slots and length-dependent slot count.",
+  "source": "AutomationDirect DIN rail specification PDF, DN-R35S precut slotted rail table and drawing",
+  "contributor": "BenchCAD-org"
+}
