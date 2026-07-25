@@ -187,38 +187,65 @@ def build(
     )
     result = result.union(handle)
 
-    sleeve_x0 = catch_x + rod_r * 0.75
-    sleeve_x1 = pivot_x + l1
-    sleeve_w = max(metal_w * 1.45, d1 * 2.2)
-    sleeve_top_z = pivot_z + handle_t * 0.74 + lift
-    sleeve_bot_left_z = pivot_z - handle_t * 0.46 + lift
-    sleeve_bot_right_z = pivot_z - handle_t * 0.12 + lift
-    cap_x = sleeve_x1 - max(handle_t * 0.62, d1 * 0.55)
-    sleeve = (
-        cq.Workplane("XZ")
-        .polyline(
-            [
-                (sleeve_x0, sleeve_bot_left_z),
-                (cap_x, sleeve_bot_right_z),
-                (sleeve_x1, (sleeve_top_z + sleeve_bot_right_z) / 2.0),
-                (cap_x, sleeve_top_z),
-                (sleeve_x0, sleeve_top_z),
-            ]
+    envelope_x0 = metal_start_x + metal_w * 0.48
+    envelope_x1 = metal_end_x - metal_w * 0.10
+    envelope_side_y = metal_w * 0.50
+    envelope_t = max(s * 0.45, d1 * 0.18)
+    envelope_top_left_z = pivot_z + handle_t * 0.74 + lift
+    envelope_top_right_z = pivot_z + handle_t * 0.58 + lift
+    envelope_drop = max(handle_t * 2.65, d1 * 2.10)
+    envelope_bot_left_z = envelope_top_left_z - envelope_drop * 1.55
+    envelope_len = envelope_x1 - envelope_x0
+    envelope_knee1_x = envelope_x0 + envelope_len * 0.24
+    envelope_knee2_x = envelope_x0 + envelope_len * 0.56
+    envelope_knee1_z = envelope_top_left_z - envelope_drop * 0.82
+    envelope_knee2_z = envelope_top_left_z - envelope_drop * 0.48
+    envelope_bot_right_z = envelope_knee2_z
+
+    # Two thin side faces hang downward from the long edges of the top handle
+    # face. The lower edge runs diagonally in XZ, then eases, then becomes
+    # horizontal near the grip.
+    for sy in (-1.0, 1.0):
+        envelope_side = (
+            cq.Workplane("XZ")
+            .polyline(
+                [
+                    (envelope_x0, envelope_bot_left_z),
+                    (envelope_knee1_x, envelope_knee1_z),
+                    (envelope_knee2_x, envelope_knee2_z),
+                    (envelope_x1, envelope_bot_right_z),
+                    (envelope_x1, envelope_top_right_z),
+                    (envelope_x0, envelope_top_left_z),
+                ]
+            )
+            .close()
+            .extrude(envelope_t, both=True)
+            .translate((0.0, sy * envelope_side_y, 0.0))
         )
-        .close()
-        .extrude(sleeve_w, both=True)
-    )
-    result = result.union(sleeve)
+        result = result.union(envelope_side)
 
-    sleeve_lip = _box(max(d1 * 0.8, s * 1.6), sleeve_w * 1.04, handle_t * 1.18, 0.0).translate(
-        (sleeve_x0, 0.0, pivot_z + handle_t * 0.12 + lift)
+    grip_span = min(max(l1 * 0.32, metal_w * 1.95, d1 * 4.55), (metal_end_x - metal_start_x) * 0.58)
+    grip_depth = min(max(m1 * 1.12, metal_w * 1.28, d1 * 2.35), max(b2 * 0.82, m1 * 1.25))
+    grip_height = max(s * 0.58, min(handle_t * 0.34, d1 * 0.62))
+    grip_center_x = envelope_x1 - grip_span * 0.38
+    grip_z = envelope_top_right_z - grip_height * 0.18
+    right_cap = _box(grip_span, grip_depth, grip_height, 0.0).translate(
+        (
+            grip_center_x,
+            0.0,
+            grip_z,
+        )
     )
-    result = result.union(sleeve_lip)
+    result = result.union(right_cap)
+    grip_top_z = grip_z + grip_height / 2.0
 
-    for i in range(7):
-        rib_x = sleeve_x0 + (sleeve_x1 - sleeve_x0) * (0.33 + i * 0.065)
-        rib = _box((sleeve_x1 - sleeve_x0) * 0.025, sleeve_w * 0.72, handle_t * 0.12, 0.0).translate(
-            (rib_x, 0.0, sleeve_top_z + handle_t * 0.08)
+    grip_rib_count = 7
+    grip_rib_margin = grip_span * 0.16
+    grip_rib_pitch = (grip_span - 2.0 * grip_rib_margin) / max(grip_rib_count - 1, 1)
+    for i in range(grip_rib_count):
+        rib_x = grip_center_x - grip_span / 2.0 + grip_rib_margin + grip_rib_pitch * i
+        rib = _box(grip_span * 0.070, grip_depth * 0.82, max(s * 0.18, grip_height * 0.32), 0.0).translate(
+            (rib_x, 0.0, grip_top_z + max(s * 0.08, grip_height * 0.06))
         )
         rib = rib.rotate((rib_x, 0.0, pivot_z), (rib_x, 1.0, pivot_z), -14.0)
         result = result.union(rib)
