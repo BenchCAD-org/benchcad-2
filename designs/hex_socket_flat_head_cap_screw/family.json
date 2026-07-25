@@ -1,0 +1,8 @@
+{
+  "family": "hex_socket_flat_head_cap_screw",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "A simplified flat-head socket screw with a 90-degree countersunk head, hex recess, and a visually threaded shank, anchored to an M8x30-style reference drawing.",
+  "source": "user-provided reference drawing for 8 mm shank, 30 mm length, 15.8 mm head diameter, and 5.04 mm head height; socket, transition, and simplified thread-groove details are honest proportion values",
+  "contributor": "a1423150775-dotcom"
+}
