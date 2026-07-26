@@ -63,36 +63,76 @@ def build(
     handle_x0 = shaft_length
     handle_x1 = handle_x0 + handle_length
 
-    # Plastic handle loft.  d3, d4, l3 and m are exact catalog envelopes;
-    # the middle-section placement and ellipse are drawing proportions.  The
-    # loft honors both the round neck in the end view and the broad, rounded
-    # T-handle envelope at the button end.
-    handle = (
-        cq.Workplane("YZ", origin=(handle_x0, 0.0, 0.0))
-        .circle(handle_neck_d / 2.0)
-        .workplane(offset=0.46 * handle_length)
-        .ellipse(0.48 * handle_thickness, 0.34 * handle_height)
-        .workplane(offset=0.54 * handle_length)
-        .ellipse(handle_thickness / 2.0, handle_height / 2.0)
-        .loft(combine=True)
-    )
-
-    # The side view has a concave opening between the two T wings around the
-    # push button.  Its radius and penetration are undimensioned proportions.
-    notch_r = 0.30 * handle_height
-    notch_center_x = handle_x1 + 0.16 * handle_length
-    center_notch = (
-        cq.Workplane("XZ", origin=(notch_center_x, 0.0, 0.0))
-        .circle(notch_r)
+    # Reconstruct the plastic handle from the two orthographic outlines in the
+    # datasheet.  The XZ side profile supplies the two T wings and their central
+    # push-button recess; the YZ end envelope supplies the rounded, eye-shaped
+    # cross-section.  Their intersection preserves exact l3, d3 and m envelopes.
+    wing_x0 = handle_x0 + 0.36 * handle_length
+    center_recess_x = handle_x0 + 0.69 * handle_length
+    side_points = [
+        (wing_x0, 0.48 * handle_neck_d),
+        (handle_x0 + 0.56 * handle_length, 0.65 * handle_neck_d),
+        (handle_x0 + 0.76 * handle_length, 0.42 * handle_height),
+        (handle_x0 + 0.90 * handle_length, 0.50 * handle_height),
+        (handle_x1, 0.50 * handle_height),
+        (handle_x1, 0.42 * handle_height),
+        (handle_x0 + 0.86 * handle_length, 0.34 * handle_height),
+        (handle_x0 + 0.73 * handle_length, 0.10 * handle_height),
+        (center_recess_x, 0.16 * handle_neck_d),
+        (center_recess_x, -0.16 * handle_neck_d),
+        (handle_x0 + 0.73 * handle_length, -0.10 * handle_height),
+        (handle_x0 + 0.86 * handle_length, -0.34 * handle_height),
+        (handle_x1, -0.42 * handle_height),
+        (handle_x1, -0.50 * handle_height),
+        (handle_x0 + 0.90 * handle_length, -0.50 * handle_height),
+        (handle_x0 + 0.76 * handle_length, -0.42 * handle_height),
+        (handle_x0 + 0.56 * handle_length, -0.65 * handle_neck_d),
+        (wing_x0, -0.48 * handle_neck_d),
+    ]
+    side_profile = (
+        cq.Workplane("XZ")
+        .moveTo(*side_points[0])
+        .polyline(side_points[1:])
+        .close()
         .extrude(handle_thickness, both=True)
     )
-    handle = handle.cut(center_notch)
+    profile_round = min(
+        0.045 * handle_height,
+        0.06 * handle_length,
+        0.10 * handle_thickness,
+    )
+    side_profile = side_profile.edges("|Y").fillet(profile_round)
+
+    end_origin_x = handle_x0 + 0.32 * handle_length
+    end_length = handle_x1 - end_origin_x
+    end_ellipse = (
+        cq.Workplane("YZ", origin=(end_origin_x, 0.0, 0.0))
+        .ellipse(handle_thickness / 2.0, handle_height / 2.0)
+        .extrude(end_length)
+    )
+    end_spine = (
+        cq.Workplane("YZ", origin=(end_origin_x, 0.0, 0.0))
+        .rect(0.60 * handle_thickness, handle_height)
+        .extrude(end_length)
+    )
+    wing_body = side_profile.intersect(end_ellipse.union(end_spine))
+
+    # The front hub is round at the pin shoulder and blends into the broad
+    # handle root.  d4 is exact; the blend station is a drawing proportion.
+    hub = (
+        cq.Workplane("YZ", origin=(handle_x0, 0.0, 0.0))
+        .circle(handle_neck_d / 2.0)
+        .workplane(offset=0.48 * handle_length)
+        .ellipse(handle_thickness / 2.0, handle_neck_d / 2.0)
+        .loft(combine=True)
+    )
+    handle = hub.union(wing_body)
 
     # Two key-ring slots are explicitly shown in the datasheet.  Their sizes
     # are not specified: length=0.52*m, width=0.18*m, centres at +/-0.36*d3.
     slot_length = 0.52 * handle_thickness
     slot_width = 0.18 * handle_thickness
-    slot_x0 = handle_x0 + 0.88 * handle_length
+    slot_x0 = handle_x0 + 0.90 * handle_length
     slot_depth = 0.14 * handle_length + 2.0
     slot_tool = (
         cq.Workplane("YZ", origin=(slot_x0 - 1.0, 0.0, 0.0))
@@ -109,23 +149,27 @@ def build(
     button_d = 0.34 * handle_neck_d
     stem_d = 0.72 * button_d
     button_embed = 0.10 * handle_length
-    button_exposed = 0.18 * handle_length
+    button_exposed = 0.16 * handle_length
     button_gap = max(0.01 * handle_length, 0.10)
+    button_face_x = center_recess_x
 
     button_stem = (
-        cq.Workplane("YZ", origin=(handle_x1 - button_embed, 0.0, 0.0))
+        cq.Workplane("YZ", origin=(button_face_x - button_embed, 0.0, 0.0))
         .circle(stem_d / 2.0)
         .extrude(button_embed + button_gap + 0.03 * handle_length)
     )
     button_cap = (
-        cq.Workplane("YZ", origin=(handle_x1 + button_gap, 0.0, 0.0))
+        cq.Workplane("YZ", origin=(button_face_x + button_gap, 0.0, 0.0))
         .circle(button_d / 2.0)
         .extrude(button_exposed)
     )
     button = button_stem.union(button_cap)
 
     button_clearance = (
-        cq.Workplane("YZ", origin=(handle_x1 - button_embed - 0.02 * handle_length, 0.0, 0.0))
+        cq.Workplane(
+            "YZ",
+            origin=(button_face_x - button_embed - 0.02 * handle_length, 0.0, 0.0),
+        )
         .circle(button_d / 2.0 + 0.035 * handle_neck_d)
         .extrude(button_embed + button_gap + 0.04 * handle_length)
     )
