@@ -163,8 +163,8 @@ def build(
     # It is coaxial with the pin (as shown in the side view) but remains a
     # clearly separate metal body: an annular clearance bore is cut into the
     # plastic handle and the exposed cap is stepped up from its sliding stem.
-    button_d = 0.46 * handle_neck_d
-    stem_d = 0.58 * button_d
+    button_d = 0.34 * handle_neck_d
+    stem_d = 0.62 * button_d
     button_embed = 0.10 * handle_length
     button_exposed = 0.10 * handle_length
     button_gap = max(0.012 * handle_length, 0.12)
