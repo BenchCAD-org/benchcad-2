@@ -1,0 +1,9 @@
+{
+  "family": "window_cam_lock",
+  "standard": null,
+  "base_plane": "XY",
+  "solids": 2,
+  "description": "Two-body surface-mounted cam-lock assembly with discrete AmesburyTruth 17.23 EntryGard and 17.32 Trimline product rows.",
+  "source": "AmesburyTruth drawings 17.23.XX.200 and 17.32.XX.200, official product pages and images, legacy Truth SW07 table, and documented proportion rules for undimensioned details",
+  "contributor": "sunzhenchuan007"
+}
