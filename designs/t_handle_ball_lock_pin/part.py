@@ -103,17 +103,33 @@ def build(
     handle = handle.cut(slot_tool)
 
     # Spring-loaded push button, visible but undimensioned in the drawing.
-    # It is a separate body; a clearance recess prevents it merging with the
-    # plastic handle during STEP export.
+    # It is coaxial with the pin (as shown in the side view) but remains a
+    # clearly separate metal body: an annular clearance bore is cut into the
+    # plastic handle and the exposed cap is stepped up from its sliding stem.
     button_d = 0.34 * handle_neck_d
-    button_length = 0.24 * handle_length
-    button_x0 = handle_x1 - 0.06 * handle_length
-    button = (
-        cq.Workplane("YZ")
-        .circle(button_d / 2.0)
-        .extrude(button_length)
-        .translate((button_x0, 0.0, 0.0))
+    stem_d = 0.72 * button_d
+    button_embed = 0.10 * handle_length
+    button_exposed = 0.18 * handle_length
+    button_gap = max(0.01 * handle_length, 0.10)
+
+    button_stem = (
+        cq.Workplane("YZ", origin=(handle_x1 - button_embed, 0.0, 0.0))
+        .circle(stem_d / 2.0)
+        .extrude(button_embed + button_gap + 0.03 * handle_length)
     )
+    button_cap = (
+        cq.Workplane("YZ", origin=(handle_x1 + button_gap, 0.0, 0.0))
+        .circle(button_d / 2.0)
+        .extrude(button_exposed)
+    )
+    button = button_stem.union(button_cap)
+
+    button_clearance = (
+        cq.Workplane("YZ", origin=(handle_x1 - button_embed - 0.02 * handle_length, 0.0, 0.0))
+        .circle(button_d / 2.0 + 0.035 * handle_neck_d)
+        .extrude(button_embed + button_gap + 0.04 * handle_length)
+    )
+    handle = handle.cut(button_clearance)
 
     result = cq.Compound.makeCompound(
         [shaft.val(), handle.val(), button.val(), upper_ball.val(), lower_ball.val()]
