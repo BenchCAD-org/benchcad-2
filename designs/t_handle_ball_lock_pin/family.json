@@ -1,0 +1,9 @@
+{
+  "family": "t_handle_ball_lock_pin",
+  "standard": "Elesa+Ganter GN 113.8",
+  "base_plane": "YZ",
+  "description": "GN 113.8 stainless steel ball lock pin in the locked state, with a plastic T-handle, spring-loaded push button and two separate locking balls. Catalog envelopes are exact; undimensioned handle curves, key-ring slots, button and ball-pocket details use declared drawing proportions. The hidden actuator and compression spring are intentionally omitted.",
+  "source": "Elesa+Ganter GN 113.8 manufacturer datasheet, 5/2026: https://www.elesa-ganter.com/siteassets/PDF/EN/GN%20113.8.pdf",
+  "contributor": "jiashunwu1030-oss",
+  "solids": 5
+}
