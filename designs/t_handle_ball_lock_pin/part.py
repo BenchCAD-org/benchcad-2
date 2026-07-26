@@ -69,30 +69,47 @@ def build(
     # cross-section.  Their intersection preserves exact l3, d3 and m envelopes.
     wing_x0 = handle_x0 + 0.36 * handle_length
     center_recess_x = handle_x0 + 0.69 * handle_length
-    side_points = [
-        (wing_x0, 0.48 * handle_neck_d),
-        (handle_x0 + 0.56 * handle_length, 0.65 * handle_neck_d),
-        (handle_x0 + 0.76 * handle_length, 0.42 * handle_height),
-        (handle_x0 + 0.90 * handle_length, 0.50 * handle_height),
-        (handle_x1, 0.50 * handle_height),
-        (handle_x1, 0.42 * handle_height),
-        (handle_x0 + 0.86 * handle_length, 0.34 * handle_height),
-        (handle_x0 + 0.73 * handle_length, 0.10 * handle_height),
-        (center_recess_x, 0.16 * handle_neck_d),
-        (center_recess_x, -0.16 * handle_neck_d),
-        (handle_x0 + 0.73 * handle_length, -0.10 * handle_height),
-        (handle_x0 + 0.86 * handle_length, -0.34 * handle_height),
-        (handle_x1, -0.42 * handle_height),
-        (handle_x1, -0.50 * handle_height),
-        (handle_x0 + 0.90 * handle_length, -0.50 * handle_height),
-        (handle_x0 + 0.76 * handle_length, -0.42 * handle_height),
-        (handle_x0 + 0.56 * handle_length, -0.65 * handle_neck_d),
-        (wing_x0, -0.48 * handle_neck_d),
-    ]
+    recess_half_height = 0.16 * handle_neck_d
     side_profile = (
         cq.Workplane("XZ")
-        .moveTo(*side_points[0])
-        .polyline(side_points[1:])
+        .moveTo(wing_x0, 0.48 * handle_neck_d)
+        .spline(
+            [
+                (handle_x0 + 0.56 * handle_length, 0.65 * handle_neck_d),
+                (handle_x0 + 0.76 * handle_length, 0.42 * handle_height),
+                (handle_x0 + 0.90 * handle_length, 0.50 * handle_height),
+                (handle_x1, 0.50 * handle_height),
+            ],
+            includeCurrent=True,
+        )
+        .lineTo(handle_x1, 0.42 * handle_height)
+        .spline(
+            [
+                (handle_x0 + 0.86 * handle_length, 0.34 * handle_height),
+                (handle_x0 + 0.73 * handle_length, 0.10 * handle_height),
+                (center_recess_x, recess_half_height),
+            ],
+            includeCurrent=True,
+        )
+        .lineTo(center_recess_x, -recess_half_height)
+        .spline(
+            [
+                (handle_x0 + 0.73 * handle_length, -0.10 * handle_height),
+                (handle_x0 + 0.86 * handle_length, -0.34 * handle_height),
+                (handle_x1, -0.42 * handle_height),
+            ],
+            includeCurrent=True,
+        )
+        .lineTo(handle_x1, -0.50 * handle_height)
+        .spline(
+            [
+                (handle_x0 + 0.90 * handle_length, -0.50 * handle_height),
+                (handle_x0 + 0.76 * handle_length, -0.42 * handle_height),
+                (handle_x0 + 0.56 * handle_length, -0.65 * handle_neck_d),
+                (wing_x0, -0.48 * handle_neck_d),
+            ],
+            includeCurrent=True,
+        )
         .close()
         .extrude(handle_thickness, both=True)
     )
