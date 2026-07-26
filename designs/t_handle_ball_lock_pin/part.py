@@ -163,11 +163,11 @@ def build(
     # It is coaxial with the pin (as shown in the side view) but remains a
     # clearly separate metal body: an annular clearance bore is cut into the
     # plastic handle and the exposed cap is stepped up from its sliding stem.
-    button_d = 0.34 * handle_neck_d
-    stem_d = 0.72 * button_d
+    button_d = 0.46 * handle_neck_d
+    stem_d = 0.58 * button_d
     button_embed = 0.10 * handle_length
-    button_exposed = 0.16 * handle_length
-    button_gap = max(0.01 * handle_length, 0.10)
+    button_exposed = 0.10 * handle_length
+    button_gap = max(0.012 * handle_length, 0.12)
     button_face_x = center_recess_x
 
     button_stem = (
@@ -181,13 +181,15 @@ def build(
         .extrude(button_exposed)
     )
     button = button_stem.union(button_cap)
+    button_edge = min(0.08 * button_d, 0.025 * handle_length)
+    button = button.faces(">X").edges().chamfer(button_edge)
 
     button_clearance = (
         cq.Workplane(
             "YZ",
             origin=(button_face_x - button_embed - 0.02 * handle_length, 0.0, 0.0),
         )
-        .circle(button_d / 2.0 + 0.035 * handle_neck_d)
+        .circle(button_d / 2.0 + 0.05 * handle_neck_d)
         .extrude(button_embed + button_gap + 0.04 * handle_length)
     )
     handle = handle.cut(button_clearance)
