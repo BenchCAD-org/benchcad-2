@@ -88,11 +88,24 @@ def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     from vtk.util.numpy_support import numpy_to_vtk
 
     front_arr = np.array(front, dtype=np.float64)
-    eye = LOOKAT + front_arr * CAMERA_DISTANCE
     up = np.array([0.0, 0.0, 1.0])
     right = np.cross(up, front_arr)
     right /= (np.linalg.norm(right) or 1.0)
     true_up = np.cross(front_arr, right)
+    up_u = true_up / (np.linalg.norm(true_up) or 1.0)
+
+    # The normalized 3D AABB is centered at LOOKAT, but its projection need not
+    # be centered there for asymmetric geometry. Frame around the midpoint of
+    # the projected bounds so the scale margin is effective on both sides.
+    rel = np.asarray(verts, dtype=np.float64) - LOOKAT
+    projected_right = rel @ right
+    projected_up = rel @ up_u
+    frame_center = (
+        LOOKAT
+        + (float(projected_right.min()) + float(projected_right.max())) / 2.0 * right
+        + (float(projected_up.min()) + float(projected_up.max())) / 2.0 * up_u
+    )
+    eye = frame_center + front_arr * CAMERA_DISTANCE
 
     points = vtk.vtkPoints()
     points.SetData(numpy_to_vtk(verts, deep=True))
@@ -140,15 +153,13 @@ def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     ren.SetBackground(1, 1, 1)
     cam = ren.GetActiveCamera()
     cam.SetPosition(*eye)
-    cam.SetFocalPoint(*LOOKAT)
+    cam.SetFocalPoint(*frame_center)
     cam.SetViewUp(*true_up)
     cam.ParallelProjectionOn()
     # fit the whole part in frame: parallel scale = half the projected bounding
     # box (onto the camera's right/up axes) plus a 12% margin, applied uniformly
     # so every part is framed the same way relative to its own bounding box.
-    up_u = true_up / (np.linalg.norm(true_up) or 1.0)
-    rel = np.asarray(verts, dtype=np.float64) - LOOKAT
-    half_extent = max(float(np.ptp(rel @ right)), float(np.ptp(rel @ up_u))) / 2.0
+    half_extent = max(float(np.ptp(projected_right)), float(np.ptp(projected_up))) / 2.0
     cam.SetParallelScale(half_extent * 1.12)
     win = vtk.vtkRenderWindow()
     win.SetOffScreenRendering(1)
