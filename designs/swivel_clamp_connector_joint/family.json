@@ -1,0 +1,18 @@
+{
+  "family": "swivel_clamp_connector_joint",
+  "standard": "JW Winco GN 490",
+  "base_plane": "XY",
+  "description": "GN 490 aluminum swivel clamp connector joint in a fixed reference pose, with two complete clamp bodies, one central distance bushing, two coaxial springs, actuator, and hex nut.",
+  "source": "JW Winco GN 490 product page, official metric dimension PDF, and documented proportion rules in NOTES.md",
+  "contributor": "sunzhenchuan007",
+  "solids": 7,
+  "components": [
+    "lower_clamp_body",
+    "upper_clamp_body",
+    "actuator",
+    "hex_nut",
+    "distance_bushing",
+    "lower_compression_spring",
+    "upper_compression_spring"
+  ]
+}
