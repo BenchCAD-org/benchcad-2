@@ -1,0 +1,23 @@
+{
+  "family": "single_friction_bearing_universal_joint",
+  "standard": "DIN 808, type EG, steel universal joint with friction bearing",
+  "base_plane": "XY",
+  "description": "Single-jointed DIN 808 EG universal joint with equal B, K, or V end bores, two independent forked yokes, and one orthogonal cross in a static pose.",
+  "source": "JW Winco DIN 808 official product page and 808g metric table; JW Winco DIN 6885-1 keyway table; uncited fork, clearance, blend, and cross details are documented proportions",
+  "contributor": "sunzhenchuan007",
+  "solids": 3,
+  "components": [
+    {
+      "name": "input_yoke",
+      "quantity": 1
+    },
+    {
+      "name": "output_yoke",
+      "quantity": 1
+    },
+    {
+      "name": "cross",
+      "quantity": 1
+    }
+  ]
+}
