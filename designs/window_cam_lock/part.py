@@ -1,16 +1,18 @@
-"""Two-body simplified AmesburyTruth 17 Series cam-lock assembly."""
+"""Two-component simplified AmesburyTruth 17 Series cam-lock assembly."""
 
 import cadquery as cq
 
 
-def build(
-    product_row,
+_RADIAL_CLEARANCE = 0.20
+_AXIAL_CLEARANCE = 0.20
+
+
+def build_fixed_body(
     body_length,
     body_width,
     end_pad_h,
     body_h,
     deck_h,
-    overall_h,
     hole_spacing,
     hole_d,
     hole_edge_offset,
@@ -20,13 +22,8 @@ def build(
     housing_length,
     cavity_h,
     closed_wall_t,
-    lever_length,
-    lever_width,
-    lever_tip_width,
-    lever_t,
-    lever_angle,
 ):
-    """Build the fixed housing and rotating handle as two separate solids."""
+    """Build the stationary mounting body and hollow cam housing."""
     half_l = body_length / 2.0
     half_w = body_width / 2.0
     corner_cut = 0.10 * body_width
@@ -101,24 +98,38 @@ def build(
         )
         fixed_body = fixed_body.union(lugs)
 
+    # The rotating spindle is built separately. This bore retains the declared
+    # radial gap all around it and opens into the shallow mechanism cavity.
     pivot_x = 0.10 * body_length
-    boss_d = 0.48 * body_width
     spindle_d = 0.16 * body_width
-    radial_clearance = 0.20
-    axial_clearance = 0.20
-
-    # Cut a real bearing opening so the spindle belongs to the rotating body
-    # without intersecting or touching the fixed housing.
     pivot_bore = (
         cq.Workplane("XY")
         .workplane(offset=cavity_h)
         .center(pivot_x, 0.0)
-        .circle(spindle_d / 2.0 + radial_clearance)
-        .extrude(deck_h - cavity_h + axial_clearance)
+        .circle(spindle_d / 2.0 + _RADIAL_CLEARANCE)
+        .extrude(deck_h - cavity_h + _AXIAL_CLEARANCE)
     )
-    fixed_body = fixed_body.cut(pivot_bore)
+    return fixed_body.cut(pivot_bore)
 
-    cap_bottom = deck_h + axial_clearance
+
+def build_rotating_body(
+    body_length,
+    body_width,
+    cavity_h,
+    deck_h,
+    overall_h,
+    lever_length,
+    lever_width,
+    lever_tip_width,
+    lever_t,
+    lever_angle,
+):
+    """Build the rotating cap, spindle, and operating lever as one solid."""
+    pivot_x = 0.10 * body_length
+    boss_d = 0.48 * body_width
+    spindle_d = 0.16 * body_width
+
+    cap_bottom = deck_h + _AXIAL_CLEARANCE
     cap = (
         cq.Workplane("XY")
         .workplane(offset=cap_bottom)
@@ -128,10 +139,10 @@ def build(
     )
     spindle = (
         cq.Workplane("XY")
-        .workplane(offset=cavity_h + axial_clearance)
+        .workplane(offset=cavity_h + _AXIAL_CLEARANCE)
         .center(pivot_x, 0.0)
         .circle(spindle_d / 2.0)
-        .extrude(overall_h - cavity_h - axial_clearance)
+        .extrude(overall_h - cavity_h - _AXIAL_CLEARANCE)
     )
 
     # The lever is one continuous solid with a thin middle and abrupt downward
@@ -186,7 +197,64 @@ def build(
             lever_angle,
         )
     )
-    rotating_body = cap.union(spindle).union(lever)
+    return cap.union(spindle).union(lever)
 
-    result = cq.Compound.makeCompound([fixed_body.val(), rotating_body.val()])
+
+def build(
+    product_row,
+    body_length,
+    body_width,
+    end_pad_h,
+    body_h,
+    deck_h,
+    overall_h,
+    hole_spacing,
+    hole_d,
+    hole_edge_offset,
+    has_alignment_lugs,
+    hole_csk_d,
+    hole_csk_angle,
+    housing_length,
+    cavity_h,
+    closed_wall_t,
+    lever_length,
+    lever_width,
+    lever_tip_width,
+    lever_t,
+    lever_angle,
+):
+    """Build the named two-component cam-lock assembly."""
+    fixed_body = build_fixed_body(
+        body_length,
+        body_width,
+        end_pad_h,
+        body_h,
+        deck_h,
+        hole_spacing,
+        hole_d,
+        hole_edge_offset,
+        has_alignment_lugs,
+        hole_csk_d,
+        hole_csk_angle,
+        housing_length,
+        cavity_h,
+        closed_wall_t,
+    )
+    rotating_body = build_rotating_body(
+        body_length,
+        body_width,
+        cavity_h,
+        deck_h,
+        overall_h,
+        lever_length,
+        lever_width,
+        lever_tip_width,
+        lever_t,
+        lever_angle,
+    )
+
+    # These stable names exactly match family.json components[].name.
+    result = cq.Assembly(name="window_cam_lock")
+    result.add(fixed_body, name="fixed_body")
+    result.add(rotating_body, name="rotating_body")
     return result

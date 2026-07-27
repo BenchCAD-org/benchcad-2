@@ -100,6 +100,24 @@ an AmesburyTruth production dimension.
 - 17.32 lug longitudinal centers: `+/- 0.28 * body_length`; both lugs are
   located on the same long edge, matching the official top view
 
+## Components and visual assembly
+
+`family.json` declares two physical components, and their names exactly match
+the stable child names returned by `cq.Assembly`:
+
+| Component builder | Assembly child | Quantity |
+|---|---|---:|
+| `build_fixed_body()` | `fixed_body` | 1 |
+| `build_rotating_body()` | `rotating_body` | 1 |
+
+The image-first assembly sequence is committed as `preview_parts.png`.
+Successive panels highlight each component in the assembled context, then show
+the rotating body exploded in `+Z` and inserted back along `-Z`, followed by
+the final two-color assembly. The spindle and fixed-body pivot bore share the
+axis at `X = 0.10 * body_length`, `Y = 0`. Final seating preserves 0.20 mm
+radial clearance around the spindle and 0.20 mm axial clearance between the
+fixed deck and rotating cap.
+
 ## Engineering constraints
 
 - Every official dimension and the lug state must equal the complete selected
