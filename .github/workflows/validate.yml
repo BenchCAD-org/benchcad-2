@@ -17,7 +17,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,30 +91,22 @@ jobs:
           name: previews
           path: designs/*/preview.png
           if-no-files-found: ignore
-      - name: post validate report as PR comment
+      # The report COMMENT is posted by validate-report.yml (workflow_run): on
+      # fork PRs this job's token is read-only, so commenting from here fails
+      # with "Resource not accessible by integration" — exactly for the external
+      # contributors the report exists for. We hand the report + PR number over
+      # via an artifact instead.
+      - name: package report for validate-report.yml
         if: always() && steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        run: |
+          mkdir -p /tmp/validate-report
+          cp report.md /tmp/validate-report/report.md 2>/dev/null || echo 'validate report missing — check the job log.' > /tmp/validate-report/report.md
+          echo "${{ github.event.pull_request.number }}" > /tmp/validate-report/pr.txt
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
         with:
-          script: |
-            const fs = require('fs');
-            let body = '<!-- bench2-validate-report -->\n';
-            try { body += fs.readFileSync('report.md', 'utf8'); }
-            catch { body += 'validate report missing — check the job log.'; }
-            body += '\n_Previews: see the `previews` artifact on this run._';
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, per_page: 100 });
-            const mine = comments.find(c =>
-              c.body.startsWith('<!-- bench2-validate-report -->'));
-            if (mine) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner, repo: context.repo.repo,
-                comment_id: mine.id, body });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner, repo: context.repo.repo,
-                issue_number: context.issue.number, body });
-            }
+          name: validate-report
+          path: /tmp/validate-report/
 
   status-board:
     if: github.event_name == 'push'

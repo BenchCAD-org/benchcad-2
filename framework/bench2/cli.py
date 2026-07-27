@@ -141,7 +141,9 @@ def cmd_preview(family: str, per_diff: int) -> int:
         hz = render.render_three_view(verts, tris)
     out4 = render.compose_grid(
         [hz], [f"hard example (front · side · top · iso)\n{_param_caption(spec, hp)}"],
-        fam_dir / "preview_hard_zoom.png", cell=380, label_w=300)
+        # wider label column than the default: this grid is one row of four, and
+        # a 2-params-per-line caption overruns 300 px on long parameter names.
+        fam_dir / "preview_hard_zoom.png", cell=380, label_w=390)
 
     print(f"preview → {out}")
     print(f"benchmark views (what the model sees) → {out2}")

@@ -87,6 +87,11 @@ the code.
 
 ### Submit
 
+Your family dir holds **only the package** — `part.py`, `spec.py`, `family.json`,
+an optional `NOTES.md`, and the `preview_*.png` renders. **Keep your datasheet,
+drawing, and photo in the issue, not in `designs/`** — CI rejects reference files
+in the family dir (download them elsewhere so `git add` can't pick them up).
+
 10. ```bash
     git add designs/my_family
     git commit -s -m "Add my_family"     # -s adds your sign-off line (required)
