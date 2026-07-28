@@ -78,9 +78,9 @@ closed easy/medium rings; it is therefore not reported as final verification.
   pairwise volumetric intersections. Easy/medium select the closed state;
   hard selects the post-build `k2 / 2` bottom subtraction.
 - `preview_parts.png` gives four standard views for each of the five distinct
-  physical components, followed by four assembly-overview views.
-- `preview_assembly.png` keeps the complete reviewed assembly in place while
-  sequentially highlighting each stable component across four standard views.
+  physical components, one assembly overview, and five further rows that keep
+  the complete assembly in place while sequentially highlighting each stable
+  component across the same four views.
 - Formal `bench2 validate` passed easy, medium, and hard at 4/4 seeds,
   covered all five declared catalog rows, produced 7/12 unique sampled
   geometries, and confirmed five non-degenerate solids per instance.
