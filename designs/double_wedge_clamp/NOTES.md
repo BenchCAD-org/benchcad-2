@@ -90,6 +90,15 @@ dimensions.
   at `y=+/-m/2`, `z=h3`; edge and wall material are checked in `spec.py`.
 - `family.json` declares four solids and four stable Assembly child names, each
   with quantity one.
+- `preview_parts.png` shows standard four-view rows for the GL and GA jaw
+  representatives (`quantity=2` each), separate left/right RF jaws, the center
+  wedge, the screw, and a final four-solid assembly overview.
+- GL and GA left/right jaws coincide after a 180-degree rigid rotation. The
+  simplified RF groove phase is mirrored, so its left/right geometries are
+  shown separately rather than being presented as one interchangeable part.
+- Independent checks confirm one non-degenerate solid per component, T-slot
+  openings through both jaw limits, stable Assembly names, and zero pairwise
+  solid-intersection volume in the M12-50 RF maximum case.
 
 ## Deliberate deviations
 
