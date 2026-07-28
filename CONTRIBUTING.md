@@ -56,7 +56,9 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 The implementer is the first verifier. Confirm:
 
 1. A real standard, catalog, datasheet, handbook, or honest proportion basis.
-2. A dimensioned drawing or equivalent source that maps symbols to geometry.
+2. A true 2D orthographic dimensioned drawing that maps symbols to geometry —
+   ideally the standard's parametric letter drawing paired with its size table
+   (dimension arrows drawn over a product photo/render do not qualify).
 3. A table or documented range containing minimum and maximum examples.
 4. At least two source values spot-checked manually.
 5. At least four meaningful parameters and enough geometric variation.
