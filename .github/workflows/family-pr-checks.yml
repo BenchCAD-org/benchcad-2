@@ -6,6 +6,9 @@ name: family-pr-checks
 # complete package: its three source files AND the three committed renders
 # (the easy/medium/hard grid, the four benchmark views, and the min/max
 # extremes). Requirements a human used to eyeball are now red/green.
+# `preview_hard_zoom.png` (the fourth render, front/side/top/iso of a hard
+# example) is WARNED about, not required, until the PRs that predate it have
+# backfilled it and main is clean — then step 3b moves into step 3's list.
 #
 # It runs on EVERY PR (no `paths` filter) and passes immediately for a non-family
 # PR, so it is safe to add to the repo ruleset's required checks (context name:
@@ -66,13 +69,20 @@ jobs:
             exit 1
           fi
 
+          # 3b) the fourth render — front/side/top/iso of a hard example. `bench2
+          # preview` emits it, but PRs branched before that landed cannot have it,
+          # so warn (don't fail) until the backlog and main are backfilled.
+          if [ ! -f "designs/${FAM}/preview_hard_zoom.png" ]; then
+            echo "::warning::designs/${FAM}/preview_hard_zoom.png is missing. Rebase on main, re-run 'uv run bench2 preview ${FAM}' and commit the fourth render (front/side/top/iso of a hard example) — the diagonal benchmark views hide axis-aligned features. This becomes a hard requirement once the in-flight PRs have it. / 缺第四张渲染图:请 rebase 到最新 main,重跑 preview 并提交 preview_hard_zoom.png(硬难度实例的主视/侧视/俯视/等轴测),该项即将变为强制。"
+          fi
+
           # 4) nothing but the package goes into designs/<family>/ — reference
           # PDFs/photos/scans belong in the family ISSUE, not the repo. Checked
           # on the files this PR adds/modifies (deletions are fine).
           ADDED=$(git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" | grep -E "^designs/${FAM}/" | sed "s|^designs/${FAM}/||" || true)
-          JUNK=$(echo "$ADDED" | grep -vE '^(part\.py|spec\.py|family\.json|NOTES\.md|preview\.png|preview_views\.png|preview_extremes\.png|preview_parts\.png)$' | grep . || true)
+          JUNK=$(echo "$ADDED" | grep -vE '^(part\.py|spec\.py|family\.json|NOTES\.md|preview\.png|preview_views\.png|preview_hard_zoom\.png|preview_extremes\.png|preview_parts\.png)$' | grep . || true)
           if [ -n "$JUNK" ]; then
-            echo "::error::designs/${FAM}/ must contain only the family package (part.py, spec.py, family.json, NOTES.md, preview.png, preview_views.png, preview_extremes.png, and preview_parts.png for assemblies). Reference drawings/photos/datasheets go in the family issue instead. Remove from this PR: $(echo $JUNK)"
+            echo "::error::designs/${FAM}/ must contain only the family package (part.py, spec.py, family.json, NOTES.md, preview.png, preview_views.png, preview_hard_zoom.png, preview_extremes.png, and preview_parts.png for assemblies). Reference drawings/photos/datasheets go in the family issue instead. Remove from this PR: $(echo $JUNK)"
             exit 1
           fi
 
