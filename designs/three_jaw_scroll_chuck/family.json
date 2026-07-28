@@ -1,0 +1,9 @@
+{
+  "family": "three_jaw_scroll_chuck",
+  "standard": "RÖHM DURO-M, cylindrical centre mount DIN 6350",
+  "base_plane": "XY",
+  "description": "Nine-body RÖHM DURO-M three-jaw geared scroll chuck assembly: one-piece chuck body, separate rear cover, spiral scroll plate, three installed outward-stepped BB jaws and three radial drive pinions. The 12 catalog_index values map one-to-one to official DIN 6350 size rows (74 through 630); jaw_open_fraction only selects an operating state inside the published A1 chucking range. Exact catalog envelopes, mounting dimensions, jaw envelopes and key-square sizes are preserved. Internal bevel/scroll tooth forms, jaw rack and serration pitch, cover details and small edge treatments are visibly simplified because the catalog does not fully dimension them. The supplied chuck key and alternate loose jaw sets are operating accessories and are not installed assembly bodies.",
+  "source": "RÖHM Lathe Chucks catalogue (DURO-M product, dimensions, chucking ranges and jaw dimensions), PDF pages 19-32 / printed pages 3041-3061: https://www.roehm.biz/fileadmin/user_upload/produkte/PG3_Handspannfutter/en_03_Lathe_chucks_FINISH_231121_en.pdf ; product mechanism description: https://www.roehm.biz/en/duro-m/",
+  "contributor": "jiashunwu1030-oss",
+  "solids": 9
+}
