@@ -59,6 +59,13 @@ PARAM_SPEC = {
         source="GE101Z R300 / GE101A R250; proportion at hard",
         askable=True,
     ),
+    "ramp_len": dict(
+        desc="blend length from the crowned body down into each ear",
+        unit="mm",
+        range={"easy": (8.0, 11.0), "medium": (6.0, 13.0), "hard": (5.0, 15.0)},
+        source="proportion (smooth body-to-ear transition on the GE101Z photo/drawing)",
+        askable=True,
+    ),
     "string_pitch": dict(
         desc="string-hole pitch (span = 5x pitch)",
         unit="mm",
@@ -104,10 +111,16 @@ def check(p: dict) -> list[str]:
     if 5.0 * p["string_pitch"] + p["hole_d"] > p["stud_span"] - p["slot_w"] - 6.0:
         bad.append("string span + hole_d > body between stud slots: outer holes break into the slots")
 
-    # crown sagitta over the bar must stay shallow vs the body above the tab
-    sag = (p["overall_l"] / 2.0) ** 2 / (2.0 * p["crown_r"])
-    if sag > 0.5 * (p["bar_h"] - p["tab_t"]):
-        bad.append("crown sagitta > 0.5*(bar_h - tab_t): crown cut would dig toward the end tabs (GE101Z crown is shallow)")
+    # the blend must start past the string holes, and the crown must still stand
+    # proud of the ear where the blend begins
+    x_r0 = p["stud_span"] / 2.0 - p["slot_w"] / 2.0 - p["ramp_len"]
+    # on the real part the outer bores sit right at the blend start, so only the
+    # early (still-tall) third of the blend may overlap them
+    if x_r0 + 0.35 * p["ramp_len"] < 2.5 * p["string_pitch"] + p["hole_d"] / 2.0 + 1.0:
+        bad.append("blend drops too early: outer string bore would break out of the descending top (GE101Z outer bores sit at the blend start)")
+    crown_at_r0 = p["bar_h"] - x_r0 * x_r0 / (2.0 * p["crown_r"])
+    if crown_at_r0 < p["tab_t"] + 2.0:
+        bad.append("crown drops below tab_t+2 before the blend starts: crown too deep for the body (GE101Z crown is shallow)")
 
     # the slot needs side walls in the bar width
     if p["slot_w"] > p["bar_w"] - 3.5:
