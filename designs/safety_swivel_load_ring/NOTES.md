@@ -79,6 +79,8 @@ closed easy/medium rings; it is therefore not reported as final verification.
   hard selects the post-build `k2 / 2` bottom subtraction.
 - `preview_parts.png` gives four standard views for each of the five distinct
   physical components, followed by four assembly-overview views.
+- `preview_assembly.png` keeps the complete reviewed assembly in place while
+  sequentially highlighting each stable component across four standard views.
 - Formal `bench2 validate` passed easy, medium, and hard at 4/4 seeds,
   covered all five declared catalog rows, produced 7/12 unique sampled
   geometries, and confirmed five non-degenerate solids per instance.
