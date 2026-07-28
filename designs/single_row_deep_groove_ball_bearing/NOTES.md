@@ -16,8 +16,8 @@ for human review under `REVIEWING.md`.
   dimensions, and all 6001-6005 internal rolling-element layouts.
 - **benchmark perturbation:** small deterministic sample variation added in
   `refine()` around the 6000 image-calibrated baseline and around the
-  proportion rows. These perturbations represent dataset variation, not
-  image-fit uncertainty or manufacturer tolerance.
+  proportion rows. These perturbations represent benchmark dataset variation,
+  not a measurement error model or a product tolerance claim.
 
 ## ISO / catalog symbol mapping
 
@@ -59,8 +59,7 @@ No reliable model-specific CAD section or manufacturer table was available for
 the internal ball, raceway, and cage geometry of 6001-6005. Their internal rows
 therefore remain `proportion` values chosen to fit inside their real `d/D/B`
 envelopes, keep clearance between bodies, and provide meaningful benchmark
-variation. They must not be described as SKF, TraceParts, or manufacturer
-measured internal dimensions.
+variation. They must not be described as SKF/TraceParts internal measurements.
 
 ## Derived ring and raceway construction
 
@@ -75,28 +74,36 @@ For the 6000 row, these normalize the SKF-style section anchors:
 - `inner_shoulder_d = 10 + 0.30 * 16 = 14.8 mm`
 - `outer_race_d = 26 - (3.4 / 16) * 16 = 22.6 mm`
 
-These shoulder relationships are then reused as proportions for 6001-6005. The
-raceways are simplified toroidal cuts on the facing ring surfaces:
+These shoulder relationships are then reused as proportions for 6001-6005.
+The current `part.py` builds both rings from a closed radial-axial profile
+revolved around the bearing axis. The profile includes the bore/outside
+cylindrical surfaces, end chamfers, shoulders, and the central deep-groove
+raceway. This replaced an earlier simple annular-cylinder plus torus-cut
+prototype.
 
-- `race_clearance = ball_d * 0.04`
-- `groove_r = ball_d / 2 + race_clearance + race_groove_depth * 0.04`
+- `raceway_clearance = max(0.16, min(0.20, ball_d * 0.035))`
+- `raceway_radius = ball_d / 2 + raceway_clearance`
+- `groove_half_width = min(width * 0.40, ball_d * (0.46 + min(race_groove_depth / ball_d, 0.24)))`
 
 `race_groove_depth` is not image-derived. It is a proportion constrained by
-ring-wall continuity and ball-envelope clearance.
+ring-wall continuity, ball-envelope clearance, and the need to keep a readable
+deep-groove shoulder in the preview.
 
 ## Cage construction
 
-The cage is a simplified one-piece retainer:
+The cage is a simplified two-half stamped retainer:
 
-- radial band limits: `pitch_d - cage_t` to `pitch_d + cage_t`
-- pocket clearance: `cage_clearance = ball_d * 0.10`
-- two narrow side rails are joined by bridge ribs between adjacent balls
-- each ball pocket is cut by an oversized sphere centered on the ball center
+- `upper cage half` and `lower cage half` are independent solids.
+- each half has a shallow channel-like annular band with rounded exposed edges.
+- spherical cup regions open around each rolling ball.
+- ball-position pockets are centered on the actual ball centers.
+- the two halves stay separated; no middle ring or vertical post connects them.
+- pocket clearance uses `cage_clearance = max(0.10, min(0.20, ball_d * 0.035))`.
 
 This is a benchmark-readable simplification of an open bearing cage. It keeps
-the cage as one solid, preserves visible ball pockets, and avoids positive
-intersection with balls or rings. It does not model exact stamped-cage pocket
-geometry.
+the ball pockets open toward the inner and outer raceways, avoids the earlier
+closed-hoop failure mode, and avoids positive intersection with balls or rings.
+It does not model rivets or exact stamped-cage manufacturing details.
 
 ## Deliberate deviations and limitations
 
