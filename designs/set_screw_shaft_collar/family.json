@@ -1,0 +1,8 @@
+{
+  "family": "set_screw_shaft_collar",
+  "standard": "GN 705 / DIN 705 style",
+  "base_plane": "XY",
+  "description": "Set screw shaft collar with central H8 bore, radial set screw hole(s), screw-side recess detail, and small machined chamfers.",
+  "source": "JW Winco GN 705 Set Screw Shaft Collars, metric table and engineering drawing",
+  "contributor": "Kakino7"
+}
