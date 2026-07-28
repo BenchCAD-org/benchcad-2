@@ -69,14 +69,19 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
     plan = cq.Workplane("XY").slot2D(overall_l, bar_w, 0).extrude(1.5 * bar_h)
     result = result.intersect(plan)
 
-    # six string holes through the crowned body (along Y)
-    z_hole = tab_t + 0.45 * (bar_h - tab_t)
+    # six string bores (along Y), set high like the drawing: the counterbores
+    # break out through the crown top (the GE101Z top view shows all six as
+    # open notches on the crown)
+    drop_out = (2.5 * string_pitch) ** 2 / (2.0 * crown_r)  # crown drop at the outer bores
+    z_hole = bar_h - drop_out - hole_d / 2.0 + 1.2
     pts = [((i - 2.5) * string_pitch, z_hole) for i in range(6)]
     if stepped_holes:
-        exit_d = 0.6 * hole_d
-        thru = cq.Workplane("XZ").pushPoints(pts).circle(exit_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
-        entry = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(bar_w * 0.55).translate((0.0, -bar_w * 0.45, 0.0))
-        result = result.cut(thru).cut(entry)
+        # drawing section: counterbored phi5.1 x 4.5 from BOTH faces, phi3 web
+        web_d = 0.6 * hole_d
+        thru = cq.Workplane("XZ").pushPoints(pts).circle(web_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
+        cb_f = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(0.35 * bar_w).translate((0.0, -0.3 * bar_w, 0.0))
+        cb_b = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(0.35 * bar_w).translate((0.0, 0.65 * bar_w, 0.0))
+        result = result.cut(thru).cut(cb_f).cut(cb_b)
     else:
         thru = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
         result = result.cut(thru)

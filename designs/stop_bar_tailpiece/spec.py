@@ -126,8 +126,11 @@ def check(p: dict) -> list[str]:
     if p["slot_w"] > p["bar_w"] - 3.5:
         bad.append("slot_w > bar_w - 3.5: stud slot leaves <1.75 mm ear wall each side")
 
-    # string holes must sit inside the body above the tab
-    if p["hole_d"] > (p["bar_h"] - p["tab_t"]) - 3.0:
-        bad.append("hole_d > bar_h - tab_t - 3: string bore does not fit the raised body")
+    # the high-set bores (breaking out through the crown, per the drawing) must
+    # keep their pocket floor above the ear plane
+    drop_out = (2.5 * p["string_pitch"]) ** 2 / (2.0 * p["crown_r"])
+    z_hole = p["bar_h"] - drop_out - p["hole_d"] / 2.0 + 1.2
+    if z_hole - p["hole_d"] / 2.0 < p["tab_t"] + 1.5:
+        bad.append("string-bore pocket floor reaches the ear plane: bar too short / bore too big for the crown-breakout bores")
 
     return bad
