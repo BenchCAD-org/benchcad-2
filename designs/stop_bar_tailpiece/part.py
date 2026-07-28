@@ -34,6 +34,19 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, string_pitch, hole
     )
     result = result.union(body.intersect(crown))
 
+    # D-profile: the end view is flat-backed with a rounded front. Constructed
+    # (no fillet): intersect with a cylinder along X whose crest touches the
+    # front face — robust at range extremes where edge fillets fail.
+    r_d = 0.75 * bar_h
+    dcyl = (
+        cq.Workplane("YZ")
+        .center(bar_w / 2.0 - r_d, bar_h / 2.0)
+        .circle(r_d)
+        .extrude(1.2 * overall_l)
+        .translate((-0.6 * overall_l, 0.0, 0.0))
+    )
+    result = result.intersect(dcyl)
+
     # six string holes through the body (along Y): plain bores, or the real
     # stepped bore (entry hole_d, exit ~0.6*hole_d)
     z_hole = tab_t + 0.45 * (bar_h - tab_t)
