@@ -103,9 +103,10 @@ def check(p: dict) -> list[str]:
     """Engineering constraints (empty = valid). Each cites its rule."""
     bad = []
 
-    # the ears must close around the open stud slots with material past them
-    if p["overall_l"] < p["stud_span"] + 2.0 * p["slot_w"] + 4.0:
-        bad.append("overall_l < stud_span + 2*slot_w + 4: ears cannot close around the stud slots")
+    # the ear tips are CLOSED hooks past the slots (drawing/photo): material must
+    # wrap beyond each stud slot to the rounded tip
+    if p["overall_l"] < p["stud_span"] + p["slot_w"] + 6.0:
+        bad.append("overall_l < stud_span + slot_w + 6: no closed hook tip past the stud slot (GE101Z ears are closed)")
 
     # the six-string span must clear both stud slots inside the raised body
     if 5.0 * p["string_pitch"] + p["hole_d"] > p["stud_span"] - p["slot_w"] - 6.0:

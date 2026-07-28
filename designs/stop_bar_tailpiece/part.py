@@ -86,15 +86,29 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
         thru = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
         result = result.cut(thru)
 
-    # open U-slots for the studs, cut out through each ear end
+    # ear lobes: the drawing's plan view bulges each ear into a rounded lobe
+    # around the stud (the hook mass the slot cuts into)
+    for s in (-1.0, 1.0):
+        lobe = (
+            cq.Workplane("XY")
+            .circle(slot_w)
+            .extrude(tab_t)
+            .translate((s * stud_span / 2.0, 0.0, 0.0))
+        )
+        result = result.union(lobe)
+
+    # stud slots per the drawing: width slot_w ALONG the bar, opening through the
+    # FRONT long face and closing in a semicircle just past the stud centre —
+    # the ear tips stay closed (curled hooks), no end-opening forks
     for s in (-1.0, 1.0):
         x_stud = s * stud_span / 2.0
-        reach = overall_l / 2.0 - abs(x_stud) + 5.0
+        y_stop = -1.0                      # closed end just past the centreline
+        reach = bar_w + 4.0                # from beyond the front face inward
         cutter = (
             cq.Workplane("XY")
-            .box(reach, slot_w, 6.0 * tab_t)
-            .translate((x_stud + s * reach / 2.0, 0.0, tab_t))
-            .union(cq.Workplane("XY").circle(slot_w / 2.0).extrude(6.0 * tab_t).translate((x_stud, 0.0, -tab_t)))
+            .box(slot_w, reach, 6.0 * tab_t)
+            .translate((x_stud, y_stop + reach / 2.0, tab_t))
+            .union(cq.Workplane("XY").circle(slot_w / 2.0).extrude(6.0 * tab_t).translate((x_stud, y_stop, -tab_t)))
         )
         result = result.cut(cutter)
 
