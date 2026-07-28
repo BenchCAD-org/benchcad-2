@@ -56,7 +56,9 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 The implementer is the first verifier. Confirm:
 
 1. A real standard, catalog, datasheet, handbook, or honest proportion basis.
-2. A dimensioned drawing or equivalent source that maps symbols to geometry.
+2. A true 2D orthographic dimensioned drawing that maps symbols to geometry —
+   ideally the standard's parametric letter drawing paired with its size table
+   (dimension arrows drawn over a product photo/render do not qualify).
 3. A table or documented range containing minimum and maximum examples.
 4. At least two source values spot-checked manually.
 5. At least four meaningful parameters and enough geometric variation.
@@ -86,7 +88,7 @@ structure. A family PR must pass all three:
 |---|---|
 | `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
 | `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open) |
-| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`; **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; and the dir name matches the linked issue's family name |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`, plus `preview_hard_zoom.png` (the fourth render — CI *warns* while PRs opened before it existed backfill it, then it becomes required); **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; and the dir name matches the linked issue's family name |
 
 ## Issue taxonomy
 

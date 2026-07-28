@@ -29,7 +29,7 @@ body:
     id: pictures
     attributes:
       label: Part pictures (drag images here)
-      description: "REQUIRED: drag in a datasheet engineering drawing and/or a photo of the part. Reviewers compare the preview renders against these."
+      description: "REQUIRED: a TRUE 2D orthographic dimensioned drawing (multi-view sheet with dimension lines — ideally the standard's parametric letter drawing that pairs with the size table), plus a photo of the part. Dimension arrows overlaid on a product photo/render do NOT count as the drawing. Reviewers compare the preview renders against these."
       placeholder: "Drag & drop the drawing / photo into this box."
     validations:
       required: true
