@@ -90,15 +90,24 @@ dimensions.
   at `y=+/-m/2`, `z=h3`; edge and wall material are checked in `spec.py`.
 - `family.json` declares four solids and four stable Assembly child names, each
   with quantity one.
-- `preview_parts.png` shows standard four-view rows for the GL and GA jaw
+- `preview_parts.png` first shows standard four-view rows for the GL and GA jaw
   representatives (`quantity=2` each), separate left/right RF jaws, the center
-  wedge, the screw, and a final four-solid assembly overview.
+  wedge, and the screw. It then shows three assembly-highlight rows: the two
+  jaws in distinct colors, the center wedge, and the screw. Components outside
+  each highlighted group remain translucent as a spatial reference.
 - GL and GA left/right jaws coincide after a 180-degree rigid rotation. The
   simplified RF groove phase is mirrored, so its left/right geometries are
   shown separately rather than being presented as one interchangeable part.
 - Independent checks confirm one non-degenerate solid per component, T-slot
   openings through both jaw limits, stable Assembly names, and zero pairwise
   solid-intersection volume in the M12-50 RF maximum case.
+- The final row is an explanatory exploded layout of that same static M12-50 RF
+  case. The jaws are offset by `+/-0.42 jaw_span` along X, the center wedge by
+  `+0.75 h1` along Z, and the screw by `+3.00 h1` along Z; red arrows identify
+  those separation directions. These offsets and arrows were chosen only to
+  make component relationships readable. They are not catalog dimensions, a
+  documented disassembly sequence, or evidence that the omitted return spring
+  and mounting hardware can be removed along those paths.
 
 ## Deliberate deviations
 
