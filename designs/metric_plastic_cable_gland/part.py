@@ -1,8 +1,26 @@
-﻿"""Parametric metric plastic cable gland."""
+"""Parametric metric plastic cable gland."""
 
 import math
 
 import cadquery as cq
+
+
+def _hex_prism(sw, height, z0):
+    corner_d = sw / math.cos(math.radians(30.0))
+    return cq.Workplane("XY").workplane(offset=z0).polygon(6, corner_d).extrude(height)
+
+
+def _ring_thread(major_d, height, z0, pitch):
+    core_d = major_d - 1.2 * pitch
+    threaded = cq.Workplane("XY").workplane(offset=z0).circle(core_d / 2.0).extrude(height)
+    crest_count = max(1, int(height / pitch))
+    for index in range(crest_count):
+        crest_z = z0 + 0.35 + index * pitch
+        if crest_z + 0.45 > z0 + height:
+            break
+        crest = cq.Workplane("XY").workplane(offset=crest_z).circle(major_d / 2.0).extrude(0.45)
+        threaded = threaded.union(crest)
+    return threaded
 
 
 def build(
@@ -17,77 +35,61 @@ def build(
     o_ring,
     tightened,
 ):
-    """Build an assembled SKINTOP-style metric polyamide cable gland."""
+    """Build a detailed SKINTOP-style metric polyamide cable gland."""
     pitch = 1.5
-    body_and_cap_h = overall_len - thread_len
-    body_h = 0.42 * body_and_cap_h
-    cap_h = body_and_cap_h - body_h
-    cap_r = outer_dia_a / 2.0
-    grip_depth = max(1.5, min(3.5, 0.07 * outer_dia_a))
-    grip_root_r = cap_r - grip_depth
+    body_h = overall_len - thread_len
+    lower_hex_h = 0.16 * body_h
+    middle_thread_h = 0.14 * body_h
+    upper_hex_h = 0.38 * body_h
+    dome_h = body_h - lower_hex_h - middle_thread_h - upper_hex_h
     bore_r = clamp_max / 2.0
-    exit_r = bore_r + max(1.8, 0.08 * outer_dia_a)
 
-    # Simplified external Mx1.5 connection thread: a minor cylinder plus
-    # pitch-spaced crests. The published nominal diameter and pitch are exact;
-    # the crest form is a proportion because the molded thread profile is not.
-    thread_core_d = thread_d - 1.2 * pitch
-    result = (
-        cq.Workplane("XY")
-        .workplane(offset=-thread_len)
-        .circle(thread_core_d / 2.0)
-        .extrude(thread_len)
-    )
-    crest_count = int(thread_len / pitch)
-    for i in range(crest_count):
-        z = -thread_len + 0.45 + i * pitch
-        crest = cq.Workplane("XY").workplane(offset=z).circle(thread_d / 2.0).extrude(0.45)
-        result = result.union(crest)
+    result = _ring_thread(thread_d, thread_len, -thread_len, pitch)
 
-    # The body is specified by its wrench size SW; the cap diameter A lies
-    # between the hex flats and corners in every catalog row.
-    hex_corner_d = sw / math.cos(math.radians(30.0))
-    body = cq.Workplane("XY").polygon(6, hex_corner_d).extrude(body_h)
-    result = result.union(body)
+    lower_hex = _hex_prism(sw, lower_hex_h, 0.0)
+    result = result.union(lower_hex)
 
-    # Revolved domed cap. The internal trapezoidal thread and seal insert are
-    # intentionally represented by the functional through-bore.
-    dome_start_z = body_h + 0.55 * cap_h
-    cap = (
-        cq.Workplane("XZ")
-        .moveTo(0.0, body_h)
-        .lineTo(grip_root_r, body_h)
-        .lineTo(grip_root_r, dome_start_z)
-        .lineTo(cap_r, dome_start_z)
-        .threePointArc(
-            (0.92 * cap_r, body_h + 0.82 * cap_h),
-            (exit_r, body_h + cap_h),
-        )
-        .lineTo(0.0, body_h + cap_h)
-        .close()
-        .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
-    )
+    middle_z = lower_hex_h
+    middle_thread_d = 0.74 * outer_dia_a
+    middle_thread = _ring_thread(middle_thread_d, middle_thread_h, middle_z, pitch)
+    result = result.union(middle_thread)
 
-    # Twelve longitudinal ribs reproduce the round-fluted cap while preserving
-    # the catalog diameter A as the outer envelope.
-    # Keep the wrench flats clear: the longitudinal grip ribs belong only to
-    # the round compression cap, with a smooth collar above the hex body.
-    flute_start_z = body_h + 0.14 * cap_h
-    flute_h = 0.34 * cap_h
+    upper_hex_z = middle_z + middle_thread_h
+    upper_hex = _hex_prism(sw, upper_hex_h, upper_hex_z)
+    result = result.union(upper_hex)
+
+    # Six ribs are placed only at upper-hex corners; flat centers stay smooth.
+    hex_corner_r = sw / (2.0 * math.cos(math.radians(30.0)))
+    rib_out = max(1.0, min(2.2, 0.045 * outer_dia_a))
+    rib_width = max(1.2, 0.05 * outer_dia_a)
+    rib_z = upper_hex_z + 0.12 * upper_hex_h
+    rib_h = 0.76 * upper_hex_h
     for angle in range(0, 360, 60):
         rib = (
             cq.Workplane("XY")
-            .workplane(offset=flute_start_z)
-            .center(grip_root_r + 0.5 * grip_depth - 0.75, 0.0)
-            .rect(grip_depth + 1.5, max(1.0, 0.12 * cap_r))
-            .extrude(flute_h)
+            .workplane(offset=rib_z)
+            .center(hex_corner_r + rib_out / 2.0 - 0.55, 0.0)
+            .rect(rib_out + 1.1, rib_width)
+            .extrude(rib_h)
             .rotate((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), angle)
         )
-        cap = cap.union(rib)
-    result = result.union(cap)
+        result = result.union(rib)
 
-    # M40 and larger rows carry a 2 mm section O-ring under the shoulder.
-    # Model it as the catalog-sized smooth band around the threaded core.
+    dome_z = upper_hex_z + upper_hex_h
+    cap_r = outer_dia_a / 2.0
+    exit_r = bore_r + max(1.8, 0.06 * outer_dia_a)
+    cap_top_z = dome_z + dome_h
+    dome = (
+        cq.Workplane("XZ")
+        .moveTo(0.0, dome_z)
+        .lineTo(cap_r, dome_z)
+        .threePointArc((1.02 * cap_r, dome_z + 0.36 * dome_h), (exit_r, cap_top_z))
+        .lineTo(0.0, cap_top_z)
+        .close()
+        .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
+    )
+    result = result.union(dome)
+
     if o_ring:
         seal_band = cq.Workplane("XY").workplane(offset=-2.0).circle(thread_d / 2.0).extrude(2.0)
         result = result.union(seal_band)
@@ -100,7 +102,3 @@ def build(
     )
     result = result.cut(bore)
     return result
-
-
-
-
