@@ -210,3 +210,35 @@ model sees), `preview_hard_zoom.png` (front/side/top/iso three-view of a hard
 example — the axis-aligned views the diagonal isos hide), and
 `preview_extremes.png` (smallest & largest sampled draw — acceptance evidence
 that both ends of your declared ranges produce sane geometry).
+
+### Named Assembly component previews
+
+A multi-component family should return a `cq.Assembly` whose shape-bearing
+nodes have stable semantic names. Its `family.json` declares:
+
+```json
+{
+  "solids": 4,
+  "components": [
+    {"name": "body", "quantity": 1},
+    {"name": "bolt", "quantity": 3}
+  ]
+}
+```
+
+Use the exact component name for a single instance (`body`) and a stable
+`<component>_<suffix>` name for repeated instances (`bolt_01`, `bolt_02`,
+`bolt_03`). Parent and child Assembly `Location` transforms are supported.
+The sum of `components[].quantity` must equal `solids`, and the names and
+quantities must match the shape-bearing Assembly nodes.
+
+```powershell
+uv run bench2 preview-parts <family>
+```
+
+The command deterministically renders `hard / seed 0` to
+`preview_parts.png`: one four-view row per semantic component type, the full
+assembly, then red-on-gray component highlight rows in metadata order.
+Repeated instances highlight together by default; pass `--per-instance` to
+highlight them one at a time. The normal `bench2 preview` command generates
+the same artifact automatically when `build()` returns a named Assembly.

