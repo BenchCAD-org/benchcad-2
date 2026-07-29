@@ -4,7 +4,7 @@ by humans reading 17 wanted lists.
 
 Sources, in precedence order (first hit wins for status):
   merged    designs/<family>/ on main
-  proposed  every [family]/[proposal] issue (open or closed)
+  proposed  every [family]/[family-assembly]/[proposal] issue (open or closed)
   wanted    the wanted-list tables inside [category] issues
 Each entry: {name, status, ref, category, anchor}.
 """
@@ -54,7 +54,7 @@ def main(root: Path):
     fam_issues = [i for i in paged(f"{API}/issues?state=all&labels=family")
                   if "pull_request" not in i]
     for i in fam_issues:
-        m = re.match(r"\[(?:family|proposal)\]\s+([a-z0-9_]+)", i["title"])
+        m = re.match(r"\[(?:family(?:-assembly)?|proposal)\]\s+([a-z0-9_]+)", i["title"])
         if m:
             cat = next((l["name"][4:] for l in i["labels"] if l["name"].startswith("cat:")), "")
             add(m.group(1), "proposed", f"#{i['number']}", category=cat)

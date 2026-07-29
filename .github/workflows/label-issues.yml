@@ -18,10 +18,11 @@ jobs:
         with:
           script: |
             const title = context.payload.issue.title || '';
-            const m = title.match(/^\s*\[([a-zA-Z]+)\]/);
+            const m = title.match(/^\s*\[([a-zA-Z-]+)\]/);
             if (!m) return;
             const map = {
               family:     ['family'],
+              'family-assembly': ['family'],
               proposal:   ['family', 'proposal'],
               bug:        ['bug'],
               feat:       ['enhancement'],
