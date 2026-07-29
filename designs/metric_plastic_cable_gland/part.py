@@ -1,4 +1,4 @@
-"""Parametric metric plastic cable gland."""
+﻿"""Parametric metric plastic cable gland."""
 
 import math
 
@@ -23,7 +23,7 @@ def build(
     body_h = 0.42 * body_and_cap_h
     cap_h = body_and_cap_h - body_h
     cap_r = outer_dia_a / 2.0
-    grip_depth = max(1.0, min(2.5, 0.05 * outer_dia_a))
+    grip_depth = max(1.5, min(3.5, 0.07 * outer_dia_a))
     grip_root_r = cap_r - grip_depth
     bore_r = clamp_max / 2.0
     exit_r = bore_r + max(1.8, 0.08 * outer_dia_a)
@@ -41,12 +41,7 @@ def build(
     crest_count = int(thread_len / pitch)
     for i in range(crest_count):
         z = -thread_len + 0.45 + i * pitch
-        crest = (
-            cq.Workplane("XY")
-            .workplane(offset=z)
-            .circle(thread_d / 2.0)
-            .extrude(0.45)
-        )
+        crest = cq.Workplane("XY").workplane(offset=z).circle(thread_d / 2.0).extrude(0.45)
         result = result.union(crest)
 
     # The body is specified by its wrench size SW; the cap diameter A lies
@@ -75,11 +70,14 @@ def build(
 
     # Twelve longitudinal ribs reproduce the round-fluted cap while preserving
     # the catalog diameter A as the outer envelope.
-    flute_h = 0.48 * cap_h
-    for angle in range(0, 360, 30):
+    # Keep the wrench flats clear: the longitudinal grip ribs belong only to
+    # the round compression cap, with a smooth collar above the hex body.
+    flute_start_z = body_h + 0.14 * cap_h
+    flute_h = 0.34 * cap_h
+    for angle in range(0, 360, 60):
         rib = (
             cq.Workplane("XY")
-            .workplane(offset=body_h)
+            .workplane(offset=flute_start_z)
             .center(grip_root_r + 0.5 * grip_depth - 0.75, 0.0)
             .rect(grip_depth + 1.5, max(1.0, 0.12 * cap_r))
             .extrude(flute_h)
@@ -91,12 +89,7 @@ def build(
     # M40 and larger rows carry a 2 mm section O-ring under the shoulder.
     # Model it as the catalog-sized smooth band around the threaded core.
     if o_ring:
-        seal_band = (
-            cq.Workplane("XY")
-            .workplane(offset=-2.0)
-            .circle(thread_d / 2.0)
-            .extrude(2.0)
-        )
+        seal_band = cq.Workplane("XY").workplane(offset=-2.0).circle(thread_d / 2.0).extrude(2.0)
         result = result.union(seal_band)
 
     bore = (
@@ -107,3 +100,7 @@ def build(
     )
     result = result.cut(bore)
     return result
+
+
+
+
