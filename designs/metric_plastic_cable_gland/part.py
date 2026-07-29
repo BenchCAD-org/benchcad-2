@@ -5,9 +5,10 @@ import math
 import cadquery as cq
 
 
-def _hex_prism(sw, height, z0):
+def _hex_prism(sw, height, z0, chamfer_size):
     corner_d = sw / math.cos(math.radians(30.0))
-    return cq.Workplane("XY").workplane(offset=z0).polygon(6, corner_d).extrude(height)
+    part = cq.Workplane("XY").workplane(offset=z0).polygon(6, corner_d).extrude(height)
+    return part.edges("|Z").chamfer(chamfer_size)
 
 
 def _ring_thread(major_d, height, z0, pitch):
@@ -44,36 +45,47 @@ def build(
     dome_h = body_h - lower_hex_h - middle_thread_h - upper_hex_h
     bore_r = clamp_max / 2.0
 
-    result = _ring_thread(thread_d, thread_len, -thread_len, pitch)
+    result = _ring_thread(thread_d, thread_len + 0.2, -thread_len, pitch)
 
-    lower_hex = _hex_prism(sw, lower_hex_h, 0.0)
+    lower_hex = _hex_prism(sw, lower_hex_h, 0.0, 0.45)
     result = result.union(lower_hex)
 
     middle_z = lower_hex_h
     middle_thread_d = 0.74 * outer_dia_a
-    middle_thread = _ring_thread(middle_thread_d, middle_thread_h, middle_z, pitch)
+    middle_thread = _ring_thread(
+        middle_thread_d,
+        middle_thread_h + 0.4,
+        middle_z - 0.2,
+        pitch,
+    )
     result = result.union(middle_thread)
 
     upper_hex_z = middle_z + middle_thread_h
-    upper_hex = _hex_prism(sw, upper_hex_h, upper_hex_z)
-    result = result.union(upper_hex)
+    upper_hex = _hex_prism(sw, upper_hex_h, upper_hex_z, 0.65)
 
-    # Six ribs are placed only at upper-hex corners; flat centers stay smooth.
+    # Two narrow pockets are cut beside each corner. Their central untouched
+    # strip forms the grip ridge; the broad hex-flat centres remain smooth.
     hex_corner_r = sw / (2.0 * math.cos(math.radians(30.0)))
-    rib_out = max(1.0, min(2.2, 0.045 * outer_dia_a))
-    rib_width = max(1.2, 0.05 * outer_dia_a)
-    rib_z = upper_hex_z + 0.12 * upper_hex_h
-    rib_h = 0.76 * upper_hex_h
-    for angle in range(0, 360, 60):
-        rib = (
-            cq.Workplane("XY")
-            .workplane(offset=rib_z)
-            .center(hex_corner_r + rib_out / 2.0 - 0.55, 0.0)
-            .rect(rib_out + 1.1, rib_width)
-            .extrude(rib_h)
-            .rotate((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), angle)
-        )
-        result = result.union(rib)
+    notch_radial = max(1.8, 0.08 * outer_dia_a)
+    notch_tangent = max(0.8, 0.03 * outer_dia_a)
+    notch_z = upper_hex_z + 0.11 * upper_hex_h
+    notch_h = 0.78 * upper_hex_h
+    for corner_angle in range(0, 360, 60):
+        for side in (-1.0, 1.0):
+            notch = (
+                cq.Workplane("XY")
+                .workplane(offset=notch_z)
+                .center(hex_corner_r - 0.55, 0.0)
+                .rect(notch_radial, notch_tangent)
+                .extrude(notch_h)
+                .rotate(
+                    (0.0, 0.0, 0.0),
+                    (0.0, 0.0, 1.0),
+                    corner_angle + side * 8.5,
+                )
+            )
+            upper_hex = upper_hex.cut(notch)
+    result = result.union(upper_hex)
 
     dome_z = upper_hex_z + upper_hex_h
     cap_r = outer_dia_a / 2.0
@@ -81,8 +93,8 @@ def build(
     cap_top_z = dome_z + dome_h
     dome = (
         cq.Workplane("XZ")
-        .moveTo(0.0, dome_z)
-        .lineTo(cap_r, dome_z)
+        .moveTo(0.0, dome_z - 0.2)
+        .lineTo(cap_r, dome_z - 0.2)
         .threePointArc((1.02 * cap_r, dome_z + 0.36 * dome_h), (exit_r, cap_top_z))
         .lineTo(0.0, cap_top_z)
         .close()
