@@ -1,12 +1,12 @@
 """stop_bar_tailpiece — the parametric part.
 
 A Gibson-style stop bar tailpiece (Gotoh GE101Z class), bar only — studs and
-bushings are separate hardware. The whole outer form is ONE lofted surface:
-D-shaped cross-sections (flat back, arc front) swept along the bar, their
-height following the R-crown over the centre body and blending down through a
-smooth cosine ramp into the thin end ears; a stadium plan outline rounds the
-ear ends. Six string holes (stepped bores on the real part) and two open stud
-U-slots are cut after the loft. Bar along X, string holes along Y, base z=0.
+bushings are separate hardware. A ruled loft carries the drawing's D-section
+along the crowned centre body and blends down into two flat end ears. In plan,
+each ear is the dimension-driven circular lobe about its stud centre, clipped
+at the front and rear faces; an 8 mm parallel-sided U-slot leaves the short
+outboard curl visible in the drawing. Six string bores run front-to-back,
+stepped from both faces on the real part. Bar along X, bores along Y, base z=0.
 
 Interface + examples: docs/DESIGN_SPEC.md
 """
@@ -31,15 +31,13 @@ def _d_section(wp, w, h):
     )
 
 
-def _heights(overall_l, stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w):
-    """(x, h) loft stations for the half-bar, mirrored to the full bar: crowned
-    centre, cosine blend down over ramp_len, flat ear to the end."""
-    x_r0 = stud_span / 2.0 - slot_w / 2.0 - ramp_len  # blend starts
-    x_r1 = x_r0 + ramp_len                             # ear begins
-    x_end = overall_l / 2.0
+def _heights(stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w):
+    """Mirrored (x, height) stations for crown and body-to-ear blends."""
+    x_ear = stud_span / 2.0 - slot_w / 2.0
+    x_r0 = x_ear - ramp_len
 
     def crown(x):
-        return bar_h - x * x / (2.0 * crown_r)
+        return bar_h - (crown_r - math.sqrt(crown_r * crown_r - x * x))
 
     def blend(x):
         t = (x - x_r0) / ramp_len
@@ -48,15 +46,23 @@ def _heights(overall_l, stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w):
     # dense stations so a RULED loft (no spline overshoot) still reads smooth
     half = [(x_r0 * i / 5.0, crown(x_r0 * i / 5.0)) for i in range(6)]
     half += [(x_r0 + ramp_len * i / 7.0, blend(x_r0 + ramp_len * i / 7.0)) for i in range(1, 8)]
-    half += [(x_end, tab_t)]
     return sorted({(round(-x, 6), h) for x, h in half} | {(round(x, 6), h) for x, h in half})
+
+
+def _string_z(tab_t, hole_d):
+    """Bore centre from the GE101Z elevation: the 5.1 mm entries sit low in
+    the 7 mm tab envelope, with a small web left at the base and at the top."""
+    return tab_t - 0.62 * hole_d
 
 
 def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
           string_pitch, hole_d, slot_w, stepped_holes):
-    stations = _heights(overall_l, stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w)
+    x_ear = stud_span / 2.0 - slot_w / 2.0
+    lobe_r = (overall_l - stud_span) / 2.0
+    stations = _heights(stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w)
 
-    # one loft through D-sections whose height follows crown -> blend -> ear
+    # Centre body: the D-sections follow the exact R-crown and finish at the
+    # ear plane. Dense ruled stations avoid spline overshoot in the pinned OCC.
     wp = cq.Workplane("YZ").workplane(offset=stations[0][0])
     wp = _d_section(wp, bar_w, stations[0][1])
     prev_x = stations[0][0]
@@ -65,51 +71,85 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
         prev_x = x
     result = wp.loft(ruled=True)
 
-    # stadium plan outline rounds the ear ends (radius = bar_w/2)
-    plan = cq.Workplane("XY").slot2D(overall_l, bar_w, 0).extrude(1.5 * bar_h)
-    result = result.intersect(plan)
+    # Ear plan read directly from the sheet. At nominal dimensions the radius
+    # is (102 - 82)/2 = 10 mm about each stud. Clipping that circle at the
+    # +/-9 mm faces makes the tiny flat nose/curl beyond the 8 mm slot wall.
+    join_overlap = 0.05
+    circle_face_x = math.sqrt(lobe_r * lobe_r - (bar_w / 2.0) ** 2)
+    for side in (-1.0, 1.0):
+        x_stud = side * stud_span / 2.0
+        x_join = side * (x_ear - join_overlap)
+        x_face = x_stud + side * circle_face_x
+        x_tip = x_stud + side * lobe_r
+        ear = (
+            cq.Workplane("XY")
+            .moveTo(x_join, bar_w / 2.0)
+            .lineTo(x_face, bar_w / 2.0)
+            .threePointArc((x_tip, 0.0), (x_face, -bar_w / 2.0))
+            .lineTo(x_join, -bar_w / 2.0)
+            .close()
+            .extrude(tab_t)
+        )
+        result = result.union(ear.val())
 
-    # six string bores (along Y), set high like the drawing: the counterbores
-    # break out through the crown top (the GE101Z top view shows all six as
-    # open notches on the crown)
-    drop_out = (2.5 * string_pitch) ** 2 / (2.0 * crown_r)  # crown drop at the outer bores
-    z_hole = bar_h - drop_out - hole_d / 2.0 + 1.2
-    pts = [((i - 2.5) * string_pitch, z_hole) for i in range(6)]
+    # Six low string bores along Y.  Their large entries intersect the curved
+    # front crown (the six plan-view breakouts) while remaining circular in the
+    # elevation. Their centres follow the same R300 elevation as the sheet.
+    x_outer = 2.5 * string_pitch
+    drop_out = crown_r - math.sqrt(crown_r * crown_r - x_outer * x_outer)
+    z_outer = _string_z(tab_t, hole_d)
+    pts = []
+    for i in range(6):
+        x_hole = (i - 2.5) * string_pitch
+        drop_here = crown_r - math.sqrt(crown_r * crown_r - x_hole * x_hole)
+        pts.append((x_hole, z_outer + drop_out - drop_here))
+
     if stepped_holes:
-        # drawing section: counterbored phi5.1 x 4.5 from BOTH faces, phi3 web
-        web_d = 0.6 * hole_d
+        # Drawing section: phi5.1 counterbores end exactly 4.5 mm in from BOTH
+        # section datum faces; the middle web is a phi3 through bore.
+        web_d = (3.0 / 5.1) * hole_d
+        cb_depth = 4.5
+        overcut = 0.2
         thru = cq.Workplane("XZ").pushPoints(pts).circle(web_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
-        cb_f = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(0.35 * bar_w).translate((0.0, -0.3 * bar_w, 0.0))
-        cb_b = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(0.35 * bar_w).translate((0.0, 0.65 * bar_w, 0.0))
-        result = result.cut(thru).cut(cb_f).cut(cb_b)
+        cb_flat = (
+            cq.Workplane("XZ")
+            .pushPoints(pts)
+            .circle(hole_d / 2.0)
+            .extrude(cb_depth + overcut)
+            .translate((0.0, -bar_w / 2.0 + cb_depth, 0.0))
+        )
+        cb_crown = (
+            cq.Workplane("XZ")
+            .pushPoints(pts)
+            .circle(hole_d / 2.0)
+            .extrude(cb_depth + overcut)
+            .translate((0.0, bar_w / 2.0 + overcut, 0.0))
+        )
+        result = result.cut(thru).cut(cb_flat).cut(cb_crown)
     else:
         thru = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
         result = result.cut(thru)
 
-    # ear lobes: the drawing's plan view bulges each ear into a rounded lobe
-    # around the stud (the hook mass the slot cuts into)
-    for s in (-1.0, 1.0):
-        lobe = (
+    # The marked 8 mm is the perpendicular X distance between these parallel
+    # faces. They run from the front edge to a semicircular closed end centred
+    # on the stud line; there is no rotated or flared wedge in the plan view.
+    slot_r = slot_w / 2.0
+    cut_h = 3.0 * max(tab_t, bar_h)
+    mouth_reach = bar_w / 2.0 + 1.0
+    for side in (-1.0, 1.0):
+        x_stud = side * stud_span / 2.0
+        closed_end = (
             cq.Workplane("XY")
-            .circle(slot_w)
-            .extrude(tab_t)
-            .translate((s * stud_span / 2.0, 0.0, 0.0))
+            .circle(slot_r)
+            .extrude(cut_h)
+            .translate((x_stud, 0.0, -tab_t))
         )
-        result = result.union(lobe)
-
-    # stud slots per the drawing: width slot_w ALONG the bar, opening through the
-    # FRONT long face and closing in a semicircle just past the stud centre —
-    # the ear tips stay closed (curled hooks), no end-opening forks
-    for s in (-1.0, 1.0):
-        x_stud = s * stud_span / 2.0
-        y_stop = -1.0                      # closed end just past the centreline
-        reach = bar_w + 4.0                # from beyond the front face inward
-        cutter = (
+        mouth = (
             cq.Workplane("XY")
-            .box(slot_w, reach, 6.0 * tab_t)
-            .translate((x_stud, y_stop + reach / 2.0, tab_t))
-            .union(cq.Workplane("XY").circle(slot_w / 2.0).extrude(6.0 * tab_t).translate((x_stud, y_stop, -tab_t)))
+            .rect(slot_w, mouth_reach)
+            .extrude(cut_h)
+            .translate((x_stud, mouth_reach / 2.0, -tab_t))
         )
-        result = result.cut(cutter)
+        result = result.cut(closed_end.val()).cut(mouth.val())
 
     return result

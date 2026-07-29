@@ -6,13 +6,17 @@ audits. Nothing is coupled, so there is no refine(). Spec: docs/DESIGN_SPEC.md
 
 Sources:
 - Gotoh official 2D drawings GE101Z / GE101A / GE101Z-T (GE101Z-Dim.pdf et al):
-  overall 101.5-102, stud span 82, section 12.3-12.75 x 17.8-18, end tab
+  overall 101.5-102, stud span 82, section 12.3-12.75 high x 17.8-18 wide, end tab
   6.8-7, crown R250-R300, string pitch 10.3 (span 51.5), stepped string bores
   phi5.1 -> phi3, stud slot 8.
 - Cross-vendor (StewMac Gotoh/Gibson, Faber TP-59, Allparts): stud span
   3-1/4 in = 82.55, overall 101.27, slot 8.1 — the open slots absorb the
   metric/imperial 0.55 mm difference.
 """
+
+import math
+
+from part import _string_z
 
 
 # ── 1. PARAM_SPEC ────────────────────────────────────────────────────────────
@@ -34,15 +38,15 @@ PARAM_SPEC = {
     "bar_w": dict(
         desc="bar section width (front-back)",
         unit="mm",
-        range={"easy": (12.3, 12.75), "medium": (12.0, 13.2), "hard": (11.5, 13.8)},
-        source="GE101Z 12.75 / GE101A 12.3; proportion at hard",
+        range={"easy": (17.8, 18.0), "medium": (16.5, 18.5), "hard": (15.5, 19.0)},
+        source="GE101Z 18 / GE101A 17.8; proportion at hard",
         askable=True,
     ),
     "bar_h": dict(
         desc="bar section height at the crown crest",
         unit="mm",
-        range={"easy": (17.8, 18.0), "medium": (16.5, 18.5), "hard": (15.5, 19.0)},
-        source="GE101Z 18 / GE101A 17.8; proportion at hard",
+        range={"easy": (12.3, 12.75), "medium": (12.0, 13.2), "hard": (11.5, 13.8)},
+        source="GE101Z 12.75 / GE101A 12.3; proportion at hard",
         askable=True,
     ),
     "tab_t": dict(
@@ -103,10 +107,13 @@ def check(p: dict) -> list[str]:
     """Engineering constraints (empty = valid). Each cites its rule."""
     bad = []
 
-    # the ear tips are CLOSED hooks past the slots (drawing/photo): material must
-    # wrap beyond each stud slot to the rounded tip
-    if p["overall_l"] < p["stud_span"] + p["slot_w"] + 6.0:
-        bad.append("overall_l < stud_span + slot_w + 6: no closed hook tip past the stud slot (GE101Z ears are closed)")
+    # In plan the lobe is centred on the stud, reaches the overall dimension,
+    # and is clipped by the +/-width/2 faces. It must still lie outboard of the
+    # slot corner there, or the drawing's short curled nose disappears.
+    lobe_r = (p["overall_l"] - p["stud_span"]) / 2.0
+    mouth_corner_r = math.sqrt((p["bar_w"] / 2.0) ** 2 + (p["slot_w"] / 2.0 + 0.05) ** 2)
+    if lobe_r <= mouth_corner_r:
+        bad.append("ear lobe does not enclose the front outboard slot corner: curled hook tip would be open (GE101Z plan view; 0.05 mm clearance is proportion)")
 
     # the six-string span must clear both stud slots inside the raised body
     if 5.0 * p["string_pitch"] + p["hole_d"] > p["stud_span"] - p["slot_w"] - 6.0:
@@ -119,19 +126,18 @@ def check(p: dict) -> list[str]:
     # early (still-tall) third of the blend may overlap them
     if x_r0 + 0.35 * p["ramp_len"] < 2.5 * p["string_pitch"] + p["hole_d"] / 2.0 + 1.0:
         bad.append("blend drops too early: outer string bore would break out of the descending top (GE101Z outer bores sit at the blend start)")
-    crown_at_r0 = p["bar_h"] - x_r0 * x_r0 / (2.0 * p["crown_r"])
+    crown_at_r0 = p["bar_h"] - (p["crown_r"] - math.sqrt(p["crown_r"] ** 2 - x_r0 ** 2))
     if crown_at_r0 < p["tab_t"] + 2.0:
         bad.append("crown drops below tab_t+2 before the blend starts: crown too deep for the body (GE101Z crown is shallow)")
 
-    # the slot needs side walls in the bar width
+    # the U-slot's round closed end needs a real back wall in the plan width
     if p["slot_w"] > p["bar_w"] - 3.5:
-        bad.append("slot_w > bar_w - 3.5: stud slot leaves <1.75 mm ear wall each side")
+        bad.append("slot_w > bar_w - 3.5: stud slot leaves <1.75 mm at its closed-end back wall")
 
-    # the high-set bores (breaking out through the crown, per the drawing) must
-    # keep their pocket floor above the ear plane
-    drop_out = (2.5 * p["string_pitch"]) ** 2 / (2.0 * p["crown_r"])
-    z_hole = p["bar_h"] - drop_out - p["hole_d"] / 2.0 + 1.2
-    if z_hole - p["hole_d"] / 2.0 < p["tab_t"] + 1.5:
-        bad.append("string-bore pocket floor reaches the ear plane: bar too short / bore too big for the crown-breakout bores")
+    # the low bores shown in elevation retain a web above the base; their large
+    # front entries still break through the D-section crown in plan
+    z_hole = _string_z(p["tab_t"], p["hole_d"])
+    if z_hole - p["hole_d"] / 2.0 < 0.8:
+        bad.append("string bore leaves <0.8 mm above the base: GE101Z elevation shows a lower retaining web")
 
     return bad
