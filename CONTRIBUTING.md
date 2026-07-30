@@ -6,7 +6,7 @@ parameter ranges, constraints, reference evidence, and provenance.
 
 Questions → [Discord](https://discord.gg/be9AtvrDyK). New to GitHub? Use the
 step-by-step guides: [English](docs/GETTING_STARTED.md) ·
-[中文](docs/GETTING_STARTED.zh.md).
+[Chinese](docs/GETTING_STARTED.zh.md).
 
 ## The contributor loop
 

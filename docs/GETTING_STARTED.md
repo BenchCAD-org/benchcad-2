@@ -1,6 +1,6 @@
 # Getting started — for engineers who don't use GitHub
 
-You do **not** need to know GitHub. Follow the steps literally. 中文版:
+You do **not** need to know GitHub. Follow the steps literally. Chinese version:
 [GETTING_STARTED.zh.md](GETTING_STARTED.zh.md)
 
 **Jargon, translated once:** *repository (repo)* = the project folder online ·
