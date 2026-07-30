@@ -29,7 +29,7 @@ body:
     id: pictures
     attributes:
       label: Part pictures (drag images here)
-      description: "REQUIRED: drag in a datasheet engineering drawing and/or a photo of the part. Reviewers compare the preview renders against these."
+      description: "REQUIRED: a TRUE 2D orthographic dimensioned drawing (multi-view sheet with dimension lines — ideally the standard's parametric letter drawing that pairs with the size table), plus a photo of the part. Dimension arrows overlaid on a product photo/render do NOT count as the drawing. Reviewers compare the preview renders against these."
       placeholder: "Drag & drop the drawing / photo into this box."
     validations:
       required: true
@@ -37,9 +37,9 @@ body:
     id: table
     attributes:
       label: Key rows of the standard table
-      description: "Paste a screenshot of the dimension table, or type the key rows. The design's sampling must COVER this table (the validator checks it)."
+      description: "Paste a screenshot of the dimension table, or type the key rows. Name every symbol column physical-quantity + symbol — `height_G=32`, `bore_E=15` — never the bare letter (`G=32`): a bare letter cannot be checked against the drawing by anyone else. The design's sampling must COVER this table (the validator checks it)."
       placeholder: |
-        e.g. row A: d=12, D=28, L=40 / row B: d=20, D=45, L=70 / …
+        e.g. row A: bore_d=12, outer_dia_D=28, length_L=40 / row B: bore_d=20, outer_dia_D=45, length_L=70 / …
     validations:
       required: true
   - type: textarea
