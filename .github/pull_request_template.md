@@ -10,6 +10,33 @@
 - Closes #<!-- the family issue number (required) -->
 - What the part is (one sentence):
 
+## Reference (re-embedded from the family issue — CI checks this section)
+
+<!-- Copy the issue's dimensioned drawing AND product photo here (2+ images),
+     so the renders below can be compared against the reference in one place. -->
+| Dimensioned drawing | Product photo |
+|---|---|
+| <!-- ![drawing](…) --> | <!-- ![photo](…) --> |
+
+## Renders (regenerated at this PR's head — CI checks each name appears)
+
+<!-- Keep the filename in the alt text. Link the committed file at your head
+     SHA (https://raw.githubusercontent.com/<org>/<repo>/<sha>/designs/<family>/…)
+     or drag the image in and keep the name in the alt text. -->
+
+![preview.png](…)          <!-- easy/medium/hard difficulty grid -->
+![preview_views.png](…)    <!-- the four benchmark views the model sees -->
+![preview_hard_zoom.png](…)<!-- front/side/top/iso of a hard example -->
+![preview_extremes.png](…) <!-- the min & max sampled instances -->
+<!-- multi-body family: also ![preview_parts.png](…) — every part in isolation -->
+
+## Verification (CI checks a table exists)
+
+<!-- The issue's parameter rows + what you sampled: one row per verified
+     instance (difficulty/seed, key dims, solids count, bbox …). -->
+| difficulty | seed | … | solids | bbox (mm) |
+|---|---|---|---|---|
+
 ## Checklist
 
 - [ ] `uv run bench2 validate <family>` **passes locally** (CI re-runs it) —

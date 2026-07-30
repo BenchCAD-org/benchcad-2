@@ -10,6 +10,11 @@ name: family-pr-checks
 # example) is WARNED about, not required, until the PRs that predate it have
 # backfilled it and main is clean — then step 3b moves into step 3's list.
 #
+# It also enforces that the PR BODY shows its evidence: the reference images
+# re-embedded from the family issue, all four renders embedded by name, the
+# parameter/verification table, and — for a multi-body family — the per-part
+# render preview_parts.png (file + embed).
+#
 # It runs on EVERY PR (no `paths` filter) and passes immediately for a non-family
 # PR, so it is safe to add to the repo ruleset's required checks (context name:
 # `family-pr-checks`) without leaving docs/CI-only PRs stuck "Expected — waiting".
@@ -69,6 +74,15 @@ jobs:
             exit 1
           fi
 
+          # 3a) a multi-body family (family.json declares "solids") must also
+          # ship the per-part render — every component individually verifiable.
+          if grep -q '"solids"' "designs/${FAM}/family.json" 2>/dev/null; then
+            if [ ! -f "designs/${FAM}/preview_parts.png" ]; then
+              echo "::error::designs/${FAM}/ declares a multi-body family (\"solids\" in family.json) but has no preview_parts.png — render every component in isolation next to the assembly and commit it. / 多体装配必须提交 preview_parts.png(每个零件单独渲染 + 装配图)。"
+              exit 1
+            fi
+          fi
+
           # 3b) the fourth render — front/side/top/iso of a hard example. `bench2
           # preview` emits it, but PRs branched before that landed cannot have it,
           # so warn (don't fail) until the backlog and main are backfilled.
@@ -102,6 +116,47 @@ jobs:
             if (fams.length !== 1) { core.info('not a single-family PR — handled by the scope step'); return; }
             const fam = fams[0];
             const body = context.payload.pull_request.body || '';
+
+            // ── the PR body must SHOW its evidence ─────────────────────────
+            // (a) all four renders embedded by name (alt text or URL); the
+            //     hard-zoom name is only required once the file exists.
+            const fs = require('fs');
+            const missing = [];
+            const wantNames = ['preview_views.png', 'preview_extremes.png', 'preview_hard_zoom.png'];
+            for (const name of wantNames) {
+              if (name === 'preview_hard_zoom.png' && !fs.existsSync(`designs/${fam}/preview_hard_zoom.png`)) continue;
+              if (!body.includes(name)) missing.push(name);
+            }
+            if (!/(?<![\w_])preview\.png/.test(body)) missing.push('preview.png');
+            if (missing.length) {
+              core.setFailed(
+                `The PR body must embed every render by name (paste the template's image lines; keep the filename in the alt text or URL). Missing: ${missing.join(', ')}. ` +
+                `/ PR 描述必须按名嵌入全部渲染图(缺:${missing.join(', ')})。`);
+            }
+            // (b) the reference images from the family issue, re-embedded
+            const refSec = body.match(/##\s*Reference[\s\S]*?(?=\n##\s|$)/i);
+            const refImgs = refSec ? ((refSec[0].match(/!\[|<img/g)) || []).length : 0;
+            if (refImgs < 2) {
+              core.setFailed(
+                'The PR body needs a "## Reference" section re-embedding the family issue\'s dimensioned drawing AND photo (2+ images), so reviewers compare renders against the reference in one place. ' +
+                '/ PR 描述需要 "## Reference" 段落,重新嵌入 issue 里的工程图和照片(≥2 张图)。');
+            }
+            // (c) the parameter / verification table
+            if (!/^\s*\|.*\|/m.test(body)) {
+              core.setFailed(
+                'The PR body needs the parameter/verification table (markdown table): the issue\'s dimension rows, plus per-instance verification for what you sampled. ' +
+                '/ PR 描述需要参数/验证表(markdown 表格):issue 的尺寸行 + 每个采样实例的验证行。');
+            }
+            // (d) multi-body: the per-part render embedded too
+            try {
+              const fj = JSON.parse(fs.readFileSync(`designs/${fam}/family.json`, 'utf8'));
+              if ((fj.solids || 0) >= 2 && !body.includes('preview_parts.png')) {
+                core.setFailed(
+                  'Multi-body family: embed preview_parts.png (each component rendered in isolation next to the assembly) in the PR body. ' +
+                  '/ 多体装配:PR 描述里也要嵌入 preview_parts.png。');
+              }
+            } catch (e) { core.info('family.json parse skipped: ' + e.message); }
+
             const unchecked = (body.match(/^\s*-\s*\[ \]/gm) || []).length;
             if (unchecked > 0) {
               core.setFailed(
