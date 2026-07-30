@@ -25,12 +25,13 @@ The slots are cut after fusion so the final body stays single-piece.
 
 ### Determined mapping
 
-These mappings are taken directly from the `LBSBB8-3030` table row:
+These mappings are taken directly from the `LBSBB8-3030` table row or are the
+closest geometry-safe interpretation of that row in this implementation:
 
 - `leg_length_1` -> `L = 28`
 - `leg_length_2` -> `H = 35`
 - `slot_width` -> `W = 6`
-- `bracket_width` -> `W1 = 7.5` in the reference row; the implementation treats it as the common-edge width envelope and keeps it as a documented baseline rather than a guaranteed literal section thickness
+- `bracket_width` -> implementation-wide total body width; the model uses `L = 28` as the symmetric width span `[-14, +14]` rather than the smaller `W1` detail from the reference table
 - `gusset_length_1` / `gusset_length_2` -> `A = 13.5` as a shared gusset reach envelope in this implementation
 - `gusset_thickness` -> `B = 8`
 - `edge_radius` -> `R = 3.5`

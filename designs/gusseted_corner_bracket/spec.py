@@ -21,7 +21,7 @@ PARAM_SPEC = {
     "bracket_width": dict(
         desc="common edge width of the bracket",
         unit="mm",
-        range={"easy": (11.0, 13.0), "medium": (24.0, 30.0), "hard": (30.0, 36.0)},
+        range={"easy": (27.0, 29.5), "medium": (24.0, 30.0), "hard": (30.0, 36.0)},
         source="family requirement: width centered across the common connection edge",
         askable=True,
     ),
@@ -101,7 +101,7 @@ PARAM_SPEC = {
 DEFAULTS = {
     "leg_length_1": 28.0,
     "leg_length_2": 35.0,
-    "bracket_width": 12.0,
+    "bracket_width": 28.0,
     "plate_thickness": 4.5,
     "gusset_thickness": 8.0,
     "gusset_length_1": 13.5,

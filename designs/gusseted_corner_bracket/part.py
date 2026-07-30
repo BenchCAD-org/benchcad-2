@@ -74,7 +74,7 @@ def build(
         (0.0, 0.0),
     ]
     section = [(max(0.0, min(x, bracket_width)), max(0.0, y)) for x, y in section]
-    result = cq.Workplane("YZ").polyline(section).close().extrude(bracket_width, both=False)
+    result = cq.Workplane("YZ").polyline(section).close().extrude(bracket_width / 2.0, both=True)
 
     if edge_radius > 0.0 and gusset_radius > 0.0:
         result = _safe_fillet(result, "|X", min(edge_radius * 0.25, plate_thickness * 0.08))
