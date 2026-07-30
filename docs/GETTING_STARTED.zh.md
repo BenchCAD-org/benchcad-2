@@ -58,6 +58,11 @@
    `bench2 new` 生成的文件已经用 TODO 标出每个必填项。再填
    `family.json`(标签);如果零件依赖尺寸表或公式,用 `NOTES.md` 记录
    来源符号 → 参数 → 公式的映射。
+   `build()` 必须给 `result` 赋值,只能用 `cq`/`math`/自己写的 `_helper`
+   (不 import 其它任何东西),返回一个实体——多体零件返回 compound /
+   `cq.Assembly`(并在 `family.json` 里声明 `"solids": N`)。完整规则见
+   [`DESIGN_SPEC.md`](DESIGN_SPEC.md)。裸跑 CadQuery 脚本报 `HashCode` 错,
+   见 [`DEBUGGING.md`](DEBUGGING.md) → Gotchas。
 9. 自查,两条命令,本机秒出结果:
    ```bash
    uv run bench2 validate my_family   # PASS = 你的代码没问题,这就是标准
@@ -67,6 +72,11 @@
    datasheet 工程图并排对照。改到 PASS、渲染像真零件为止。
 
 ### 提交
+
+family 目录里**只放交付包**——`part.py`、`spec.py`、`family.json`、可选的
+`NOTES.md`,以及 `preview_*.png` 渲染图。**datasheet、工程图、照片留在 issue
+里,不要放进 `designs/`**——CI 会拒绝 family 目录里的参考文件(把它们下载到
+别的地方,免得被 `git add` 顺手带进来)。
 
 10. ```bash
     git add designs/my_family
