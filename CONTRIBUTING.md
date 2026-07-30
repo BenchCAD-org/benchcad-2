@@ -59,7 +59,10 @@ The implementer is the first verifier. Confirm:
 2. A true 2D orthographic dimensioned drawing that maps symbols to geometry —
    ideally the standard's parametric letter drawing paired with its size table
    (dimension arrows drawn over a product photo/render do not qualify).
-3. A table or documented range containing minimum and maximum examples.
+3. A table or documented range containing minimum and maximum examples,
+   its columns named physical-quantity + drawing symbol (`height_G`,
+   `bore_E`, `pitch_P`) — a bare letter is ambiguous once it leaves the
+   drawing, and carries into the `PARAM_SPEC` names.
 4. At least two source values spot-checked manually.
 5. At least four meaningful parameters and enough geometric variation.
 6. No duplicate or near-duplicate in `registry.json` or active issues.
