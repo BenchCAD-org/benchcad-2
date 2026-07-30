@@ -43,9 +43,7 @@ jobs:
             if (!m) {
               core.setFailed(
                 'PR description must link its family issue, e.g. `Closes #12` ' +
-                '(CONTRIBUTING.md station 3). Edit the PR description — no new push needed. ' +
-                '/ PR 描述里需要写 `Closes #<issue编号>` 关联 family issue,' +
-                '直接编辑 PR 描述即可,不用重新 push。');
+                '(CONTRIBUTING.md station 3). Edit the PR description — no new push needed. ');
               return;
             }
             const n = Number(m[1]);
@@ -119,8 +117,7 @@ jobs:
             for (const m of movingRefs) {
               core.warning(
                 `image pinned to a moving ref: ${m} — re-pin to the commit sha. A branch ref ` +
-                'silently breaks the image the moment the asset is renamed or the branch is deleted. ' +
-                '/ 图片钉在分支名上,请改钉 commit sha,否则文件一改名/分支一删图就碎。');
+                'silently breaks the image the moment the asset is renamed or the branch is deleted. ');
             }
 
             const errs = [];
@@ -129,18 +126,14 @@ jobs:
                 `image url(s) that do not resolve: ${broken.join('; ')} — re-pin to a commit that ` +
                 'actually contains the file. If the family dir was renamed (e.g. to the `_asm` form), ' +
                 'the previews live at the NEW path only from the rename commit onward — bump every ' +
-                'image url to the new head sha. ' +
-                '/ 图片链接打不开:若刚把目录改名(如 _asm),预览图只在改名那个 commit 之后才有新路径,' +
-                '请把所有图片 url 的 sha 一并更新到最新 head。');
+                'image url to the new head sha. ');
             }
             if (moving.length) {
               errs.push(
                 `designs/ image(s) pinned to a branch instead of a commit sha: ${moving.join('; ')} — ` +
                 'your fork branch is deleted when this PR merges and every one of those images dies ' +
                 'with it, leaving the merged PR unreviewable. Copy the sha from the branch and use ' +
-                'blob/<sha>/<path>?raw=true. ' +
-                '/ designs/ 下的图片钉在分支名上:本 PR 合并后 fork 分支会被删除,这些图会全部失效,' +
-                '请改用 blob/<sha>/<path>?raw=true。');
+                'blob/<sha>/<path>?raw=true. ');
             }
             if (errs.length) {
               core.setFailed(errs.join(' || ') + ' Edit the PR description — no new push needed.');
