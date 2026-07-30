@@ -45,7 +45,8 @@ def _heights(stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w):
 
     # dense stations so a RULED loft (no spline overshoot) still reads smooth
     half = [(x_r0 * i / 5.0, crown(x_r0 * i / 5.0)) for i in range(6)]
-    half += [(x_r0 + ramp_len * i / 7.0, blend(x_r0 + ramp_len * i / 7.0)) for i in range(1, 8)]
+    half += [(x_r0 + ramp_len * i / 14.0, blend(x_r0 + ramp_len * i / 14.0)) for i in range(1, 15)]  # fine ramp: facet turns stay under the 35 deg render threshold
+    half += [(x_ear + 1.4, tab_t)]  # run flat past the ear join: no lip over the overlap
     return sorted({(round(-x, 6), h) for x, h in half} | {(round(x, 6), h) for x, h in half})
 
 
@@ -83,13 +84,19 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
         x_tip = x_stud + side * lobe_r
         ear = (
             cq.Workplane("XY")
-            .moveTo(x_join, bar_w / 2.0)
-            .lineTo(x_face, bar_w / 2.0)
-            .threePointArc((x_tip, 0.0), (x_face, -bar_w / 2.0))
-            .lineTo(x_join, -bar_w / 2.0)
+            .moveTo(x_join, bar_w / 2.0 - 0.15)
+            .lineTo(x_face, bar_w / 2.0 - 0.15)
+            .threePointArc((x_tip, 0.0), (x_face, -(bar_w / 2.0 - 0.15)))
+            .lineTo(x_join, -(bar_w / 2.0 - 0.15))
             .close()
             .extrude(tab_t)
         )
+        # match the bar's D-section at tab height so the join is flush (the
+        # rectangular extrusion's front corner otherwise pokes past the curve)
+        x_lo = min(x_join, x_tip) - 1.0
+        x_hi = max(x_join, x_tip) + 1.0
+        dpr = _d_section(cq.Workplane("YZ").workplane(offset=x_lo), bar_w - 0.06, tab_t - 0.03).extrude(x_hi - x_lo)
+        ear = ear.intersect(dpr)
         result = result.union(ear.val())
 
     # Six low string bores along Y.  Their large entries intersect the curved
