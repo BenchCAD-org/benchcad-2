@@ -35,9 +35,7 @@ jobs:
             if (!m) {
               core.setFailed(
                 'PR description must link its family issue, e.g. `Closes #12` ' +
-                '(CONTRIBUTING.md station 3). Edit the PR description — no new push needed. ' +
-                '/ PR 描述里需要写 `Closes #<issue编号>` 关联 family issue,' +
-                '直接编辑 PR 描述即可,不用重新 push。');
+                '(CONTRIBUTING.md station 3). Edit the PR description — no new push needed. ');
               return;
             }
             const n = Number(m[1]);
