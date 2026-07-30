@@ -30,7 +30,7 @@ These mappings are taken directly from the `LBSBB8-3030` table row:
 - `leg_length_1` -> `L = 28`
 - `leg_length_2` -> `H = 35`
 - `slot_width` -> `W = 6`
-- `bracket_width` -> `W1 = 7.5`
+- `bracket_width` -> `W1 = 7.5` in the reference row; the implementation treats it as the common-edge width envelope and keeps it as a documented baseline rather than a guaranteed literal section thickness
 - `gusset_length_1` / `gusset_length_2` -> `A = 13.5` as a shared gusset reach envelope in this implementation
 - `gusset_thickness` -> `B = 8`
 - `edge_radius` -> `R = 3.5`
@@ -41,7 +41,7 @@ These mappings are taken directly from the `LBSBB8-3030` table row:
 
 The following are geometric placements that are not uniquely defined by the screenshot/table alone:
 
-- `slot_length`: long-hole total length, chosen to preserve a visible long slot without colliding with the gusset
+- `slot_length`: long-hole total length, chosen as the implementation-length of the slot body
 - `slot_offset_1`, `slot_offset_2`: slot center placements along each wing, chosen so the holes remain inside the wing envelope and outside the gusset
 
 ### Notes on geometry
