@@ -33,9 +33,32 @@ jobs:
             const fam = (files.map(f => f.filename.match(/^designs\/([^/]+)\//))
                               .find(Boolean) || [])[1];
             if (!fam) { core.info('no designs/ change'); return; }
-            // blob?raw=true renders the acceptance images in the issue
-            const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/designs/${fam}`;
-            const sha = context.payload.pull_request.merge_commit_sha.slice(0, 7);
+            // blob?raw=true renders the acceptance images in the issue. Pin to the
+            // MERGE COMMIT, never to main: main moves, and the next rename of this
+            // family dir turns every link in this permanent record into a 404.
+            const mergeSha = context.payload.pull_request.merge_commit_sha;
+            const sha = mergeSha.slice(0, 7);
+            const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/${mergeSha}/designs/${fam}`;
+
+            // Link only the renders this family actually ships — preview.png is
+            // required today, but an assembly also has preview_parts.png and a
+            // dead link in the dossier is worse than a missing one.
+            let names = null;
+            try {
+              const { data } = await github.rest.repos.getContent({
+                owner: context.repo.owner, repo: context.repo.repo,
+                path: `designs/${fam}`, ref: mergeSha });
+              if (Array.isArray(data)) names = data.map(f => f.name);
+            } catch (e) { core.info(`could not list designs/${fam}: ${e.message}`); }
+            const has = n => names === null || names.includes(n);
+            const link = (label, file) => `[${label}](${raw}/${file}?raw=true)`;
+
+            const extras = [
+              has('preview.png') ? link('preview.png', 'preview.png') : null,
+              has('preview_hard_zoom.png') ? link('preview_hard_zoom.png', 'preview_hard_zoom.png') : null,
+              has('preview_parts.png') ? link('preview_parts.png', 'preview_parts.png') : null,
+            ].filter(Boolean);
+
             const comment = [
               `## ✅ Merged — acceptance evidence (dossier close-out)`,
               ``,
@@ -45,7 +68,8 @@ jobs:
               `|---|---|`,
               `| ![views](${raw}/preview_views.png?raw=true) | ![extremes](${raw}/preview_extremes.png?raw=true) |`,
               ``,
-              `Overview grid: [preview.png](${raw}/preview.png?raw=true) · gates: \`bench2 validate ${fam}\` PASS (checked in CI on the PR).`,
+              (extras.length ? `Other renders: ${extras.join(' · ')} · ` : '') +
+                `gates: \`bench2 validate ${fam}\` PASS (checked in CI on the PR).`,
               ``,
               `Next stations: factory batch → release — track on [STATUS.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/STATUS.md).`,
             ].join('\n');
