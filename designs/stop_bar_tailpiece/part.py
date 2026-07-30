@@ -74,8 +74,8 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
     # Ear plan read directly from the sheet. At nominal dimensions the radius
     # is (102 - 82)/2 = 10 mm about each stud. Clipping that circle at the
     # +/-9 mm faces makes the tiny flat nose/curl beyond the 8 mm slot wall.
-    join_overlap = 0.05
-    circle_face_x = math.sqrt(lobe_r * lobe_r - (bar_w / 2.0) ** 2)
+    join_overlap = 1.0  # bury a real overlap at the join: near-coincident unions leave slivers
+    circle_face_x = math.sqrt(max(lobe_r * lobe_r - (bar_w / 2.0) ** 2, 0.25))  # guard: spec keeps lobe_r > bar_w/2
     for side in (-1.0, 1.0):
         x_stud = side * stud_span / 2.0
         x_join = side * (x_ear - join_overlap)
@@ -150,6 +150,7 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
             .extrude(cut_h)
             .translate((x_stud, mouth_reach / 2.0, -tab_t))
         )
-        result = result.cut(closed_end.val()).cut(mouth.val())
+        cutter = closed_end.union(mouth)  # fuse first: tangent cylinder/box seam stays in the cutter
+        result = result.cut(cutter.val())
 
     return result
