@@ -38,8 +38,8 @@ def _ocp_hashcode_fix():
             _cls.HashCode = lambda self, ub=2147483647: id(self) % ub
 
 
-def step_to_normalized_mesh(step_path: Path):
-    """STEP -> (verts, tris), normalized so bbox center=0.5, longest axis=1."""
+def step_to_mesh(step_path: Path):
+    """STEP -> raw (verts, tris) in model units (mm), no normalization."""
     _ocp_hashcode_fix()
     import cadquery as cq
 
@@ -55,6 +55,12 @@ def step_to_normalized_mesh(step_path: Path):
     tris = np.array([[t[0], t[1], t[2]] for t in tris_raw], dtype=np.int64)
     if len(verts) == 0 or len(tris) == 0:
         raise ValueError(f"empty mesh from {step_path}")
+    return verts, tris
+
+
+def step_to_normalized_mesh(step_path: Path):
+    """STEP -> (verts, tris), normalized so bbox center=0.5, longest axis=1."""
+    verts, tris = step_to_mesh(step_path)
     lo, hi = verts.min(axis=0), verts.max(axis=0)
     center = (lo + hi) / 2.0
     longest = (hi - lo).max()
@@ -82,8 +88,20 @@ def step_solid_report(step_path: Path):
     return len(vols), min(vols), max(vols)
 
 
-def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
-    """One off-screen VTK render (teal + dark feature edges) -> PIL Image."""
+# an actor style is (face_rgb, edge_rgb, edge_width, ambient, diffuse); the
+# assembly highlight rows dim every other component so the red one reads first
+TEAL_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.6, 0.3, 0.7)
+HIGHLIGHT_STYLE = ((0.83, 0.15, 0.16), (0.40, 0.04, 0.05), 1.8, 0.3, 0.7)
+DIMMED_STYLE = ((0.80, 0.80, 0.82), (0.46, 0.46, 0.48), 1.0, 0.55, 0.45)
+
+
+def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
+    """One off-screen VTK render of one or more styled meshes -> PIL Image.
+
+    `meshes` is a list of (verts, tris, style) sharing one normalized frame, so
+    a multi-actor assembly keeps its true relative pose and the z-buffer gives
+    correct depth occlusion between components. The camera is fitted over the
+    union of every actor's vertices."""
     import vtk
     from vtk.util.numpy_support import numpy_to_vtk
 
@@ -94,68 +112,71 @@ def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     right /= (np.linalg.norm(right) or 1.0)
     true_up = np.cross(front_arr, right)
 
-    points = vtk.vtkPoints()
-    points.SetData(numpy_to_vtk(verts, deep=True))
-    cells = vtk.vtkCellArray()
-    for tri in tris:
-        cells.InsertNextCell(3)
-        for idx in tri:
-            cells.InsertCellPoint(int(idx))
-    pd = vtk.vtkPolyData()
-    pd.SetPoints(points)
-    pd.SetPolys(cells)
-    # tessellation duplicates vertices along BRep face borders, so every face
-    # boundary used to render as an edge line (lofts looked "faceted"). Merge
-    # coincident points first: FeatureEdges then draws only true >35 deg edges.
-    cleaner = vtk.vtkCleanPolyData()
-    cleaner.SetInputData(pd)
-    cleaner.PointMergingOn()
-    cleaner.Update()
-    pd = cleaner.GetOutput()
-    normals = vtk.vtkPolyDataNormals()
-    normals.SetInputData(pd)
-    normals.ComputePointNormalsOn()
-    normals.Update()
-
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputConnection(normals.GetOutputPort())
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-    p = actor.GetProperty()
-    p.SetColor(*TEAL01)
-    p.SetAmbient(0.3)
-    p.SetDiffuse(0.7)
-
-    edges = vtk.vtkFeatureEdges()
-    edges.SetInputConnection(normals.GetOutputPort())
-    edges.BoundaryEdgesOn()
-    edges.FeatureEdgesOn()
-    edges.ManifoldEdgesOff()
-    edges.NonManifoldEdgesOn()
-    edges.SetFeatureAngle(35.0)
-    em = vtk.vtkPolyDataMapper()
-    em.SetInputConnection(edges.GetOutputPort())
-    ea = vtk.vtkActor()
-    ea.SetMapper(em)
-    ep = ea.GetProperty()
-    ep.SetColor(0.12, 0.12, 0.12)
-    ep.SetLineWidth(1.6)
-    ep.LightingOff()
-
     ren = vtk.vtkRenderer()
-    ren.AddActor(actor)
-    ren.AddActor(ea)
     ren.SetBackground(1, 1, 1)
+    for verts, tris, (face_rgb, edge_rgb, edge_width, ambient, diffuse) in meshes:
+        points = vtk.vtkPoints()
+        points.SetData(numpy_to_vtk(verts, deep=True))
+        cells = vtk.vtkCellArray()
+        for tri in tris:
+            cells.InsertNextCell(3)
+            for idx in tri:
+                cells.InsertCellPoint(int(idx))
+        pd = vtk.vtkPolyData()
+        pd.SetPoints(points)
+        pd.SetPolys(cells)
+        # tessellation duplicates vertices along BRep face borders, so every face
+        # boundary used to render as an edge line (lofts looked "faceted"). Merge
+        # coincident points first: FeatureEdges then draws only true >35 deg edges.
+        cleaner = vtk.vtkCleanPolyData()
+        cleaner.SetInputData(pd)
+        cleaner.PointMergingOn()
+        cleaner.Update()
+        pd = cleaner.GetOutput()
+        normals = vtk.vtkPolyDataNormals()
+        normals.SetInputData(pd)
+        normals.ComputePointNormalsOn()
+        normals.Update()
+
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(normals.GetOutputPort())
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        p = actor.GetProperty()
+        p.SetColor(*face_rgb)
+        p.SetAmbient(ambient)
+        p.SetDiffuse(diffuse)
+
+        edges = vtk.vtkFeatureEdges()
+        edges.SetInputConnection(normals.GetOutputPort())
+        edges.BoundaryEdgesOn()
+        edges.FeatureEdgesOn()
+        edges.ManifoldEdgesOff()
+        edges.NonManifoldEdgesOn()
+        edges.SetFeatureAngle(35.0)
+        em = vtk.vtkPolyDataMapper()
+        em.SetInputConnection(edges.GetOutputPort())
+        ea = vtk.vtkActor()
+        ea.SetMapper(em)
+        ep = ea.GetProperty()
+        ep.SetColor(*edge_rgb)
+        ep.SetLineWidth(edge_width)
+        ep.LightingOff()
+
+        ren.AddActor(actor)
+        ren.AddActor(ea)
+
     cam = ren.GetActiveCamera()
     cam.SetPosition(*eye)
     cam.SetFocalPoint(*LOOKAT)
     cam.SetViewUp(*true_up)
     cam.ParallelProjectionOn()
-    # fit the whole part in frame: parallel scale = half the projected bounding
+    # fit the whole scene in frame: parallel scale = half the projected bounding
     # box (onto the camera's right/up axes) plus a 12% margin, applied uniformly
     # so every part is framed the same way relative to its own bounding box.
     up_u = true_up / (np.linalg.norm(true_up) or 1.0)
-    rel = np.asarray(verts, dtype=np.float64) - LOOKAT
+    all_verts = np.concatenate([np.asarray(m[0], dtype=np.float64) for m in meshes], axis=0)
+    rel = all_verts - LOOKAT
     half_extent = max(float(np.ptp(rel @ right)), float(np.ptp(rel @ up_u))) / 2.0
     cam.SetParallelScale(half_extent * 1.12)
     win = vtk.vtkRenderWindow()
@@ -173,6 +194,11 @@ def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     from PIL import Image
 
     return Image.fromarray(arr[:, :, :3])
+
+
+def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
+    """One off-screen VTK render (teal + dark feature edges) -> PIL Image."""
+    return render_actors([(verts, tris, TEAL_STYLE)], img_size, front)
 
 
 def compose_grid(rows: list[list], row_labels: list[str], out_png: Path,

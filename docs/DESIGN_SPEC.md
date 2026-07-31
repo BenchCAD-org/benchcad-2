@@ -210,3 +210,58 @@ model sees), `preview_hard_zoom.png` (front/side/top/iso three-view of a hard
 example — the axis-aligned views the diagonal isos hide), and
 `preview_extremes.png` (smallest & largest sampled draw — acceptance evidence
 that both ends of your declared ranges produce sane geometry).
+
+## Assembly component previews (`bench2 preview-parts`)
+
+A multi-component family returns a **named `cq.Assembly`** from `build()`. The
+STEP export path folds an assembly into a compound — component names and
+hierarchy never reach the renderer — so component evidence has its own command:
+
+```bash
+uv run bench2 preview-parts <family>     # -> designs/<family>/preview_parts.png
+```
+
+It re-executes the derived stand-alone program for the deterministic
+**hard / seed 0** instance with an export harness that keeps the assembly tree
+(one STEP per shape-bearing node plus its absolute world transform), then
+renders the components as separate actors — the full pose and every
+parent/child `Location` transform survive. The grid shows, in `family.json`
+`components` order:
+
+1. one four-view row per semantic component — its raw local shape in its own
+   frame, labeled with the component's bounding box in mm;
+2. the complete assembly in its true pose, labeled with the instance's
+   parameters;
+3. one red-on-gray highlight row per component (correct depth occlusion, the
+   rest of the assembly stays in place). Repeated instances highlight together
+   with `quantity=N` by default; `--per-instance` renders one row per instance
+   (`bolt_01`, `bolt_02`, …) instead.
+
+`bench2 preview` runs the same render automatically when `build()` returns a
+named assembly; single-part families are unaffected. Component order and image
+bytes are deterministic in the pinned environment.
+
+**The naming contract.** `family.json` declares the components, and `"solids"`
+must equal the quantity sum:
+
+```json
+{
+  "solids": 4,
+  "components": [
+    {"name": "body", "quantity": 1},
+    {"name": "bolt", "quantity": 3}
+  ]
+}
+```
+
+Name every shape-bearing assembly node either **exactly** after its component
+(`body` — the quantity-1 case) or `<component>_<NN>` for repeated instances
+(`bolt_01`, `bolt_02`, `bolt_03`). An exact declared name wins over suffix
+stripping; any other name fails. Keep semantically distinct components
+separate even when their geometry happens to match — two pins with different
+roles are `left_pin`/`right_pin` (two declared components), not
+`pin_01`/`pin_02`. The command **fails clearly instead of producing a
+misleading image** when `result` is not a named assembly, an instance matches
+no declared component, instance names collide, or quantities drift from the
+declaration. `bench2 validate` checks `components`/`solids` consistency as
+part of the family.json gate.

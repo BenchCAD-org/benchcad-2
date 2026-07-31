@@ -1,9 +1,10 @@
 """bench2 — the BenchCAD 2.0 contributor CLI.
 
-    bench2 new <family>        scaffold designs/<family>/ from the template
-    bench2 validate <family>   run every machine gate locally (same as CI)
-    bench2 preview <family>    render a difficulty x seed grid PNG
-    bench2 status              regenerate STATUS.md (the progress board)
+    bench2 new <family>            scaffold designs/<family>/ from the template
+    bench2 validate <family>       run every machine gate locally (same as CI)
+    bench2 preview <family>        render a difficulty x seed grid PNG
+    bench2 preview-parts <family>  render assembly components + highlight rows
+    bench2 status                  regenerate STATUS.md (the progress board)
 
 Run from the repo root (the directory containing designs/).
 """
@@ -48,16 +49,6 @@ def cmd_validate(family: str, seeds: int, fast: bool) -> int:
     return 0 if passed else 1
 
 
-def _param_caption(spec, p) -> str:
-    """Compact `name=value` summary of the meaningful params (~2 per line) for a
-    preview row label — lets a reviewer map the rendered part to its numbers and
-    to the source drawing. Covers askable dimensions plus feature params so
-    every relevant catalog symbol is legible."""
-    parts = [f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-             if (e.get("askable") or e.get("feature")) and k in p]
-    return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
-
-
 def cmd_preview(family: str, per_diff: int) -> int:
     import numpy as np
 
@@ -65,6 +56,7 @@ def cmd_preview(family: str, per_diff: int) -> int:
     from .derive import derive_program
     from .execute import execute_cq_to_step
     from .loader import load_family
+    from .preview_parts import build_preview_parts, param_caption as _param_caption
     from .sampling import sample as sample_params
     from .validate import DIFFS
 
@@ -149,6 +141,31 @@ def cmd_preview(family: str, per_diff: int) -> int:
     print(f"benchmark views (what the model sees) → {out2}")
     print(f"three-view + iso (hard example) → {out4}")
     print(f"extremes (smallest & largest draw) → {out3}")
+
+    # a named-Assembly family also gets its component artifact, automatically;
+    # single-part families skip this (build_preview_parts returns None). A
+    # broken component contract fails the command instead of shipping a
+    # misleading image.
+    try:
+        out5 = build_preview_parts(fam_dir, required=False)
+    except (ValueError, RuntimeError) as e:
+        sys.exit(f"bench2: preview-parts: {e}")
+    if out5 is not None:
+        print(f"assembly components + highlights → {out5}")
+    return 0
+
+
+def cmd_preview_parts(family: str, per_instance: bool) -> int:
+    from .preview_parts import build_preview_parts
+
+    fam_dir = _designs_root() / family
+    if not fam_dir.is_dir():
+        sys.exit(f"bench2: designs/{family}/ not found")
+    try:
+        out = build_preview_parts(fam_dir, per_instance=per_instance)
+    except (ValueError, RuntimeError) as e:
+        sys.exit(f"bench2: preview-parts: {e}")
+    print(f"assembly components + highlights → {out}")
     return 0
 
 
@@ -176,6 +193,17 @@ def main() -> None:
     p_pre = sub.add_parser("preview", help="render a difficulty x seed grid")
     p_pre.add_argument("family")
     p_pre.add_argument("--per-diff", type=int, default=3, help="seeds per difficulty row")
+    p_parts = sub.add_parser(
+        "preview-parts",
+        help="render named-Assembly components, the full assembly, and highlight rows "
+             "(deterministic hard / seed 0)",
+    )
+    p_parts.add_argument("family")
+    p_parts.add_argument(
+        "--per-instance",
+        action="store_true",
+        help="one highlight row per instance (bolt_01, bolt_02) instead of per component",
+    )
     sub.add_parser("status", help="regenerate STATUS.md")
     a = ap.parse_args()
     if a.cmd == "new":
@@ -184,5 +212,7 @@ def main() -> None:
         sys.exit(cmd_validate(a.family, a.seeds, a.fast))
     if a.cmd == "preview":
         sys.exit(cmd_preview(a.family, a.per_diff))
+    if a.cmd == "preview-parts":
+        sys.exit(cmd_preview_parts(a.family, a.per_instance))
     if a.cmd == "status":
         sys.exit(cmd_status())

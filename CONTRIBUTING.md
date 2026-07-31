@@ -16,6 +16,8 @@ uv run bench2 new <family>
 # fill designs/<family>/{part.py,spec.py,family.json}
 uv run bench2 validate <family>
 uv run bench2 preview <family>     # inspect every generated view yourself
+# assembly family: preview also renders preview_parts.png
+# (or run it alone: uv run bench2 preview-parts <family>)
 # submit one PR with `Closes #<family-issue>`
 ```
 
@@ -83,6 +85,10 @@ licensing permits, with the original source linked in the issue.
 - Difficulty levels and feature coverage are meaningful.
 - Preview views and extremes match the reference evidence.
 - `family.json` labels and contributor information are accurate.
+- An assembly family names every component instance stably, matches its
+  declared `components`/`solids`, and ships an inspected `preview_parts.png`
+  (component four-views, assembly overview, ordered highlight rows — see
+  `docs/DESIGN_SPEC.md`).
 
 **Hard gates (red ✗ = cannot merge)** — so review spends its time on *truth*, not
 structure. A family PR must pass all three:

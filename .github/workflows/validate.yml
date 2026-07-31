@@ -45,6 +45,11 @@ jobs:
           python-version: "3.11"
       - run: uv sync
         if: steps.scope.outputs.run == 'true'
+      # framework unit tests (tests/): fast, hermetic fixture families — they
+      # gate the shared tooling the same way `bench2 validate` gates a design
+      - name: framework unit tests
+        if: steps.scope.outputs.run == 'true'
+        run: uv run python -m unittest discover -s tests -v
       # Only validate the families this change actually touches — a framework or
       # pyproject change re-validates every family (it can affect any of them),
       # but a family PR validates just that family. Keeps CI fast + scoped as the
