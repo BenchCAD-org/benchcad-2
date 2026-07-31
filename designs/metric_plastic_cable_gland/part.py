@@ -94,14 +94,16 @@ def build(
     result = result.union(upper_hex)
 
     dome_z = upper_hex_z + upper_hex_h
-    cap_r = outer_dia_a / 2.0
+    # the dome base is the hex's INSCRIBED circle (tangent to the flats in top
+    # view, never proud of them) — review finding on the top-view tangency
+    cap_r = sw / 2.0
     exit_r = bore_r + max(1.8, 0.06 * outer_dia_a)
     cap_top_z = dome_z + dome_h
     dome = (
         cq.Workplane("XZ")
         .moveTo(0.0, dome_z - 0.2)
         .lineTo(cap_r, dome_z - 0.2)
-        .threePointArc((1.02 * cap_r, dome_z + 0.36 * dome_h), (exit_r, cap_top_z))
+        .threePointArc((0.995 * cap_r, dome_z + 0.36 * dome_h), (exit_r, cap_top_z))
         .lineTo(0.0, cap_top_z)
         .close()
         .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
@@ -119,6 +121,18 @@ def build(
         .extrude(overall_len + 1.0)
     )
     result = result.cut(bore)
+
+    # stepped top entry: the seal counterbore — a larger opening at the dome
+    # top stepping down to the clamp bore (two concentric circles in top view)
+    cb_r = bore_r + max(1.2, 0.045 * outer_dia_a)
+    cb_depth = 0.30 * dome_h
+    counterbore = (
+        cq.Workplane("XY")
+        .workplane(offset=cap_top_z - cb_depth)
+        .circle(cb_r)
+        .extrude(cb_depth + 0.5)
+    )
+    result = result.cut(counterbore)
 
     # entry chamfers on the bottom face: 45-degree lead-in on the thread-end
     # OD (core cylinder rim) and a matching cone at the bore mouth
