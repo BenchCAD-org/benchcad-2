@@ -147,16 +147,22 @@ def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     ren.AddActor(ea)
     ren.SetBackground(1, 1, 1)
     cam = ren.GetActiveCamera()
-    cam.SetPosition(*eye)
-    cam.SetFocalPoint(*LOOKAT)
-    cam.SetViewUp(*true_up)
-    cam.ParallelProjectionOn()
     # fit the whole part in frame: parallel scale = half the projected bounding
-    # box (onto the camera's right/up axes) plus a 12% margin, applied uniformly
-    # so every part is framed the same way relative to its own bounding box.
+    # box (onto the camera's right/up axes) plus a 12% margin — and CENTER the
+    # camera on that projected box. The 3D bbox is centered at LOOKAT, but an
+    # asymmetric part's PROJECTED bounds need not be, so framing around LOOKAT
+    # let one side clip (issue #68).
     up_u = true_up / (np.linalg.norm(true_up) or 1.0)
     rel = np.asarray(verts, dtype=np.float64) - LOOKAT
-    half_extent = max(float(np.ptp(rel @ right)), float(np.ptp(rel @ up_u))) / 2.0
+    pr = rel @ right
+    pu = rel @ up_u
+    half_extent = max(float(np.ptp(pr)), float(np.ptp(pu))) / 2.0
+    center_off = right * (float(pr.max()) + float(pr.min())) / 2.0         + up_u * (float(pu.max()) + float(pu.min())) / 2.0
+    focal = LOOKAT + center_off
+    cam.SetPosition(*(focal + front_arr * CAMERA_DISTANCE))
+    cam.SetFocalPoint(*focal)
+    cam.SetViewUp(*true_up)
+    cam.ParallelProjectionOn()
     cam.SetParallelScale(half_extent * 1.12)
     win = vtk.vtkRenderWindow()
     win.SetOffScreenRendering(1)
@@ -217,6 +223,32 @@ def render_bench_views(verts, tris, img_size: int = 320):
 # a pure top front=(0,0,1) collapses the camera basis; the top view uses a small
 # forward tilt instead (a near-plan view).
 THREE_VIEW_FRONTS = [(0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (0.0, -0.12, 1.0), (1.0, -1.0, 1.0)]
+
+
+def step_cutaway_mesh(step_path: Path):
+    """Mesh of the part with its +Y half removed — a half-section that exposes
+    internal bores/pockets (counterbore steps, webs) that exterior views hide."""
+    _ocp_hashcode_fix()
+    import cadquery as cq
+
+    shape = cq.importers.importStep(str(step_path))
+    solid = shape.val()
+    bb = solid.BoundingBox()
+    yc = (bb.ymin + bb.ymax) / 2.0
+    cutter = (
+        cq.Workplane("XY")
+        .box(bb.xlen + 4.0, bb.ylen + 4.0, bb.zlen + 4.0)
+        .translate(((bb.xmin + bb.xmax) / 2.0, yc + (bb.ylen + 4.0) / 2.0, (bb.zmin + bb.zmax) / 2.0))
+    )
+    half = solid.cut(cutter.val())
+    verts_raw, tris_raw = half.tessellate(0.05)
+    verts = np.array([[v.x, v.y, v.z] for v in verts_raw], dtype=np.float64)
+    tris = np.array([[a, b, c] for a, b, c in tris_raw], dtype=np.int64)
+    lo, hi = verts.min(axis=0), verts.max(axis=0)
+    center = (lo + hi) / 2.0
+    longest = (hi - lo).max()
+    verts = (verts - center) / longest + 0.5
+    return verts, tris
 
 
 def render_three_view(verts, tris, img_size: int = 380):
