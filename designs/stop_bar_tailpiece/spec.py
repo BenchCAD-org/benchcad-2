@@ -1,5 +1,11 @@
 """stop_bar_tailpiece — the benchmark generator spec.
 
+Difficulty is expressed by range CLUSTERING, not a feature toggle (the stepped
+bore stack is on the drawing for every variant, so it is always built):
+easy   = the GE101Z catalog numbers (a render is a replica of the sheet);
+medium = adds the GE101A / US-vendor spread (R250 crown, 82.55 span, 8.1 slot);
+hard   = proportion extremes (short steep shoulders, deep crowns, 96-106 length).
+
 Gibson-style stop bar tailpiece, bar only (Gotoh GE101Z class). PARAM_SPEC
 declares each build() parameter; check() holds the engineering rules a reviewer
 audits. Nothing is coupled, so there is no refine(). Spec: docs/DESIGN_SPEC.md
@@ -24,80 +30,79 @@ PARAM_SPEC = {
     "overall_l": dict(
         desc="overall bar length",
         unit="mm",
-        range={"easy": (101.0, 102.5), "medium": (99.0, 104.0), "hard": (96.0, 106.0)},
+        range={"easy": (101.8, 102.2), "medium": (101.2, 102.5), "hard": (96.0, 106.0)},
         source="Gotoh 101.5-102 / Faber 101.27; hard widened as proportion",
         askable=True,
     ),
     "stud_span": dict(
         desc="stud centre-to-centre span (the Gibson mounting standard)",
         unit="mm",
-        range={"easy": (82.0, 82.55), "medium": (81.5, 83.0), "hard": (81.5, 83.0)},
+        range={"easy": (81.95, 82.05), "medium": (81.9, 82.6), "hard": (81.5, 83.0)},
         source="Gotoh 82 (metric) vs Gibson/StewMac/Faber 82.55 (3-1/4 in)",
         askable=True,
     ),
     "bar_w": dict(
         desc="bar section width (front-back)",
         unit="mm",
-        range={"easy": (17.8, 18.0), "medium": (16.5, 18.5), "hard": (15.5, 19.0)},
+        range={"easy": (17.9, 18.1), "medium": (17.6, 18.4), "hard": (15.5, 19.0)},
         source="GE101Z 18 / GE101A 17.8; proportion at hard",
         askable=True,
     ),
     "bar_h": dict(
         desc="bar section height at the crown crest",
         unit="mm",
-        range={"easy": (12.3, 12.75), "medium": (12.0, 13.2), "hard": (11.5, 13.8)},
+        range={"easy": (12.65, 12.85), "medium": (12.3, 13.0), "hard": (11.5, 13.8)},
         source="GE101Z 12.75 / GE101A 12.3; proportion at hard",
         askable=True,
     ),
     "tab_t": dict(
         desc="end-tab (ear) thickness",
         unit="mm",
-        range={"easy": (6.8, 7.0), "medium": (6.0, 7.6), "hard": (5.5, 8.0)},
+        range={"easy": (6.9, 7.1), "medium": (6.7, 7.2), "hard": (5.5, 8.0)},
         source="GE101Z 7 / GE101A 6.8; proportion at hard",
         askable=True,
     ),
     "crown_r": dict(
         desc="crown radius along the bar top",
         unit="mm",
-        range={"easy": (250.0, 300.0), "medium": (240.0, 320.0), "hard": (220.0, 340.0)},
+        range={"easy": (290.0, 310.0), "medium": (245.0, 320.0), "hard": (220.0, 340.0)},
         source="GE101Z R300 / GE101A R250; proportion at hard",
         askable=True,
     ),
     "ramp_len": dict(
         desc="blend length from the crowned body down into each ear",
         unit="mm",
-        range={"easy": (8.0, 11.0), "medium": (6.0, 13.0), "hard": (5.0, 15.0)},
+        range={"easy": (8.0, 10.0), "medium": (6.0, 13.0), "hard": (5.0, 15.0)},
         source="proportion (smooth body-to-ear transition on the GE101Z photo/drawing)",
         askable=True,
     ),
     "string_pitch": dict(
         desc="string-hole pitch (span = 5x pitch)",
         unit="mm",
-        range={"easy": (10.3, 10.3), "medium": (10.0, 10.6), "hard": (9.8, 10.8)},
+        range={"easy": (10.28, 10.32), "medium": (10.25, 10.4), "hard": (9.8, 10.8)},
         source="Gotoh 10.3 (51.5 span); slight vendor spread as proportion",
         askable=True,
     ),
     "hole_d": dict(
         desc="string-hole entry diameter",
         unit="mm",
-        range={"easy": (5.0, 5.2), "medium": (4.8, 5.5), "hard": (4.5, 5.8)},
+        range={"easy": (5.05, 5.15), "medium": (4.9, 5.3), "hard": (4.5, 5.8)},
         source="GE101Z phi5.1 entry (exit phi3 when stepped)",
         askable=True,
     ),
     "slot_w": dict(
         desc="open stud-slot width in the ears",
         unit="mm",
-        range={"easy": (8.0, 8.1), "medium": (7.8, 8.4), "hard": (7.5, 8.6)},
+        range={"easy": (7.95, 8.05), "medium": (7.8, 8.15), "hard": (7.5, 8.6)},
         source="Gotoh 8 / Faber 8.1",
         askable=True,
     ),
-    "stepped_holes": dict(
-        desc="stepped string bores phi entry -> ~0.6x exit (1) vs plain through (0)",
-        unit="",
-        range={"easy": (0, 0), "medium": (0, 1), "hard": (0, 1)},
-        source="GE101Z section shows phi5.1 -> phi3 stepped bore",
-        choices={"easy": [0], "medium": [0, 1], "hard": [0, 1]},
-        feature=True,
+    "web_d": dict(
+        desc="through-web bore diameter between the twin counterbores",
+        unit="mm",
+        range={"easy": (2.95, 3.05), "medium": (2.85, 3.15), "hard": (2.6, 3.4)},
+        source="GE101Z section: phi3 web between the phi5.1 x 4.5 counterbores",
+        askable=True,
     ),
 }
 
@@ -139,5 +144,9 @@ def check(p: dict) -> list[str]:
     z_hole = _string_z(p["tab_t"], p["hole_d"])
     if z_hole - p["hole_d"] / 2.0 < 0.8:
         bad.append("string bore leaves <0.8 mm above the base: GE101Z elevation shows a lower retaining web")
+
+    # the web must remain a genuine step under the counterbores (drawing: 5.1 -> 3)
+    if p["web_d"] > p["hole_d"] - 1.5:
+        bad.append("web_d > hole_d - 1.5: no real counterbore step left (GE101Z bores are 5.1 entries over a 3 web)")
 
     return bad

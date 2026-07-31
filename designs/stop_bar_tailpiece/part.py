@@ -57,7 +57,7 @@ def _string_z(tab_t, hole_d):
 
 
 def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
-          string_pitch, hole_d, slot_w, stepped_holes):
+          string_pitch, hole_d, slot_w, web_d):
     x_ear = stud_span / 2.0 - slot_w / 2.0
     lobe_r = (overall_l - stud_span) / 2.0
     stations = _heights(stud_span, bar_h, tab_t, crown_r, ramp_len, slot_w)
@@ -111,31 +111,26 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
         drop_here = crown_r - math.sqrt(crown_r * crown_r - x_hole * x_hole)
         pts.append((x_hole, z_outer + drop_out - drop_here))
 
-    if stepped_holes:
-        # Drawing section: phi5.1 counterbores end exactly 4.5 mm in from BOTH
-        # section datum faces; the middle web is a phi3 through bore.
-        web_d = (3.0 / 5.1) * hole_d
-        cb_depth = 4.5
-        overcut = 0.2
-        thru = cq.Workplane("XZ").pushPoints(pts).circle(web_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
-        cb_flat = (
-            cq.Workplane("XZ")
-            .pushPoints(pts)
-            .circle(hole_d / 2.0)
-            .extrude(cb_depth + overcut)
-            .translate((0.0, -bar_w / 2.0 + cb_depth, 0.0))
-        )
-        cb_crown = (
-            cq.Workplane("XZ")
-            .pushPoints(pts)
-            .circle(hole_d / 2.0)
-            .extrude(cb_depth + overcut)
-            .translate((0.0, bar_w / 2.0 + overcut, 0.0))
-        )
-        result = result.cut(thru).cut(cb_flat).cut(cb_crown)
-    else:
-        thru = cq.Workplane("XZ").pushPoints(pts).circle(hole_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
-        result = result.cut(thru)
+    # the drawing's bore stack is NOT optional: phi5.1 counterbores exactly
+    # 4.5 deep from BOTH faces, phi3-class web through the middle
+    cb_depth = 4.5
+    overcut = 0.2
+    thru = cq.Workplane("XZ").pushPoints(pts).circle(web_d / 2.0).extrude(3.0 * bar_w).translate((0.0, 1.5 * bar_w, 0.0))
+    cb_flat = (
+        cq.Workplane("XZ")
+        .pushPoints(pts)
+        .circle(hole_d / 2.0)
+        .extrude(cb_depth + overcut)
+        .translate((0.0, -bar_w / 2.0 + cb_depth, 0.0))
+    )
+    cb_crown = (
+        cq.Workplane("XZ")
+        .pushPoints(pts)
+        .circle(hole_d / 2.0)
+        .extrude(cb_depth + overcut)
+        .translate((0.0, bar_w / 2.0 + overcut, 0.0))
+    )
+    result = result.cut(thru).cut(cb_flat).cut(cb_crown)
 
     # The marked 8 mm is the perpendicular X distance between these parallel
     # faces. They run from the front edge to a semicircular closed end centred
