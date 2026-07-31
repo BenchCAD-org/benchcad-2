@@ -38,7 +38,6 @@ jobs:
               `- **Red gate?** The message tells you the fix: click **Details**, or read the \`bench2 validate\` report comment posted after each run. Reproduce locally with \`uv sync && uv run bench2 validate <family>\` ([debug help](${R}/docs/DEBUGGING.md)).`,
               `- **Scope:** \`designs/<family>/\` holds only the package files (reference drawings/photos go in the family issue), and the PR checklist must be fully ticked. Not done yet? Mark the PR as a **Draft**.`,
               ``,
-              `中文:红 ✗ 点 Details 或看 validate 报告评论;本地 \`uv run bench2 validate <family>\` 复现;参考图放 issue 不放 PR;没做完用 Draft。入门 → [GETTING_STARTED.zh](${R}/docs/GETTING_STARTED.zh.md)`,
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,

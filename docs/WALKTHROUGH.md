@@ -1,6 +1,6 @@
 # Walkthrough: from proposal to a merged family
 
-*中文: [WALKTHROUGH.zh.md](WALKTHROUGH.zh.md)*
+*Chinese: [WALKTHROUGH.zh.md](WALKTHROUGH.zh.md)*
 
 Every accepted family becomes an auditable BenchCAD 2.0 parametric design.
 
