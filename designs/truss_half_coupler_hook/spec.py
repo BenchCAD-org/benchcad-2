@@ -1,9 +1,10 @@
 """truss_half_coupler_hook — the benchmark generator spec.
 
 A stage-rigging half coupler / hook clamp for the standard Ø48-51 mm barrel
-(Doughty T-series class). PARAM_SPEC declares each build() parameter; check()
-holds the engineering rules a reviewer audits. Nothing is coupled, so there is
-no refine(). Spec: docs/DESIGN_SPEC.md
+(Doughty T-series class), modelled as a six-body assembly (shells, pins,
+closing bolt, wing nut — see part.py). PARAM_SPEC declares each build()
+parameter; check() holds the engineering rules a reviewer audits. Nothing is
+coupled, so there is no refine(). Spec: docs/DESIGN_SPEC.md
 
 Sources:
 - Doughty datasheets T57000/T57010 (standard, WLL 750 kg), T58080 (slimline,
@@ -87,9 +88,9 @@ def check(p: dict) -> list[str]:
     if not p["stud"] and tang_h < 2.2 * p["hang_d"]:
         bad.append("base_drop - bore/2 < 2.2*hang_d: no room for the fixing eye plus edge material in the tang (eye variant)")
 
-    # the eye/bolt hole must leave wall in the closure lug (lug block is 2.6*hang_d wide)
+    # the slotted crown lug must be deep enough for the closing bolt to bear on
     if p["lug_h"] < p["hang_d"] + 3.0:
-        bad.append("lug_h < hang_d+3: closing-bolt hole would break out of the lug block")
+        bad.append("lug_h < hang_d+3: slot fork too shallow for the closing bolt to bear (lug is the clamping face)")
 
     # cast body, not sheet: ring wall carries the rated load (WLL up to 750 kg)
     if p["wall_t"] < p["bore_d"] / 11.0:
