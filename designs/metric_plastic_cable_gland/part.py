@@ -8,7 +8,13 @@ import cadquery as cq
 def _hex_prism(sw, height, z0, chamfer_size):
     corner_d = sw / math.cos(math.radians(30.0))
     part = cq.Workplane("XY").workplane(offset=z0).polygon(6, corner_d).extrude(height)
-    return part.edges("|Z").chamfer(chamfer_size)
+    part = part.edges("|Z").chamfer(chamfer_size)
+    # washer-face style chamfer on both hex rims (the z-direction chamfer a
+    # moulded gland hex carries), sized to survive the smallest catalog rows
+    face_ch = min(0.12 * height, 0.6)
+    part = part.edges(">Z").chamfer(face_ch)
+    part = part.edges("<Z").chamfer(face_ch)
+    return part
 
 
 def _ring_thread(major_d, height, z0, pitch):
@@ -66,16 +72,16 @@ def build(
     # Two narrow pockets are cut beside each corner. Their central untouched
     # strip forms the grip ridge; the broad hex-flat centres remain smooth.
     hex_corner_r = sw / (2.0 * math.cos(math.radians(30.0)))
-    notch_radial = max(1.8, 0.08 * outer_dia_a)
+    notch_radial = max(2.2, 0.10 * outer_dia_a)
     notch_tangent = max(0.8, 0.03 * outer_dia_a)
-    notch_z = upper_hex_z + 0.11 * upper_hex_h
-    notch_h = 0.78 * upper_hex_h
+    notch_z = upper_hex_z - 0.1
+    notch_h = upper_hex_h + 0.2
     for corner_angle in range(0, 360, 60):
         for side in (-1.0, 1.0):
             notch = (
                 cq.Workplane("XY")
                 .workplane(offset=notch_z)
-                .center(hex_corner_r - 0.55, 0.0)
+                .center(hex_corner_r - 0.75, 0.0)
                 .rect(notch_radial, notch_tangent)
                 .extrude(notch_h)
                 .rotate(
@@ -113,4 +119,29 @@ def build(
         .extrude(overall_len + 1.0)
     )
     result = result.cut(bore)
+
+    # entry chamfers on the bottom face: 45-degree lead-in on the thread-end
+    # OD (core cylinder rim) and a matching cone at the bore mouth
+    core_r = (thread_d - 1.2 * pitch) / 2.0
+    ch = 0.8
+    od_ch = (
+        cq.Workplane("XZ")
+        .moveTo(core_r - ch, -thread_len)
+        .lineTo(thread_d / 2.0 + 1.0, -thread_len)
+        .lineTo(thread_d / 2.0 + 1.0, -thread_len + ch + 1.0)
+        .lineTo(core_r, -thread_len + ch)
+        .close()
+        .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
+    )
+    result = result.cut(od_ch)
+    bore_ch = (
+        cq.Workplane("XZ")
+        .moveTo(0.0, -thread_len - 0.2)
+        .lineTo(bore_r + 0.7, -thread_len - 0.2)
+        .lineTo(bore_r, -thread_len + 0.7)
+        .lineTo(0.0, -thread_len + 0.7)
+        .close()
+        .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
+    )
+    result = result.cut(bore_ch)
     return result
