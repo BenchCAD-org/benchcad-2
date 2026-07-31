@@ -42,8 +42,7 @@ jobs:
             if (run.conclusion === 'failure') {
               body += '❌ **validate failed** — fix locally, then push again:\n' +
                 '`uv sync && uv run bench2 validate <family>` (the pinned env matters — ' +
-                'see [docs/DEBUGGING.md](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/main/docs/DEBUGGING.md)).\n' +
-                '/ validate 未通过——请在本地用 pinned 环境复现并修复后重新 push。\n\n';
+                'see [docs/DEBUGGING.md](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/blob/main/docs/DEBUGGING.md)).\n' + '\n\n';
             }
             body += fs.readFileSync('report.md', 'utf8');
             body += `\n_Previews: the \`previews\` artifact on [this run](${runUrl})._`;

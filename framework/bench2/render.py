@@ -104,6 +104,14 @@ def render_iso(verts, tris, img_size: int = 320, front=ISO_FRONT):
     pd = vtk.vtkPolyData()
     pd.SetPoints(points)
     pd.SetPolys(cells)
+    # tessellation duplicates vertices along BRep face borders, so every face
+    # boundary used to render as an edge line (lofts looked "faceted"). Merge
+    # coincident points first: FeatureEdges then draws only true >35 deg edges.
+    cleaner = vtk.vtkCleanPolyData()
+    cleaner.SetInputData(pd)
+    cleaner.PointMergingOn()
+    cleaner.Update()
+    pd = cleaner.GetOutput()
     normals = vtk.vtkPolyDataNormals()
     normals.SetInputData(pd)
     normals.ComputePointNormalsOn()

@@ -9,7 +9,7 @@ body:
         A good family issue lets anyone implement and review the part without
         guessing. Two things are non-negotiable: **a real source** (standard /
         datasheet) and **a picture** of the part. Guide:
-        [EN](../blob/main/docs/GETTING_STARTED.md) · [中文](../blob/main/docs/GETTING_STARTED.zh.md)
+        [EN](../blob/main/docs/GETTING_STARTED.md) · [Chinese](../blob/main/docs/GETTING_STARTED.zh.md)
   - type: input
     id: name
     attributes:
