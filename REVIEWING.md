@@ -121,6 +121,35 @@ directions (the "Review order" below is the step-by-step how-to):
 8. **Scope.** PR touches only `designs/<family>/`; description has
    `Closes #N` (CI enforces); commits DCO-signed.
 
+## Copy-paste review template
+
+Copy the block, fill every `<…>`, delete lines that don't apply, and submit it
+as your review (approve / request changes per the verdict). Numbers beat
+adjectives: paste what you measured, not "looks fine". Tip: save it as a
+GitHub *saved reply* (Settings → Saved replies) to fill it in one click.
+
+```markdown
+## Family review — <family> @ <head-sha>
+
+1. Table & parameterization: <ok | issue>
+   source checked: <catalogue/page or standard clause> · recomputed row: <input → computed vs printed>
+   row-lock / coverage / discrete ladders: <ok | gap: …>
+2. Review material: <ok | issue>
+   reference re-embedded: <y/n> · 4 renders at head: <y/n> · per-part render (assembly): <y/n/n-a>
+   reconstructable from the 4 views: <y | hidden internals: …>
+3. Geometry vs table/drawing: <ok | issue>
+   bbox measured vs declared: <a×b×c vs x×y×z> · profile features: <ok | missing: …> · extremes: <sane | …>
+4. Function & fit: <ok | issue>
+   max pairwise intersection: <0.00 | … mm³ (pair, instance)> · interfaces engage: <ok | floating/fused: …>
+   operating-state full travel: <clear | collides at …>
+5. Detail geometry: <ok | issue>
+   fillets/chamfers/run-outs: <ok | sharp: …> · arcs vs polylines: <ok | faceted: …> · consistency: <ok | …>
+6. Process: <ok | issue>
+   scope / files / DCO / body current at head: <ok | …>
+
+Verdict: <approve | request changes — blockers: 4 (interference), … | comment — asks: …>
+```
+
 ## The verdict
 
 Approve with a three-line comment so the dossier is self-explaining (the
