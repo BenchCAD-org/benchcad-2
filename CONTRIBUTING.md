@@ -6,7 +6,7 @@ parameter ranges, constraints, reference evidence, and provenance.
 
 Questions → [Discord](https://discord.gg/be9AtvrDyK). New to GitHub? Use the
 step-by-step guides: [English](docs/GETTING_STARTED.md) ·
-[中文](docs/GETTING_STARTED.zh.md).
+[Chinese](docs/GETTING_STARTED.zh.md).
 
 ## The contributor loop
 
@@ -56,8 +56,13 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 The implementer is the first verifier. Confirm:
 
 1. A real standard, catalog, datasheet, handbook, or honest proportion basis.
-2. A dimensioned drawing or equivalent source that maps symbols to geometry.
-3. A table or documented range containing minimum and maximum examples.
+2. A true 2D orthographic dimensioned drawing that maps symbols to geometry —
+   ideally the standard's parametric letter drawing paired with its size table
+   (dimension arrows drawn over a product photo/render do not qualify).
+3. A table or documented range containing minimum and maximum examples,
+   its columns named physical-quantity + drawing symbol (`height_G`,
+   `bore_E`, `pitch_P`) — a bare letter is ambiguous once it leaves the
+   drawing, and carries into the `PARAM_SPEC` names.
 4. At least two source values spot-checked manually.
 5. At least four meaningful parameters and enough geometric variation.
 6. No duplicate or near-duplicate in `registry.json` or active issues.
@@ -85,8 +90,8 @@ structure. A family PR must pass all three:
 | Gate | Enforces |
 |---|---|
 | `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
-| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open) |
-| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`; **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; and the dir name matches the linked issue's family name |
+| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open); **and every image url in the body resolves**, with anything under `designs/` pinned to a **commit sha** — a branch name is not a pin: your fork branch is deleted when this PR merges and every preview pinned to it dies with it, leaving the merged family unreviewable. Copy the sha off the branch and use `blob/<sha>/<path>?raw=true`. Both `![alt](…)` and `<img src="…">` are checked, so the width-setting form is covered too |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`, plus `preview_hard_zoom.png` (the fourth render — CI *warns* while PRs opened before it existed backfill it, then it becomes required); **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; the dir name matches the linked issue's family name; and the **PR body shows its evidence** — the issue's drawing + photo re-embedded under `## Reference`, all four renders embedded by name, the parameter/verification table, and for a multi-body family `preview_parts.png` (file **and** embed) |
 
 ## Issue taxonomy
 
