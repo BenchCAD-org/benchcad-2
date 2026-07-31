@@ -45,6 +45,13 @@ jobs:
           python-version: "3.11"
       - run: uv sync
         if: steps.scope.outputs.run == 'true'
+      # the hosted runner has no display, EGL, or OSMesa, so VTK segfaults on
+      # any offscreen render (which is also why the preview step below never
+      # actually rendered before). The vtk wheel dlopens the system OSMesa at
+      # runtime — install it and VTK gets a software offscreen backend.
+      - name: install OSMesa (headless VTK rendering)
+        if: steps.scope.outputs.run == 'true'
+        run: sudo apt-get update -q && sudo apt-get install -y -q libosmesa6
       # framework unit tests (tests/): fast, hermetic fixture families — they
       # gate the shared tooling the same way `bench2 validate` gates a design
       - name: framework unit tests
@@ -87,6 +94,9 @@ jobs:
       - name: render previews
         if: always() && steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
         run: |
+          # `always()` runs this even when a step BEFORE family scoping failed,
+          # so the list may not exist — then there is nothing to render
+          [ -f /tmp/fams.txt ] || { echo "no family list — skipping"; exit 0; }
           while read -r fam; do
             [ -d "designs/$fam" ] && (uv run bench2 preview "$fam" --per-diff 3 || true)
           done < /tmp/fams.txt
