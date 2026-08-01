@@ -7,6 +7,10 @@ This family models the single `LBSBB 8-3030` right-angle corner bracket only:
 - one elongated through-slot in each wing;
 - an optional pair of mounting holes on the two triangular side panels.
 
+The implementation is fully self-contained CadQuery geometry. It does not load
+or depend on any STEP, BREP, round directory, or local absolute path at build
+time.
+
 ## Modeling convention
 
 - `X` = width along the shared connection edge
