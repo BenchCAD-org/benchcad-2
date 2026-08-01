@@ -2,7 +2,7 @@
   "family": "gusseted_corner_bracket",
   "standard": null,
   "base_plane": "XY",
-  "description": "Independent 90-degree gusseted corner bracket matching the LBSBB8-3030 reference row, with two perpendicular mounting wings, one centered triangular gusset, and two elongated through-slots.",
-  "source": "LBSBB8-3030 specification table and reference image supplied in the task; geometric mapping documented in NOTES.md",
+  "description": "Independent 90-degree gusseted corner bracket matching the LBSBB 8-3030 reference row, with two perpendicular mounting wings, one centered triangular gusset, two elongated through-slots, and an optional pair of side-panel mounting holes.",
+  "source": "LBSBB 8-3030 specification table and reference image supplied in the task; geometric mapping and optional side-panel hole behavior documented in NOTES.md",
   "contributor": "codex"
 }
