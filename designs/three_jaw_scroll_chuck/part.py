@@ -81,6 +81,10 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     L["z_scroll_front"] = L["z_ridge_top"] - L["thread_h"]
     plate_t = max(0.09 * D, 1.15 * L["thread_h"])
     L["z_scroll_back"] = L["z_scroll_front"] - plate_t
+    # the T-slot floor is relieved a full tooth below the foot plane so the
+    # serrations run the WHOLE jaw underside (as the BB drawing shows) and
+    # ride clear of the floor outside the scroll chamber
+    L["z_slot_bot"] = L["z_foot"] - L["thread_h"] - clr
 
     # --- scroll plate radial ---
     sleeve_od = max(bore_E + 0.06 * A, 0.20 * A)     # body central sleeve OD
@@ -371,11 +375,13 @@ def _jaw(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
     # underside arc teeth at the local spiral gap radii; evaluating the
     # (phase-rotated) spiral at this jaw's meridian gives the real 1/3-pitch
     # stagger between jaws
+    # serrations run the WHOLE underside (per the BB drawing); only the ones
+    # inside the spiral band engage — the slot floor is relieved for the rest
     p, w_t = L["pitch"], L["jaw_tooth_w"]
     theta_frac = ((JAW_ANGLES[jaw_idx] - phase_alpha) % 360.0) / 360.0
     r_base = L["r_spiral_start"] + p * theta_frac
-    lo = max(x_f0 + 0.6 * w_t, L["r_spiral_start"])
-    hi = min(x_f1 - 0.6 * w_t, L["r_spiral_outer"] - 0.5 * L["ridge_w"])
+    lo = x_f0 + 0.6 * w_t
+    hi = x_f1 - 0.6 * w_t
     k_min = int(math.ceil((lo - r_base) / p - 0.5))
     k_max = int(math.floor((hi - r_base) / p - 0.5))
     clip = (
@@ -454,11 +460,12 @@ def build(
             .rotate((0, 0, 0), (0, 0, 1), angd))
         t2 = (
             cq.Workplane("XY", origin=(L["guide_inner"],
-                                       -(jaw_width_B / 2.0 + g), L["z_floor"]))
+                                       -(jaw_width_B / 2.0 + g),
+                                       L["z_slot_bot"]))
             .box(0.60 * A, jaw_width_B + 2.0 * g,
-                 -L["tier1_d"] - L["z_floor"],   # stop at the tier-1 boundary:
-                 centered=(False, False, False))  # the ledge retains the flange
-            .rotate((0, 0, 0), (0, 0, 1), angd))
+                 -L["tier1_d"] - L["z_slot_bot"],  # stop at the tier-1
+                 centered=(False, False, False))   # boundary: the ledge
+            .rotate((0, 0, 0), (0, 0, 1), angd))   # retains the flange
         body = body.cut(t1).cut(t2)
 
     # scroll cavity between central sleeve and outer wall

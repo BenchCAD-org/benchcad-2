@@ -35,11 +35,15 @@ half-angle 20°, universal running clearance clr = max(0.2, 0.004·D) mm.
 - **Scroll thread**: one Archimedean band r(θ) = r_start + pitch·θ/2π swept
   over the annulus between the body sleeve and 0.345·A, standing 0.55·pitch
   proud of the scroll face. Spline-sampled at 36 pts/turn (no polyline facets).
-- **Jaw teeth**: concentric arc segments on the jaw foot at the spiral's
-  *gap* radii evaluated at that jaw's meridian (0°/120°/240°), i.e. radii
+- **Jaw teeth**: concentric arc segments across the WHOLE jaw underside (as
+  the BB drawing's serrated band shows), at the spiral's *gap* radii evaluated
+  at that jaw's meridian (0°/120°/240°), i.e. radii
   r_start + pitch·((θ_jaw − α)/360) + (k+½)·pitch. Jaws 1/2/3 therefore carry
-  the real ⅓-pitch stagger and interleave the spiral with clr axial clearance.
-  The arc-vs-spiral radial deviation over the jaw width is covered by the
+  the real ⅓-pitch stagger; the teeth inside the spiral band interleave the
+  thread with clr axial clearance, and the rest ride clear because the T-slot
+  floor is relieved one tooth height + clr below the foot plane (`z_slot_bot`),
+  exactly like the machined relief channel in the real body. The
+  arc-vs-spiral radial deviation over the jaw width is covered by the
   0.24·pitch side gap (verified per size).
 - **Key position α** (`part._scroll_phase`, mirrored in `check()`): the
   scroll is rotated by a whole number of crown pitches k·360/Z_w — which
