@@ -75,15 +75,72 @@ catalogue bolt-hole values geometrically distinct.
 
 | Metric | OEM root 2 | Parametric Ø8 | Difference |
 |---|---:|---:|---:|
-| Bounding box X | 16.300000 mm | 16.270 mm | -0.030 mm |
-| Bounding box Y | 16.300000 mm | 16.270 mm | -0.030 mm |
+| Bounding box X | 16.300000 mm | 16.180 mm | -0.120 mm |
+| Bounding box Y | 16.300000 mm | 16.240 mm | -0.060 mm |
 | Bounding box Z | 14.650000 mm | 14.650000 mm | < 0.000001 mm |
 | Solid count | 1 | 1 | 0 |
-| Volume | 801.707894 mm3 | 731.81 mm3 | -69.9 mm3 (-8.7%) |
+| Volume | 801.707894 mm3 | 765.03 mm3 | -36.7 mm3 (-4.6%) |
+| 3D sym-diff vs OEM | 0 | 28.49% | -- |
 
-The Ø7 baseline is 743.26 mm3. Bounding box Z is exact; X/Y are within 0.03 mm
-(the inscribed polygon rim). Volume is a useful mass-property check, not a claim
-of identical topology.
+The Ø7 baseline is 776.48 mm3 (sym-diff 27.08%; the OEM CAD is the Ø7 option, so
+the Ø7 row is the closest match). Bounding box Z is exact. X/Y undershoot the
+OEM's torus-lipped rim (R8.14) because the stored rim is a 48-gon at R7.94; the
+3D sym-diff is the primary fidelity metric and the polygon rim envelope is a
+documented residual. Volume is a useful mass-property check, not a claim of
+identical topology.
+
+## 3D sym-diff oracle progress (analytic/hybrid rebuild in progress)
+
+The un-gameable shape metric is the 3-D symmetric volume difference vs the OEM
+BREP (`sym = vol(mine)+vol(oem)-2*vol(BRepAlgoAPI_Common)`, as % of vol(oem)),
+measured in the OEM frame (the build's display rotation undone). Each geometric
+change was prototyped in-memory and only written when it strictly lowered this
+metric while keeping one solid and exact bbox Z.
+
+| Step | Change | sym-diff |
+|---|---|---:|
+| contour stack (committed baseline) | 21 OEM sections, rigid-block axial map | 46.05% |
+| hold cage section at seating plane | z=0.0 was the rim disc (R~8.1) extruded up to z=0.8 where the OEM has the R7.45 cage; hold the z=0.8 cage section at z=0..0.8 for every row | 30.58% |
+| hold rim section at rim bottom | z=-0.8 contour was a chainer artefact at R~3.9; hold the z=-0.5 rim section (R~7.94) down to the rim bottom | 28.49% |
+
+A per-z-band hotspot map (1 mm slabs) drives the next target. After the two
+section-hold fixes the residual concentrates at: the rim band z=-0.85 (33 mm3,
+polygon rim + missing torus lip), the cam/hook band z=6.15 (27 mm3), the
+drive-recess mouth z=1.15 (26 mm3, over-built), the fork z=11.15 (23 mm3) and
+the cam-to-drive transition z=7.15 (22 mm3, over-built).
+
+### Rejected patches (oracle-gated, not merged)
+
+Cheap add/remove patches were all prototyped in-memory and rejected or neutral:
+- analytic rim flange (R8.15 annulus + torus lip, fused): +0.07 to +1.15 (the
+  contour rim already overlaps OEM; added material lands outside or in filled
+  space).
+- drive-recess deepen (cut a wider/deeper R3.6 cone/cylinder at z=0..2.2):
+  +4.0 to +5.2 (removes OEM-overlapping material).
+- full and partial-azimuth cam lobes (eccentric R4.40 cylinder, solid / half /
+  z-segmented): +1.2 to +35.5. The cam outer wall is a partial-azimuth patch
+  (face bbox xy[-2.42,-1.99]x[-0.52,3.19], a vertical strip on the -x side of
+  the cam circle), and the cam inner bore (R3.787, offset 0.718) pokes through
+  the outer wall (3.787+0.718 > 4.40) so the cam is an open C, not a closed
+  annulus; any full-ring add over-fills.
+- cam-inner bore cut (R3.787 hole) on the over-built cam contours: neutral
+  (-0.06) or degenerate (+166 at z=6.6, a coincident cut at the mouth).
+- a systematic section-replacement sweep (hold each other station's contour at
+  each station) found drops only by holding the small fork-tip contour (z=13.7)
+  at the cam/drive stations (-0.5 to -6.6). That is a size-matching over-fit,
+  not shape-matching: the cam/drive contours are over-built and the small
+  fork-tip contour trims the over-fill while rendering the cam region as a fork
+  tip. It is rejected as physically incoherent (volume-over-fit, which the
+  coherent-reconstruction principle forbids).
+
+The contour stack is therefore at its coherent ceiling (~28.5%). The two
+merged fixes are *section replacements* (reuse an existing measured contour at a
+station where the stored one is a chainer artefact), the same coherent class as
+the rigid-block axial map. Further reduction toward single-digit sym-diff needs
+the analytic rebuild with correctly-extracted cam-region sections (the chainer
+dropped the cam-inner loop at z=5.3/6.6 and merged it into the outer C,
+over-building that band) and the partial-azimuth cam lobe -- a multi-iteration
+effort that must stay oracle-gated.
 
 ### Section fidelity (chaining-free point-cloud Hausdorff, stored vs OEM)
 
