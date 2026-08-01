@@ -3,6 +3,7 @@
     bench2 new <family>        scaffold designs/<family>/ from the template
     bench2 validate <family>   run every machine gate locally (same as CI)
     bench2 preview <family>    render a difficulty x seed grid PNG
+    bench2 preview-parts <family> render named Assembly components + highlights
     bench2 status              regenerate STATUS.md (the progress board)
 
 Run from the repo root (the directory containing designs/).
@@ -169,6 +170,38 @@ def cmd_preview(family: str, per_diff: int) -> int:
     print(f"benchmark views (what the model sees) → {out2}")
     print(f"three-view + iso (hard example) → {out4}")
     print(f"extremes (smallest & largest draw) → {out3}")
+    from .assembly_preview import build_preview_parts
+
+    try:
+        parts_out = build_preview_parts(fam_dir, required=False)
+    except (TypeError, ValueError) as exc:
+        sys.exit(f"bench2: preview-parts: {exc}")
+    if parts_out is not None:
+        print(f"assembly components + highlights → {parts_out}")
+    return 0
+
+
+def cmd_preview_parts(
+    family: str,
+    difficulty: str,
+    seed: int,
+    per_instance: bool,
+) -> int:
+    from .assembly_preview import build_preview_parts
+
+    fam_dir = _designs_root() / family
+    if not fam_dir.is_dir():
+        sys.exit(f"bench2: designs/{family}/ not found")
+    try:
+        out = build_preview_parts(
+            fam_dir,
+            difficulty=difficulty,
+            seed=seed,
+            per_instance=per_instance,
+        )
+    except (TypeError, ValueError) as exc:
+        sys.exit(f"bench2: preview-parts: {exc}")
+    print(f"assembly components + highlights → {out}")
     return 0
 
 
@@ -196,6 +229,23 @@ def main() -> None:
     p_pre = sub.add_parser("preview", help="render a difficulty x seed grid")
     p_pre.add_argument("family")
     p_pre.add_argument("--per-diff", type=int, default=3, help="seeds per difficulty row")
+    p_parts = sub.add_parser(
+        "preview-parts",
+        help="render named Assembly components, overview, and highlights",
+    )
+    p_parts.add_argument("family")
+    p_parts.add_argument(
+        "--difficulty",
+        choices=("easy", "medium", "hard"),
+        default="hard",
+        help="deterministic preview difficulty (default hard)",
+    )
+    p_parts.add_argument("--seed", type=int, default=0, help="deterministic seed (default 0)")
+    p_parts.add_argument(
+        "--per-instance",
+        action="store_true",
+        help="highlight repeated instances separately instead of by component type",
+    )
     sub.add_parser("status", help="regenerate STATUS.md")
     a = ap.parse_args()
     if a.cmd == "new":
@@ -204,5 +254,7 @@ def main() -> None:
         sys.exit(cmd_validate(a.family, a.seeds, a.fast))
     if a.cmd == "preview":
         sys.exit(cmd_preview(a.family, a.per_diff))
+    if a.cmd == "preview-parts":
+        sys.exit(cmd_preview_parts(a.family, a.difficulty, a.seed, a.per_instance))
     if a.cmd == "status":
         sys.exit(cmd_status())
