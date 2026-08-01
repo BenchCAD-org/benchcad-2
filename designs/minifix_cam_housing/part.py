@@ -151,13 +151,15 @@ def build(
             ps = [[o, [h for h in hs if _contains(h, 0.0, 0.0)]] for o, hs in ps]
         prepared.append((z0, ps))
 
-    if not has_rim:
-        # the OEM z=0 section is the rim disc, which clips to garbage for rim-less
-        # rows; hold the valid 0.8 cage section up to the seating plane so the
-        # rim-less top sits flush instead of 0.8 mm short.
-        pmap = {z0: i for i, (z0, _) in enumerate(prepared)}
-        if 0.0 in pmap and 0.8 in pmap:
-            prepared[pmap[0.0]] = (0.0, prepared[pmap[0.8]][1])
+    # The OEM z=0 section is the rim disc (outer R~8.1 with the mouth and cam
+    # pocket cut). Extruding it up to z=0.8 puts a fat rim disc where the OEM has
+    # the R7.45 cage, so the seating-plane band measures the wrong shape. Hold the
+    # valid 0.8 cage section up to the seating plane for every row: the rim (z<0,
+    # kept by has_rim rows) is unaffected, and the z=0..0.8 band becomes the cage.
+    # For rim-less rows this also makes the top flush instead of 0.8 mm short.
+    pmap = {z0: i for i, (z0, _) in enumerate(prepared)}
+    if 0.0 in pmap and 0.8 in pmap:
+        prepared[pmap[0.0]] = (0.0, prepared[pmap[0.8]][1])
 
     solids = []
     last_good = None
