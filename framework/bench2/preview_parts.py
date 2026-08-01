@@ -32,10 +32,12 @@ _INSTANCE_SUFFIX = re.compile(r"_(\d+)$")
 
 
 def param_caption(spec, p) -> str:
-    """Compact `name=value` summary of the meaningful params (~2 per line) for a
-    preview row label — lets a reviewer map the rendered part to its numbers and
-    to the source drawing. Covers every declared parameter so all catalog
-    symbols stay legible."""
+    """Compact `name=value` summary of EVERY declared param (~2 per line) for a
+    preview row label, row-locked/refine-filled ones included. Parameter names
+    carry the reference drawing's dimension symbol (the issue dimension-table
+    convention: `width_sw`, `bore_d1`), so listing all of them is what lets a
+    reviewer read each dimension of the issue's 2D drawing straight off the
+    render."""
     parts = [f"{k}={p[k]}" for k in spec.PARAM_SPEC if k in p]
     return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
 
