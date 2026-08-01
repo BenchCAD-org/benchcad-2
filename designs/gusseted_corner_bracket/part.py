@@ -182,6 +182,7 @@ def build(
     slot_offset_2,
     panel_mount_holes,
     panel_hole_offset,
+    panel_hole_diameter,
     edge_radius,
     gusset_radius,
 ):
@@ -208,7 +209,7 @@ def build(
         corrected = corrected.cut(_make_slot_solid_xz(14.0, slot_offset_2, slot_length, slot_width, plate_thickness))
 
     if panel_mount_holes:
-        hole_r = 2.1
+        hole_r = panel_hole_diameter / 2.0
         corrected = corrected.cut(_make_panel_hole_side_face(0.0, panel_hole_offset, panel_hole_offset, hole_r, gusset_thickness))
         corrected = corrected.cut(_make_panel_hole_side_face(bracket_width - gusset_thickness, panel_hole_offset, panel_hole_offset, hole_r, gusset_thickness))
 

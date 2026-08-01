@@ -17,27 +17,42 @@ The part is built as one fused solid from a wing in the `XY` plane, a wing in th
 
 ## Parameter intent
 
-### Confirmed mapping
+### Fixed product identity
+
+The family targets the single product line `LBSBB 8-3030`:
+
+- `Type = LBSBB`
+- `No. = 8-3030`
+- `3030` profile size
+
+These fields identify the product family. The geometric dimensions below are exposed as adjustable parameters with the listed defaults and safe ranges.
+
+### Geometry mapping
 
 The drawing/table values used by this family are:
 
-- `leg_length_1` -> `L = 28`
-- `leg_length_2` -> `H = 35`
-- `slot_width` -> `W = 6`
-- `bracket_width` -> overall width span centered on `x = 0`, also `28` in this implementation
-- `gusset_length_1` / `gusset_length_2` -> local gusset reach derived from `A = 13.5`
-- `gusset_thickness` -> `T1 = 3`
-- `edge_radius` -> `R = 3.5`
-- `plate_thickness` -> `T = 4.5`
-- `panel_mount_holes` -> optional on/off switch for the pair of main-face installation holes
+- `leg_length_1` -> `L = 28` (adjustable family parameter)
+- `leg_length_2` -> `H = 35` (adjustable family parameter)
+- `bracket_width` -> overall width span centered on `x = 0` (adjustable family parameter)
+- `plate_thickness` -> `T = 4.5` (adjustable family parameter)
+- `gusset_thickness` -> `T1 = 3` (adjustable family parameter)
+- `gusset_length_1` / `gusset_length_2` -> local gusset reach derived from `A = 13.5` (adjustable family parameters)
+- `slot_width` -> `W = 6` (adjustable family parameter)
+- `slot_length` -> `A = 13.5` (adjustable family parameter)
+- `slot_offset_1` / `slot_offset_2` -> `B`-related slot placement controls (adjustable family parameters)
+- `edge_radius` -> `R = 3.5` (adjustable family parameter)
+- `panel_mount_holes` -> optional on/off switch for the pair of side-panel installation holes
+- `panel_hole_offset` -> shared placement control for the optional side-panel holes
+- `panel_hole_diameter` -> optional side-panel hole diameter, defaulting to the M5 clearance size
 
 ### Tentative mapping
 
 The screenshot does not uniquely pin down every placement dimension, so these remain implementation choices constrained by the drawing and the validated geometry:
 
-- `slot_length` -> long-hole total length, taken as `13.5`
+- `slot_length` -> long-hole total length, defaulting to `13.5`
 - `slot_offset_1`, `slot_offset_2` -> slot center placements along each wing, chosen to keep both slots inside the wing outline and clear of the gusset
 - `panel_hole_offset` -> shared placement control for the optional panel holes, chosen to keep both holes inside their faces and away from slots, fillets, and internal cavities
+- `panel_hole_diameter` -> M5-style clearance hole diameter, defaulting to `4.2`
 
 ### Geometry notes
 
@@ -46,4 +61,4 @@ The screenshot does not uniquely pin down every placement dimension, so these re
 - `Z` is the second wing direction.
 - The bracket is built from two fused rectangular wings plus one local triangular gusset prism.
 - Each slot is cut in its own wing-local plane so the long axis follows that wing's direction.
-- When `panel_mount_holes` is enabled, the two additional holes are standard 4.2 mm through-holes on the two triangular side panels; they are coordinated by the single `panel_hole_offset` parameter and must not intersect the long slots, gusset, or central cavities.
+- When `panel_mount_holes` is enabled, the two additional holes are standard M5 clearance through-holes on the two triangular side panels; they are coordinated by `panel_hole_offset` and `panel_hole_diameter`, and must not intersect the long slots, gusset, or central cavities.
