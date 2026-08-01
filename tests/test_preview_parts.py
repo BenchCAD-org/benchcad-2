@@ -315,6 +315,26 @@ class ValidateGateTests(unittest.TestCase):
                                 for okay, msg in log if not okay), msg=str(log))
 
 
+class DocsExampleTests(unittest.TestCase):
+    """The committed docs example keeps working as the framework evolves."""
+
+    def test_docs_example_stays_runnable(self):
+        from PIL import Image
+
+        from bench2.preview_parts import build_preview_parts
+
+        demo = Path(__file__).resolve().parent.parent / "docs" / "examples" / "preview_parts_demo"
+        with tempfile.TemporaryDirectory() as td:
+            fam_dir = Path(td) / "demo"
+            fam_dir.mkdir()
+            for name in ("part.py", "spec.py", "family.json"):
+                (fam_dir / name).write_text((demo / name).read_text())
+            out = build_preview_parts(fam_dir)
+            # 3 component rows + 1 assembly overview + 3 grouped highlight rows
+            with Image.open(out) as image:
+                self.assertEqual(image.size, (GRID_W, _grid_height(7)))
+
+
 class RenderRegressionTests(unittest.TestCase):
     """The multi-actor refactor keeps single-part rendering deterministic."""
 
