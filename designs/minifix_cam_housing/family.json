@@ -3,6 +3,6 @@
   "standard": null,
   "base_plane": "XY",
   "description": "Häfele Minifix 15 die-cast eccentric-cam connector housing with an open cage, optional seating rim, combination PZ2/flat/SW4 drive, and radial bolt-capture mouth.",
-  "source": "Häfele UK catalogue 14CFC294.pdf and 14CFC295.pdf, pp. 294--295, supplies seven nominal installation rows; Häfele US P-00861332 item 262.25.035 STEP AP214 anchors the 19 mm baseline through 27 sampled horizontal sections and measured landmarks; cross-SKU transforms remain proportion.",
+  "source": "Häfele UK catalogue 14CFC294.pdf and 14CFC295.pdf, pp. 294--295, supplies seven nominal installation rows; Häfele US P-00861332 item 262.25.035 STEP AP214 anchors the 19 mm baseline via a stack of 21 measured cross-sections with a rigid-block axial map (the 19 mm baseline maps to the identity); cross-SKU axial transforms and undocumented die-cast detail remain proportion.",
   "contributor": "snowy-void"
 }
