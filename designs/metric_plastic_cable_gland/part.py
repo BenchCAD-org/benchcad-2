@@ -97,13 +97,21 @@ def build(
     # the dome base is the hex's INSCRIBED circle (tangent to the flats in top
     # view, never proud of them) — review finding on the top-view tangency
     cap_r = sw / 2.0
-    exit_r = bore_r + max(1.8, 0.06 * outer_dia_a)
     cap_top_z = dome_z + dome_h
+    # cap profile = straight side + quarter-arc shoulder + FLAT top: the arc
+    # ends with a horizontal tangent, so the top face is a plane, not a peak
+    cb_r_ref = bore_r + max(1.2, 0.045 * outer_dia_a)
+    shoulder_r = max(1.5, min(0.6 * dome_h, cap_r - cb_r_ref - 0.8))
+    a45 = shoulder_r * (1.0 - math.sqrt(0.5))
     dome = (
         cq.Workplane("XZ")
         .moveTo(0.0, dome_z - 0.2)
         .lineTo(cap_r, dome_z - 0.2)
-        .threePointArc((0.995 * cap_r, dome_z + 0.36 * dome_h), (exit_r, cap_top_z))
+        .lineTo(cap_r, cap_top_z - shoulder_r)
+        .threePointArc(
+            (cap_r - a45, cap_top_z - a45),
+            (cap_r - shoulder_r, cap_top_z),
+        )
         .lineTo(0.0, cap_top_z)
         .close()
         .revolve(360.0, (0.0, 0.0), (0.0, 1.0))
