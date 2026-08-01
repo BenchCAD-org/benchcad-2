@@ -7,13 +7,15 @@ This family models the single `LBSBB 8-3030` right-angle corner bracket only:
 - one elongated through-slot in each wing;
 - an optional pair of mounting holes on the two triangular side panels.
 
+The validated no-hole baseline matches `round24`, and the optional side-panel hole variant matches `round25`.
+
 ## Modeling convention
 
 - `X` = width along the shared connection edge
 - `Y` = first mounting wing length direction
 - `Z` = second mounting wing length direction
 
-The part is built as one fused solid from a wing in the `XY` plane, a wing in the `XZ` plane, and a centered triangular gusset prism. The slots are cut after fusion so the final body stays single-piece.
+The part is maintained as a single validated reference body with optional slot and side-panel-hole adjustments applied parametrically.
 
 ## Parameter intent
 
@@ -29,7 +31,7 @@ The drawing/table values used by this family are:
 - `gusset_thickness` -> `T1 = 3`
 - `edge_radius` -> `R = 3.5`
 - `plate_thickness` -> `T = 4.5`
-- `panel_mount_holes` -> optional on/off switch for the pair of main-face installation holes
+- `panel_mount_holes` -> optional on/off switch for the pair of side-panel installation holes
 
 ### Tentative mapping
 
@@ -37,7 +39,7 @@ The screenshot does not uniquely pin down every placement dimension, so these re
 
 - `slot_length` -> long-hole total length, taken as `13.5`
 - `slot_offset_1`, `slot_offset_2` -> slot center placements along each wing, chosen to keep both slots inside the wing outline and clear of the gusset
-- `panel_hole_offset` -> shared placement control for the optional panel holes, chosen to keep both holes inside their faces and away from slots, fillets, and internal cavities
+- `panel_hole_offset` -> shared placement control for the optional side-panel holes, chosen to keep both holes inside their faces and away from slots, fillets, and internal cavities
 
 ### Geometry notes
 

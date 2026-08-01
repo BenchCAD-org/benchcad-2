@@ -3,6 +3,6 @@
   "standard": null,
   "base_plane": "XY",
   "description": "Independent 90-degree gusseted corner bracket matching the LBSBB 8-3030 reference row, with two perpendicular mounting wings, one centered triangular gusset, two elongated through-slots, and an optional pair of side-panel mounting holes.",
-  "source": "LBSBB 8-3030 specification table and reference image supplied in the task; geometric mapping and optional side-panel hole behavior documented in NOTES.md",
+  "source": "LBSB 8-3030 reference geometry supplied in the task; the default body matches round24 and the optional side-panel hole variant matches round25.",
   "contributor": "codex"
 }
