@@ -112,8 +112,8 @@ directions (the "Review order" below is the step-by-step how-to):
    What's *missing* — think tear-out, thin walls, tool clearance, unstable
    proportions, and check those failure modes are constrained.
 6. **Audit `PARAM_SPEC`.** Ranges sensible per tier; `source` fields specific
-   (a table, a rule, or honest `"proportion"`); `askable` only on parameters
-   visible/derivable from the part; `feature` on optional-feature toggles;
+   (a table, a rule, or honest `"proportion"`); `feature` on optional-feature
+   toggles;
    `coverage` on the table-driving parameter.
 7. **`family.json`.** Name accurate, `standard` correct or null, `base_plane`
    matches the build, `geomlib` lists exactly the helpers used, description

@@ -120,7 +120,7 @@ def cmd_preview(family: str, per_diff: int) -> int:
             ex_labels.append(f"{tag} ({diff})\n{_param_caption(spec, p)}")
             print(f"  extreme {tag} [{diff}]: "
                   + ", ".join(f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-                              if e.get("askable") and k in p))
+                              if k in p))
     out3 = render.compose_grid(ex_rows, ex_labels, fam_dir / "preview_extremes.png")
 
     # three-view + iso of a hard example — the four benchmark views are all

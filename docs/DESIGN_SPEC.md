@@ -77,7 +77,6 @@ required; the remaining keys tell the framework **how to draw** the value:
 | `integer` | – | draw as an integer in `range` (default is a float, 2 dp) |
 | `choices` | – | draw from a discrete set — `[0, 2, 4]`, or per-difficulty `{"easy": [0], "hard": [2, 4]}` |
 | `refine` | – | **not drawn** by the framework — computed in `refine()` (a coupled parameter). Still declares a `range` for the contract |
-| `askable` | – | `True` if a numeric QA question may target it |
 | `feature` | – | `True` if it toggles an optional feature (drives edit derivation) |
 | `coverage` | – | list of values sampling **must** be able to produce (e.g. every catalog row); the validator fails if any never appears in ~120 draws |
 
@@ -184,10 +183,9 @@ give each form its own physically justified constraints in `check()`.
 
 ## What you do NOT write
 
-No sampling loop (the framework samples from `PARAM_SPEC`), and no QA items or
-edit pairs — those are derived downstream (`askable` params seed numeric QA;
-`feature` params drive add/remove edits). Your jobs are `part.py`, `spec.py`,
-and `family.json`.
+No sampling loop (the framework samples from `PARAM_SPEC`), and no edit
+pairs — those are derived downstream (`feature` params drive add/remove
+edits). Your jobs are `part.py`, `spec.py`, and `family.json`.
 
 ## Machine gates (`bench2 validate`, same in CI)
 
