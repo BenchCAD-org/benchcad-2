@@ -34,10 +34,9 @@ _INSTANCE_SUFFIX = re.compile(r"_(\d+)$")
 def param_caption(spec, p) -> str:
     """Compact `name=value` summary of the meaningful params (~2 per line) for a
     preview row label — lets a reviewer map the rendered part to its numbers and
-    to the source drawing. Covers askable dimensions plus feature params so
-    every relevant catalog symbol is legible."""
-    parts = [f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-             if (e.get("askable") or e.get("feature")) and k in p]
+    to the source drawing. Covers every declared parameter so all catalog
+    symbols stay legible."""
+    parts = [f"{k}={p[k]}" for k in spec.PARAM_SPEC if k in p]
     return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
 
 

@@ -36,8 +36,7 @@ def build(base_w, pin_d):
 ASSEMBLY_SPEC = '''
 PARAM_SPEC = {
     "base_w": {"desc": "base plate width", "unit": "mm", "source": "proportion",
-               "range": {"easy": (20, 30), "medium": (20, 40), "hard": (20, 50)},
-               "askable": True},
+               "range": {"easy": (20, 30), "medium": (20, 40), "hard": (20, 50)}},
     "pin_d": {"desc": "pin diameter", "unit": "mm", "source": "proportion",
               "range": {"easy": (4, 6), "medium": (4, 8), "hard": (4, 10)}},
 }
