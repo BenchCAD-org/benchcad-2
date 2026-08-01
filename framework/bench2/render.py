@@ -88,11 +88,14 @@ def step_solid_report(step_path: Path):
     return len(vols), min(vols), max(vols)
 
 
-# an actor style is (face_rgb, edge_rgb, edge_width, ambient, diffuse); the
-# assembly highlight rows dim every other component so the red one reads first
-TEAL_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.6, 0.3, 0.7)
-HIGHLIGHT_STYLE = ((0.83, 0.15, 0.16), (0.40, 0.04, 0.05), 1.8, 0.3, 0.7)
-DIMMED_STYLE = ((0.80, 0.80, 0.82), (0.46, 0.46, 0.48), 1.0, 0.55, 0.45)
+# an actor style is (face_rgb, edge_rgb, edge_width, ambient, diffuse, opacity);
+# highlight rows dim every other component so the red one reads first, and the
+# transparent variant ghosts them instead so an INTERNAL component (a bushing
+# pressed into its bore, a bolt shank inside its hole) shows through
+TEAL_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.6, 0.3, 0.7, 1.0)
+HIGHLIGHT_STYLE = ((0.83, 0.15, 0.16), (0.40, 0.04, 0.05), 1.8, 0.3, 0.7, 1.0)
+DIMMED_STYLE = ((0.80, 0.80, 0.82), (0.46, 0.46, 0.48), 1.0, 0.55, 0.45, 1.0)
+GHOST_STYLE = ((0.72, 0.74, 0.76), (0.58, 0.60, 0.62), 0.8, 0.6, 0.35, 0.22)
 
 
 def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
@@ -114,7 +117,7 @@ def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
 
     ren = vtk.vtkRenderer()
     ren.SetBackground(1, 1, 1)
-    for verts, tris, (face_rgb, edge_rgb, edge_width, ambient, diffuse) in meshes:
+    for verts, tris, (face_rgb, edge_rgb, edge_width, ambient, diffuse, opacity) in meshes:
         points = vtk.vtkPoints()
         points.SetData(numpy_to_vtk(verts, deep=True))
         cells = vtk.vtkCellArray()
@@ -146,6 +149,7 @@ def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
         p.SetColor(*face_rgb)
         p.SetAmbient(ambient)
         p.SetDiffuse(diffuse)
+        p.SetOpacity(opacity)
 
         edges = vtk.vtkFeatureEdges()
         edges.SetInputConnection(normals.GetOutputPort())
@@ -161,6 +165,8 @@ def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
         ep = ea.GetProperty()
         ep.SetColor(*edge_rgb)
         ep.SetLineWidth(edge_width)
+        # ghosted actors keep faint edges so the see-through silhouette still reads
+        ep.SetOpacity(1.0 if opacity >= 1.0 else 0.45)
         ep.LightingOff()
 
         ren.AddActor(actor)

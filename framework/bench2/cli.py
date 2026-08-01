@@ -174,14 +174,14 @@ def cmd_preview(family: str, per_diff: int) -> int:
     return 0
 
 
-def cmd_preview_parts(family: str, per_instance: bool) -> int:
+def cmd_preview_parts(family: str, per_instance: bool, transparent: bool) -> int:
     from .preview_parts import build_preview_parts
 
     fam_dir = _designs_root() / family
     if not fam_dir.is_dir():
         sys.exit(f"bench2: designs/{family}/ not found")
     try:
-        out = build_preview_parts(fam_dir, per_instance=per_instance)
+        out = build_preview_parts(fam_dir, per_instance=per_instance, transparent=transparent)
     except (ValueError, RuntimeError) as e:
         sys.exit(f"bench2: preview-parts: {e}")
     print(f"assembly components + highlights → {out}")
@@ -223,6 +223,11 @@ def main() -> None:
         action="store_true",
         help="one highlight row per instance (bolt_01, bolt_02) instead of per component",
     )
+    p_parts.add_argument(
+        "--transparent",
+        action="store_true",
+        help="ghost the non-highlighted components (see-through) so internal parts stay visible",
+    )
     sub.add_parser("status", help="regenerate STATUS.md")
     a = ap.parse_args()
     if a.cmd == "new":
@@ -232,6 +237,6 @@ def main() -> None:
     if a.cmd == "preview":
         sys.exit(cmd_preview(a.family, a.per_diff))
     if a.cmd == "preview-parts":
-        sys.exit(cmd_preview_parts(a.family, a.per_instance))
+        sys.exit(cmd_preview_parts(a.family, a.per_instance, a.transparent))
     if a.cmd == "status":
         sys.exit(cmd_status())

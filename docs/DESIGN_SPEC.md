@@ -233,7 +233,10 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
 3. one red-on-gray highlight row per component (correct depth occlusion, the
    rest of the assembly stays in place). Repeated instances highlight together
    with `quantity=N` by default; `--per-instance` renders one row per instance
-   (`bolt_01`, `bolt_02`, …) instead.
+   (`bolt_01`, `bolt_02`, …) instead, and `--transparent` ghosts the
+   non-highlighted components (see-through) so an internal component — a
+   bushing pressed into its bore, a bolt shank inside its hole — stays visible
+   when highlighted.
 
 `bench2 preview` runs the same render automatically when `build()` returns a
 named assembly; single-part families are unaffected. Component order and image
@@ -266,7 +269,9 @@ part of the family.json gate.
 
 A complete runnable example — three semantic components, a repeated
 `bolt_01`/`bolt_02` pair, a nested and rotated sub-assembly — lives in
-[`docs/examples/preview_parts_demo/`](examples/preview_parts_demo/) with both
+[`docs/examples/preview_parts_demo/`](examples/preview_parts_demo/) with the
+grouped, [per-instance](examples/preview_parts_demo/preview_parts_per_instance.png),
+and [transparent](examples/preview_parts_demo/preview_parts_transparent.png)
 artifacts committed (a framework test keeps it runnable). The grouped default
 looks like this:
 

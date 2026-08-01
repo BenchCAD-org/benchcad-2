@@ -138,12 +138,14 @@ def _normalized(verts_list: list[np.ndarray]) -> list[np.ndarray]:
 
 
 def build_preview_parts(fam_dir: Path, per_instance: bool = False,
+                        transparent: bool = False,
                         required: bool = True) -> Path | None:
     """Render designs/<family>/preview_parts.png for the deterministic
     hard / seed 0 instance. With required=False (the `bench2 preview`
     auto-detect path) a non-Assembly `result` returns None instead of failing;
     every contract violation still fails clearly rather than producing a
-    misleading image."""
+    misleading image. `transparent` ghosts the non-highlighted components
+    (see-through) so an internal component stays visible when highlighted."""
     from . import render
     from .derive import derive_program
     from .execute import execute_cq_to_parts
@@ -202,13 +204,15 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
             (name, set(groups[name]), f"quantity={quantity}")
             for name, quantity in contract
         ]
+    other_style = render.GHOST_STYLE if transparent else render.DIMMED_STYLE
+    others_note = "others ghosted (see-through)" if transparent else "assembly stays in place"
     for row_no, (label, indices, detail) in enumerate(highlight_rows, start=1):
         actors = [
-            (verts, tris, render.HIGHLIGHT_STYLE if i in indices else render.DIMMED_STYLE)
+            (verts, tris, render.HIGHLIGHT_STYLE if i in indices else other_style)
             for i, (verts, tris) in enumerate(posed)
         ]
         rows.append([render.render_actors(actors, front=f) for f in render.BENCH_FRONTS])
-        labels.append(f"{row_no}. {label} highlighted\n{detail}\nassembly stays in place")
+        labels.append(f"{row_no}. {label} highlighted\n{detail}\n{others_note}")
 
     out = fam_dir / "preview_parts.png"
     render.compose_grid(rows, labels, out)

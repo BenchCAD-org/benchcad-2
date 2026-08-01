@@ -263,6 +263,19 @@ class PreviewPartsEndToEndTests(unittest.TestCase):
             with Image.open(out) as image:
                 self.assertEqual(image.size, (GRID_W, _grid_height(6)))
 
+    def test_transparent_mode_renders_the_same_grid_shape(self):
+        from PIL import Image
+
+        from bench2.preview_parts import build_preview_parts
+
+        with tempfile.TemporaryDirectory() as td:
+            fam_dir = _write_family(Path(td) / "fam", ASSEMBLY_PART, ASSEMBLY_SPEC,
+                                    ASSEMBLY_META)
+            out = build_preview_parts(fam_dir, transparent=True)
+            # same rows as the grouped default — only the styling changes
+            with Image.open(out) as image:
+                self.assertEqual(image.size, (GRID_W, _grid_height(5)))
+
     def test_single_part_family_skips_or_fails_clearly(self):
         from bench2.preview_parts import build_preview_parts
 
@@ -370,7 +383,12 @@ class RenderRegressionTests(unittest.TestCase):
         highlighted = self._png_bytes(render.render_actors(
             [(verts, tris, render.HIGHLIGHT_STYLE), (shifted, tris, render.DIMMED_STYLE)],
             img_size=120))
+        ghosted = self._png_bytes(render.render_actors(
+            [(verts, tris, render.HIGHLIGHT_STYLE), (shifted, tris, render.GHOST_STYLE)],
+            img_size=120))
         self.assertNotEqual(teal, highlighted)
+        # ghosting is visibly different from opaque dimming (see-through actors)
+        self.assertNotEqual(highlighted, ghosted)
 
 
 if __name__ == "__main__":
