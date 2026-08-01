@@ -12,8 +12,8 @@ def _hex_prism(sw, height, z0, chamfer_size):
     # washer-face style chamfer on both hex rims (the z-direction chamfer a
     # moulded gland hex carries), sized to survive the smallest catalog rows
     face_ch = min(0.12 * height, 0.6)
-    part = part.edges(">Z").chamfer(face_ch)
-    part = part.edges("<Z").chamfer(face_ch)
+    # part = part.edges(">Z").chamfer(face_ch)
+    # part = part.edges("<Z").chamfer(face_ch)
     return part
 
 
@@ -47,7 +47,7 @@ def build(
     body_h = overall_len - thread_len
     lower_hex_h = 0.16 * body_h
     middle_thread_h = 0.14 * body_h
-    upper_hex_h = 0.38 * body_h
+    upper_hex_h = 0.45 * body_h
     dome_h = body_h - lower_hex_h - middle_thread_h - upper_hex_h
     bore_r = clamp_max / 2.0
 
@@ -57,7 +57,7 @@ def build(
     result = result.union(lower_hex)
 
     middle_z = lower_hex_h
-    middle_thread_d = 0.74 * outer_dia_a
+    middle_thread_d = 0.8 * outer_dia_a
     middle_thread = _ring_thread(
         middle_thread_d,
         middle_thread_h + 0.4,
@@ -81,7 +81,7 @@ def build(
             notch = (
                 cq.Workplane("XY")
                 .workplane(offset=notch_z)
-                .center(hex_corner_r - 0.75, 0.0)
+                .center(hex_corner_r - 0.15, 0.0)
                 .rect(notch_radial, notch_tangent)
                 .extrude(notch_h)
                 .rotate(
@@ -102,7 +102,7 @@ def build(
     # tangent at the base, horizontal tangent at the top plane — no arc+line
     cb_r_ref = bore_r + max(1.2, 0.045 * outer_dia_a)
     ell_a = max(1.0, cap_r - cb_r_ref - 0.8)      # horizontal semi-axis
-    ell_b = cap_top_z - (dome_z - 0.2)            # vertical semi-axis
+    ell_b = cap_top_z - (dome_z - 0.2) - 1            # vertical semi-axis
     dome = (
         cq.Workplane("XZ")
         .moveTo(0.0, dome_z - 0.2)
