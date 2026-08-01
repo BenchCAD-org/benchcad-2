@@ -58,6 +58,7 @@ PARAM_SPEC = {
             "AutomationDirect DN-R35S precut slotted rail table; each draw "
             "selects one complete catalog row"
         ),
+        askable=True,
     ),
     "rail_length": dict(
         desc="precut rail segment length",
@@ -65,6 +66,7 @@ PARAM_SPEC = {
         range=_row_range("rail_length"),
         source="AutomationDirect DN-R35S precut length table, selected row only",
         refine=True,
+        askable=True,
     ),
     "rail_width": dict(
         desc="TH35 rail outside width",
@@ -72,6 +74,7 @@ PARAM_SPEC = {
         range=_row_range("rail_width"),
         source="AutomationDirect DN-R35S drawing, 35 mm",
         refine=True,
+        askable=True,
     ),
     "rail_height": dict(
         desc="TH35 rail profile height",
@@ -79,6 +82,7 @@ PARAM_SPEC = {
         range=_row_range("rail_height"),
         source="AutomationDirect DN-R35S drawing, 7.5 mm",
         refine=True,
+        askable=True,
     ),
     "rail_thickness": dict(
         desc="steel rail material thickness",
@@ -86,6 +90,7 @@ PARAM_SPEC = {
         range=_row_range("rail_thickness"),
         source="AutomationDirect DIN rail drawing, 1.0 mm",
         refine=True,
+        askable=True,
     ),
     "slot_width": dict(
         desc="mounting slot width",
@@ -93,6 +98,7 @@ PARAM_SPEC = {
         range=_row_range("slot_width"),
         source="AutomationDirect DN-R35S drawing, 6.3 mm",
         refine=True,
+        askable=True,
     ),
     "slot_length": dict(
         desc="mounting slot length",
@@ -100,6 +106,7 @@ PARAM_SPEC = {
         range=_row_range("slot_length"),
         source="AutomationDirect DN-R35S drawing, 18.0 mm",
         refine=True,
+        askable=True,
     ),
     "slot_count": dict(
         desc="number of mounting slots",
@@ -108,6 +115,7 @@ PARAM_SPEC = {
         source="AutomationDirect DN-R35S precut table, selected row only",
         integer=True,
         refine=True,
+        askable=True,
     ),
     "profile_inner_width": dict(
         desc="inside span between TH35 side returns",
@@ -115,6 +123,7 @@ PARAM_SPEC = {
         range=_row_range("profile_inner_width"),
         source="AutomationDirect DN-R35S steel precut rail cross-section drawing, 27.0 mm",
         refine=True,
+        askable=True,
     ),
     "slot_pitch": dict(
         desc="center-to-center pitch between repeated mounting slots",
@@ -125,6 +134,7 @@ PARAM_SPEC = {
             "one slot per 25 mm segment"
         ),
         refine=True,
+        askable=True,
     ),
     "side_relief": dict(
         desc="modeled downturned outer edge return lips",

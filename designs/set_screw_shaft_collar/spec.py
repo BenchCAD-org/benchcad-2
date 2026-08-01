@@ -41,6 +41,7 @@ PARAM_SPEC = {
             "hard": [row[0] for row in ROWS_BY_DIFF["hard"]],
         },
         integer=True,
+        askable=True,
         coverage=[row[0] for row in CATALOG_ROWS],
     ),
     "outer_d": dict(
@@ -49,6 +50,7 @@ PARAM_SPEC = {
         range={"easy": (10, 28), "medium": (20, 63), "hard": (10, 110)},
         source="JW Winco GN 705 metric table, column d2",
         refine=True,
+        askable=True,
     ),
     "width": dict(
         desc="Axial collar width b js14",
@@ -56,6 +58,7 @@ PARAM_SPEC = {
         range={"easy": (6, 12), "medium": (10, 18), "hard": (6, 22)},
         source="JW Winco GN 705 metric table, column b js14",
         refine=True,
+        askable=True,
     ),
     "screw_d": dict(
         desc="Set screw nominal thread major diameter d3",
@@ -63,6 +66,7 @@ PARAM_SPEC = {
         range={"easy": (3, 6), "medium": (5, 10), "hard": (3, 12)},
         source="JW Winco GN 705 metric table, column d3, M size converted to major diameter",
         refine=True,
+        askable=True,
     ),
     "screw_len": dict(
         desc="Set screw nominal length from the catalog d3 entry",
@@ -70,6 +74,7 @@ PARAM_SPEC = {
         range={"easy": (4, 8), "medium": (8, 16), "hard": (4, 20)},
         source="JW Winco GN 705 metric table, column d3, length after x",
         refine=True,
+        askable=True,
     ),
     "second_screw": dict(
         desc="Second set screw on the largest GN 705 table rows, placed at 135 degrees per drawing cue",

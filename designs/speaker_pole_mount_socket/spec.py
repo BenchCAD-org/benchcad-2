@@ -11,6 +11,7 @@ PARAM_SPEC = {
         choices={"easy": [35.0], "medium": [35.0], "hard": [35.0, 38.1]},
         coverage=[35.0, 38.1],
         source="Penn Elcom M1551/M1552 manufacturer pages",
+        askable=True,
     ),
     "cup_outer_d": dict(
         desc="Outside diameter of the drawn cup",
@@ -18,6 +19,7 @@ PARAM_SPEC = {
         range={"easy": (41.0, 41.0), "medium": (41.0, 43.0), "hard": (41.0, 46.1)},
         source="M1551 drawing: 41 mm; otherwise pole diameter + 2 mm clearance + twice sheet thickness",
         refine=True,
+        askable=True,
     ),
     "flange_od": dict(
         desc="Outside diameter of the circular mounting flange",
@@ -26,6 +28,7 @@ PARAM_SPEC = {
         choices={"easy": [118.0], "medium": [110.0, 118.0], "hard": [110.0, 118.0]},
         coverage=[110.0, 118.0],
         source="Penn Elcom M1551 and M1553 manufacturer drawings",
+        askable=True,
     ),
     "flange_t": dict(
         desc="Drawn-steel wall and flange thickness",
@@ -34,6 +37,7 @@ PARAM_SPEC = {
         choices={"easy": [2.0], "medium": [2.0, 3.0], "hard": [2.0, 3.0]},
         coverage=[2.0, 3.0],
         source="Penn Elcom M1551 (2 mm) and M1553-series (3 mm) drawings",
+        askable=True,
     ),
     "depth": dict(
         desc="Cup depth from flange underside to closed bottom",
@@ -42,6 +46,7 @@ PARAM_SPEC = {
         choices={"easy": [76.0], "medium": [60.0, 65.0, 76.0, 95.0], "hard": DEPTHS},
         coverage=DEPTHS,
         source="Adam Hall SM701 and Penn Elcom M1551/M1553/M1555 size tables",
+        askable=True,
     ),
     "hole_d": dict(
         desc="Diameter of each of four flange screw-clearance holes",
@@ -49,6 +54,7 @@ PARAM_SPEC = {
         range={"easy": (6.6, 6.6), "medium": (6.6, 6.6), "hard": (6.6, 6.6)},
         choices=[6.6],
         source="Penn Elcom M1553-series drawing: four holes diameter 6.6 mm",
+        askable=True,
     ),
     "hole_bcd": dict(
         desc="Bolt-circle diameter through the four screw-hole centres",
@@ -56,6 +62,7 @@ PARAM_SPEC = {
         range={"easy": (82.6, 82.6), "medium": (82.6, 82.6), "hard": (82.6, 82.6)},
         choices=[82.6],
         source="M1551 retailer dimension: 82.6 mm centre-to-centre across opposite holes",
+        askable=True,
     ),
     "bottom_radius": dict(
         desc="External radius on the closed cup bottom edge",
