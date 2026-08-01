@@ -1,4 +1,4 @@
-"""gusseted_corner_bracket - round20 baseline with analytic round23 repair."""
+"""gusseted_corner_bracket - self-contained parameterized corner bracket."""
 
 import cadquery as cq
 
@@ -95,6 +95,38 @@ def _make_box(x0: float, x1: float, y0: float, y1: float, z0: float, z1: float) 
     return cq.Solid.makeBox(x1 - x0, y1 - y0, z1 - z0).translate((x0, y0, z0))
 
 
+def _make_reference_body(bracket_width: float, leg_length_1: float, leg_length_2: float) -> cq.Solid:
+    """Build the default gusseted bracket body without loading any STEP file.
+
+    The body is modeled as a single prism in the X direction from the
+    reference side silhouette, then the wing slots and optional mounting holes
+    are cut from that solid.
+    """
+
+    top_step = 7.5
+    side_step = 7.5
+
+    profile = (
+        cq.Workplane("YZ")
+        .moveTo(0.0, 0.0)
+        .lineTo(0.0, leg_length_2)
+        .lineTo(top_step, leg_length_2)
+        .lineTo(top_step, leg_length_2 - side_step)
+        .lineTo(leg_length_1 - side_step, side_step)
+        .lineTo(leg_length_1, side_step)
+        .lineTo(leg_length_1, 0.0)
+        .close()
+    )
+    body = profile.extrude(bracket_width).val()
+
+    try:
+        body = body.edges("%Line").fillet(0.25)
+    except Exception:
+        pass
+
+    return body
+
+
 def _make_prism_from_yz(points, x0: float, x1: float) -> cq.Solid:
     """Extrude a closed YZ profile along X as a solid prism."""
 
@@ -185,32 +217,19 @@ def build(
     edge_radius,
     gusset_radius,
 ):
-    """Build the round23 body from the read-only round20 baseline."""
+    """Build the gusseted bracket as a self-contained CAD model."""
 
-    step_path = r"D:\projectBenchCAD\benchcad-2\designs\gusseted_corner_bracket\round20\final.step"
-    reference_body = cq.importers.importStep(str(step_path)).val()
-    geom_eps = 0.0
-    default_slot_offset_1 = 15.0
-    default_slot_offset_2 = 15.0
+    corrected = _make_reference_body(bracket_width, leg_length_1, leg_length_2)
 
-    corrected = reference_body
-    corrected = corrected.cut(_make_extra_a())
-    corrected = corrected.cut(_make_extra_b())
-    corrected = corrected.fuse(_make_missing_bottom_layer())
-    corrected = corrected.fuse(_make_missing_center_lens())
-
-    if abs(slot_offset_1 - default_slot_offset_1) > 1e-9:
-        corrected = corrected.fuse(_make_slot_solid_xy(14.0, default_slot_offset_1, slot_length, slot_width, plate_thickness))
-        corrected = corrected.cut(_make_slot_solid_xy(14.0, slot_offset_1, slot_length, slot_width, plate_thickness))
-
-    if abs(slot_offset_2 - default_slot_offset_2) > 1e-9:
-        corrected = corrected.fuse(_make_slot_solid_xz(14.0, default_slot_offset_2, slot_length, slot_width, plate_thickness))
-        corrected = corrected.cut(_make_slot_solid_xz(14.0, slot_offset_2, slot_length, slot_width, plate_thickness))
+    corrected = corrected.cut(_make_slot_solid_xy(bracket_width / 2.0, slot_offset_1, slot_length, slot_width, plate_thickness))
+    corrected = corrected.cut(_make_slot_solid_xz(bracket_width / 2.0, slot_offset_2, slot_length, slot_width, plate_thickness))
 
     if panel_mount_holes:
         hole_r = 2.1
-        corrected = corrected.cut(_make_panel_hole_side_face(0.0, panel_hole_offset, panel_hole_offset, hole_r, gusset_thickness))
-        corrected = corrected.cut(_make_panel_hole_side_face(bracket_width - gusset_thickness, panel_hole_offset, panel_hole_offset, hole_r, gusset_thickness))
+        left_panel_x = 0.0
+        right_panel_x = bracket_width - gusset_thickness
+        corrected = corrected.cut(_make_panel_hole_side_face(left_panel_x, panel_hole_offset, panel_hole_offset, hole_r, gusset_thickness))
+        corrected = corrected.cut(_make_panel_hole_side_face(right_panel_x, panel_hole_offset, panel_hole_offset, hole_r, gusset_thickness))
 
     corrected = corrected.clean()
     try:
