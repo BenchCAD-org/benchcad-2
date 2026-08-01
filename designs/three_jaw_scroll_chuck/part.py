@@ -89,7 +89,7 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     L["scroll_od"] = 0.72 * A
     L["cavity_od"] = L["scroll_od"] + 2.0 * max(0.3, 0.0025 * A)
     L["r_spiral_start"] = L["scroll_id"] / 2.0 + 0.55 * L["ridge_w"] + 0.3
-    L["r_spiral_outer"] = L["scroll_od"] / 2.0 - 0.02 * A
+    L["r_spiral_outer"] = L["scroll_od"] / 2.0 - 0.015 * A
 
     # --- bevel crown ring (scroll back) + pinion, shared apex on chuck axis ---
     ring_band = 0.10 * A                      # radial face width of the ring
@@ -141,6 +141,33 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     L["guide_inner"] = max(bore_E / 2.0 + 0.04 * A, 0.11 * A, sleeve_od / 2.0)
     L["slot_gap"] = max(0.15, 0.0015 * A)     # per-side jaw/slot clearance
     return L
+
+
+def _scroll_phase(L, clamp_d, jaw_length_A):
+    """Rotate the scroll by a WHOLE number of crown pitches (k*360/Z_w), which
+    leaves the bevel mesh untouched, choosing the position that seats the most
+    arc teeth on the worst-off jaw — the operator's key position, made
+    deterministic.  Mirrored in spec.check()."""
+    p_ = L["pitch"]
+    w_t = L["jaw_tooth_w"]
+    x0 = clamp_d / 2.0
+    x_f0 = max(x0 + 0.02 * jaw_length_A, L["guide_inner"] + 2.0 * L["slot_gap"])
+    x_f1 = x0 + 0.98 * jaw_length_A
+    lo = max(x_f0 + 0.6 * w_t, L["r_spiral_start"])
+    hi = min(x_f1 - 0.6 * w_t, L["r_spiral_outer"] - 0.5 * L["ridge_w"])
+    best = None
+    for k in range(L["z_wheel"]):
+        alpha = k * 360.0 / L["z_wheel"]
+        counts = []
+        for ang in JAW_ANGLES:
+            r_base = L["r_spiral_start"] + p_ * (((ang - alpha) % 360.0) / 360.0)
+            k_lo = int(math.ceil((lo - r_base) / p_ - 0.5))
+            k_hi = int(math.floor((hi - r_base) / p_ - 0.5))
+            counts.append(k_hi - k_lo + 1)
+        key = (min(counts), sum(counts), -k)
+        if best is None or key > best[0]:
+            best = (key, alpha)
+    return best[1]
 
 
 def _spiral_thread(L):
@@ -275,13 +302,14 @@ def _bevel_pinion(L, meridian_deg):
     return pinion.rotate(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1), meridian_deg)
 
 
-def _jaw(L, jaw_idx, clamp_d, jaw_length_A, jaw_width_B, jaw_height_C,
-         jaw_step_F, jaw_step_G, jaw_step_H, jaw_tongue_E):
+def _jaw(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
+         jaw_height_C, jaw_step_F, jaw_step_G, jaw_step_H, jaw_tongue_E):
     """Stepped jaw + T-foot + underside arc teeth, built on the +X meridian."""
     x0 = clamp_d / 2.0
     z_top = L["z_foot"] + jaw_height_C       # catalog C spans foot to top
-    mid_drop = min(0.50 * jaw_step_H, 0.22 * jaw_height_C)
-    low_drop = min(jaw_step_H, 0.38 * jaw_height_C)
+    # the BB drawing labels EACH step height H (two H callouts, one per step)
+    mid_drop = min(jaw_step_H, 0.22 * jaw_height_C)
+    low_drop = min(2.0 * jaw_step_H, 0.38 * jaw_height_C)
 
     body = (
         cq.Workplane("XZ")
@@ -297,14 +325,21 @@ def _jaw(L, jaw_idx, clamp_d, jaw_length_A, jaw_width_B, jaw_height_C,
         .extrude(jaw_width_B / 2.0, both=True)
     )
 
-    # gripping-face serrations (2 shallow transverse grooves, proportions)
-    serr_d = max(0.25, 0.025 * jaw_height_C)
-    for i in range(2):
-        sx = x0 + (0.18 + 0.18 * i) * jaw_step_F
-        body = body.cut(
-            cq.Workplane("XY", origin=(sx, 0.0, z_top - serr_d))
-            .box(0.045 * jaw_length_A, 1.2 * jaw_width_B, 3.0 * serr_d,
-                 centered=(True, True, False)))
+    # gripping serrations on the VERTICAL clamping faces (the BB drawing marks
+    # the nose face and both step risers, not the top land): two shallow
+    # horizontal grooves per face, cut just below each face's local top edge
+    serr_d = max(0.25, 0.02 * jaw_height_C)
+    for xf, local_top in ((x0, z_top),
+                          (x0 + jaw_step_F, z_top - mid_drop),
+                          (x0 + jaw_step_G, z_top - low_drop)):
+        for i in range(2):
+            gz = local_top - (0.14 + 0.16 * i) * jaw_height_C
+            if gz - serr_d < 0.5:
+                continue
+            body = body.cut(
+                cq.Workplane("XY", origin=(xf - 0.45, -0.6 * jaw_width_B, gz))
+                .box(0.80, 1.2 * jaw_width_B, serr_d,
+                     centered=(False, False, False)))
 
     # nose chamfers: the BB drawing's plan view shows a narrowed tip; it is
     # also what lets three jaws meet at small clamp diameters without touching
@@ -333,10 +368,11 @@ def _jaw(L, jaw_idx, clamp_d, jaw_length_A, jaw_width_B, jaw_height_C,
         .box(x_f1 - x_f0, jaw_width_B, jaw_tongue_E + 0.2,
              centered=(False, False, False)))
 
-    # underside arc teeth at the local spiral gap radii; evaluating the spiral
-    # at this jaw's meridian gives the real 1/3-pitch stagger between jaws
+    # underside arc teeth at the local spiral gap radii; evaluating the
+    # (phase-rotated) spiral at this jaw's meridian gives the real 1/3-pitch
+    # stagger between jaws
     p, w_t = L["pitch"], L["jaw_tooth_w"]
-    theta_frac = JAW_ANGLES[jaw_idx] / 360.0
+    theta_frac = ((JAW_ANGLES[jaw_idx] - phase_alpha) % 360.0) / 360.0
     r_base = L["r_spiral_start"] + p * theta_frac
     lo = max(x_f0 + 0.6 * w_t, L["r_spiral_start"])
     hi = min(x_f1 - 0.6 * w_t, L["r_spiral_outer"] - 0.5 * L["ridge_w"])
@@ -445,8 +481,9 @@ def build(
             .rotate((0, 0, 0), (0, 0, 1), angd))
         body = body.cut(pocket).cut(journal)
 
-    # rear mounting: F bolt circle, catalog hole count, blind depth (real
-    # chucks are tapped from the back; the front face stays clean)
+    # rear mounting: F bolt circle, catalog hole count, blind depth. The BODY
+    # is tapped (hole at the thread minor diameter ~0.85*G, no false helix);
+    # the COVER carries clearance holes.
     hole_depth = min(2.5 * mount_thread_G, 0.45 * D)
     for i in range(mount_hole_count):
         ang = 2.0 * math.pi * i / mount_hole_count
@@ -454,7 +491,7 @@ def build(
         hy = 0.5 * bolt_circle_F * math.sin(ang)
         body = body.cut(
             cq.Workplane("XY", origin=(hx, hy, -D - 0.5))
-            .circle(mount_thread_G / 2.0)
+            .circle(0.85 * mount_thread_G / 2.0)
             .extrude(hole_depth + 0.5))
 
     # characteristic scallops (absent from size 400 up, catalog p.3041)
@@ -485,7 +522,7 @@ def build(
         hy = 0.5 * bolt_circle_F * math.sin(ang)
         cover = cover.cut(
             cq.Workplane("XY", origin=(hx, hy, -D - 0.5))
-            .circle(mount_thread_G / 2.0)
+            .circle((mount_thread_G + max(0.4, 0.05 * mount_thread_G)) / 2.0)
             .extrude(hole_depth + 0.5))
 
     # ---------------- scroll plate ----------------
@@ -495,11 +532,14 @@ def build(
     boss, crown_teeth = _crown_ring(L)
     spiral = _spiral_thread(L)
     scroll = plate.val().fuse(*([boss, spiral] + crown_teeth))
+    # operator's key position: whole crown pitches, bevel mesh unaffected
+    phase_alpha = _scroll_phase(L, clamp_d, jaw_length_A)
+    scroll = scroll.rotate(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1), phase_alpha)
 
     # ---------------- jaws + pinions ----------------
     jaws = [
-        _jaw(L, i, clamp_d, jaw_length_A, jaw_width_B, jaw_height_C,
-             jaw_step_F, jaw_step_G, jaw_step_H, jaw_tongue_E)
+        _jaw(L, i, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
+             jaw_height_C, jaw_step_F, jaw_step_G, jaw_step_H, jaw_tongue_E)
         for i in range(3)
     ]
     pinions = [_bevel_pinion(L, angd) for angd in PINION_ANGLES]

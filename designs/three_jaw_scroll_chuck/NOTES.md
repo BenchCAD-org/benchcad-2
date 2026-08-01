@@ -15,7 +15,7 @@
 | jaw BB p.3060 | A/B/C | `jaw_length_A` / `jaw_width_B` / `jaw_height_C` | jaw envelope (C spans foot underside → top) |
 | | D | `jaw_serration_D` | underside serration band → **scroll thread pitch** |
 | | E | `jaw_tongue_E` | guide-tongue band → **T-flange height** |
-| | F/G/H | `jaw_step_F/G/H` | outward step profile |
+| | F/G/H | `jaw_step_F/G/H` | outward step profile; the drawing labels EACH riser height H, so the profile drops H at F and another H at G (capped by 0.22·C / 0.38·C at the largest rows) |
 | ranges p.3044 | A1 | `grip_min_A1`..`grip_max_A1` | `clamp_d = A1min + f·(A1max − A1min)` |
 
 The BB side view labels D on the serrated band and E on the tongue band; the
@@ -33,15 +33,21 @@ width 0.34·pitch, ring face width 0.10·A, pinion teeth Z_p = 12, flank
 half-angle 20°, universal running clearance clr = max(0.2, 0.004·D) mm.
 
 - **Scroll thread**: one Archimedean band r(θ) = r_start + pitch·θ/2π swept
-  over the annulus between the body sleeve and 0.34·A, standing 0.55·pitch
+  over the annulus between the body sleeve and 0.345·A, standing 0.55·pitch
   proud of the scroll face. Spline-sampled at 36 pts/turn (no polyline facets).
 - **Jaw teeth**: concentric arc segments on the jaw foot at the spiral's
   *gap* radii evaluated at that jaw's meridian (0°/120°/240°), i.e. radii
-  r_start + pitch·(θ_jaw/360) + (k+½)·pitch. Jaws 1/2/3 therefore carry the
-  real ⅓-pitch stagger and interleave the spiral with clr axial clearance.
-  Modelling one static engagement is equivalent to choosing the scroll's
-  rotation phase; the arc-vs-spiral radial deviation over the jaw width is
-  covered by the 0.24·pitch side gap (verified per size).
+  r_start + pitch·((θ_jaw − α)/360) + (k+½)·pitch. Jaws 1/2/3 therefore carry
+  the real ⅓-pitch stagger and interleave the spiral with clr axial clearance.
+  The arc-vs-spiral radial deviation over the jaw width is covered by the
+  0.24·pitch side gap (verified per size).
+- **Key position α** (`part._scroll_phase`, mirrored in `check()`): the
+  scroll is rotated by a whole number of crown pitches k·360/Z_w — which
+  leaves the bevel mesh phase untouched — choosing the k that seats the most
+  arc teeth on the worst-off jaw. This is the real degree of freedom the
+  operator's key provides, made deterministic; with it every catalog row
+  keeps ≥ 2 engaged teeth per jaw over the entire published A1 range
+  (verified on a 51-point f grid × 12 rows).
 - **Bevel pair**: straight planar-flank teeth, shaft angle 90°, shared pitch
   apex on the chuck axis at the pinion axis height: tan δ_wheel = Z_w/Z_p,
   pinion pitch radius r_pp = R_ring·Z_p/Z_w = axial offset between ring pitch
@@ -68,6 +74,14 @@ half-angle 20°, universal running clearance clr = max(0.2, 0.004·D) mm.
   spiral engagement (≥ 2 pitches) — all 12 catalog rows stay feasible over
   the full published A1 range, and at A1 max the jaws overhang the body OD,
   which the catalogue's own ranges imply.
+
+## Mounting holes
+
+The body is tapped: holes cut at the thread minor diameter (0.85·G), blind
+from the back (depth min(2.5·G, 0.45·D)); the cover carries clearance holes
+(G + max(0.4, 0.05·G)). No false helical detail. Jaw gripping serrations are
+two shallow grooves on each vertical gripping face (nose and both risers),
+as the BB drawing marks them; groove pitch/depth are proportions.
 
 ## Not modelled (visible simplifications)
 

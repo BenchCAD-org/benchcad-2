@@ -10,6 +10,8 @@ convention): chuck table symbols A/B/C/D/E/F/G/K from catalogue p.3048, jaw BB
 table symbols A/B/C/D/E/F/G/H from p.3060, chucking range A1 from p.3044.
 """
 
+import math
+
 
 CATALOG_ROWS = [
     # chuck: size(A), item, B, C, D, E, F, G, holes; jaw BB: A/B/C/D/E/F/G/H;
@@ -240,18 +242,54 @@ def check(p: dict) -> list[str]:
             "needs clamp radius > 0.13*B/tan60)")
     sleeve_od = max(p["bore_E"] + 0.06 * A, 0.20 * A)
     guide_inner = max(p["bore_E"] / 2.0 + 0.04 * A, 0.11 * A, sleeve_od / 2.0)
-    engaged = min(x0 + jA, 0.5 * A) - max(x0, guide_inner)
+    slot_gap = max(0.15, 0.0015 * A)
+    x_f0 = max(x0 + 0.02 * jA, guide_inner + 2.0 * slot_gap)  # as-built flange
+    x_f1 = x0 + 0.98 * jA
+    engaged = min(x_f1, 0.5 * A) - max(x_f0, guide_inner)
     if engaged < 0.30 * jA:
         bad.append(
-            "jaw guide engagement below 0.30*jaw_length_A: the T-tongue must "
-            "keep at least 30% of the jaw length inside its guideway")
+            "jaw guide engagement below 0.30*jaw_length_A: the as-built "
+            "T-flange must keep at least 30% of the jaw length in its guideway")
+    # exact mirror of part._layout's crown solve + part._scroll_phase: at the
+    # chosen key position (a whole number of crown pitches, so the bevel mesh
+    # is untouched) every jaw must seat at least two arc teeth in the spiral
+    pitch = p["jaw_serration_D"]
+    ridge_w = 0.42 * pitch
+    tooth_w = 0.34 * pitch
     scroll_id = sleeve_od + 2.0 * max(0.3, 0.0025 * A)
-    ridge_w = 0.42 * p["jaw_serration_D"]
     r_si = scroll_id / 2.0 + 0.55 * ridge_w + 0.3
-    r_so = 0.36 * A - 0.02 * A
-    overlap = min(x0 + jA, r_so) - max(x0, r_si)
-    if overlap < 2.0 * p["jaw_serration_D"]:
+    r_so = 0.345 * A
+    lo = max(x_f0 + 0.6 * tooth_w, r_si)
+    hi = min(x_f1 - 0.6 * tooth_w, r_so - 0.5 * ridge_w)
+    D = p["height_D"]
+    clr = max(0.20, 0.004 * D)
+    neck_h = max(1.0, 0.55 * p["jaw_tongue_E"])
+    z_foot = -(neck_h + 2.0 * clr) - p["jaw_tongue_E"]
+    thread_h = 0.55 * pitch
+    z_scroll_back = (z_foot - clr - thread_h
+                     - max(0.09 * D, 1.15 * thread_h))
+    scroll_od = 0.72 * A
+    ring_band = 0.10 * A
+    r_mean = min(max(0.29 * A, scroll_id / 2.0 + 0.60 * ring_band),
+                 scroll_od / 2.0 - 0.55 * ring_band)
+    cover_t = max(1.8, 0.085 * D, p["register_depth_C"] + 0.8)
+    head_clr = max(0.5, 0.008 * A)
+    kb = (r_mean + ring_band / 2.0) / r_mean
+    denom = 1.35 + 3.0 * ring_band / r_mean + 6.0 + 6.75 * kb
+    m_max = (z_scroll_back + D - cover_t - 1.0 - head_clr) / denom
+    z_wheel = max(33, 3 * int(math.ceil(2.0 * r_mean / (3.0 * m_max))))
+    best = -99
+    for k in range(z_wheel):
+        alpha = k * 360.0 / z_wheel
+        worst = 99
+        for ang in (0.0, 120.0, 240.0):
+            r_base = r_si + pitch * (((ang - alpha) % 360.0) / 360.0)
+            k_lo = math.ceil((lo - r_base) / pitch - 0.5)
+            k_hi = math.floor((hi - r_base) / pitch - 0.5)
+            worst = min(worst, k_hi - k_lo + 1)
+        best = max(best, worst)
+    if best < 2:
         bad.append(
-            "scroll engagement below two thread pitches: the jaw underside "
-            "must overlap the spiral band [r_si, r_so] by >= 2*jaw_serration_D")
+            "scroll engagement below two teeth: at the best key position some "
+            "jaw's as-built arc-tooth window holds < 2 teeth at this clamp_d")
     return bad
