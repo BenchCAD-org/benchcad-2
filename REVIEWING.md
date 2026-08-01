@@ -30,6 +30,8 @@ directions (the "Review order" below is the step-by-step how-to):
 2. **Review material.** The issue carries a true 2D orthographic drawing + a
    product photo; the PR re-embeds them and ships all four renders
    regenerated at the current head; an assembly adds a per-part render. The
+   easy/medium/hard labels must show every catalog column as a value or
+   range (sw, a, d, f, …) so each render is checkable against the table. The
    four benchmark views must suffice to reconstruct the geometry — no "solid
    outside, structure inside": fully enclosed internals are either not scored
    bodies or get a cutaway view. The code reads against the drawing:

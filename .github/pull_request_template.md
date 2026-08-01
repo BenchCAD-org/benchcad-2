@@ -43,7 +43,8 @@
       [the contributor loop](https://github.com/BenchCAD-org/benchcad-2/blob/main/CONTRIBUTING.md#the-contributor-loop) ·
       [red-CI debugging](https://github.com/BenchCAD-org/benchcad-2/blob/main/docs/DEBUGGING.md)
 - [ ] I ran `uv run bench2 preview <family>`, **looked at every image**, and
-      **committed all four renders** — `preview.png` (easy/medium/hard grid),
+      **committed all four renders**; the easy/medium/hard labels show **every
+      catalog column as a value or range** (sw, a, d, f, …) — `preview.png` (easy/medium/hard grid),
       `preview_views.png` (the four benchmark views), `preview_hard_zoom.png`
       (front/side/top/iso of a hard example), `preview_extremes.png` (min & max
       draw). The part matches the issue's reference drawing across all tiers, and

@@ -49,13 +49,29 @@ def cmd_validate(family: str, seeds: int, fast: bool) -> int:
 
 
 def _param_caption(spec, p) -> str:
-    """Compact `name=value` summary of the meaningful params (~2 per line) for a
-    preview row label — lets a reviewer map the rendered part to its numbers and
-    to the source drawing. Covers askable dimensions plus feature params so
-    every relevant catalog symbol is legible."""
-    parts = [f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-             if (e.get("askable") or e.get("feature")) and k in p]
+    """Compact `name=value` summary of EVERY param (~2 per line) for a preview
+    row label — lets a reviewer map the rendered part to its numbers and the
+    source drawing. Includes row-locked/refine-filled params, so every catalog
+    column (sw, a, d, f, …) is legible in the image, not just the askable ones."""
+    parts = [f"{k}={p[k]}" for k in spec.PARAM_SPEC if k in p]
     return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
+
+
+def _row_caption(spec, plist) -> str:
+    """Per-difficulty label for the easy/medium/hard grid: each param as a
+    value (constant across the row's seeds) or a lo–hi range — the catalog
+    numbers stay visible even when seeds vary."""
+    parts = []
+    for k in spec.PARAM_SPEC:
+        vals = [p[k] for p in plist if k in p]
+        if not vals:
+            continue
+        try:
+            lo, hi = min(vals), max(vals)
+            parts.append(f"{k}={lo}" if lo == hi else f"{k}={lo}–{hi}")
+        except TypeError:
+            parts.append(f"{k}={vals[0]}")
+    return "\n".join(parts)
 
 
 def cmd_preview(family: str, per_diff: int) -> int:
@@ -76,8 +92,10 @@ def cmd_preview(family: str, per_diff: int) -> int:
     with tempfile.TemporaryDirectory() as td:
         for diff in DIFFS:
             row = []
+            row_params = []
             for seed in range(per_diff):
                 p = sample_params(spec, diff, np.random.default_rng(seed))
+                row_params.append(p)
                 step = Path(td) / f"{diff}_{seed}.step"
                 execute_cq_to_step(derive_program(part, p), step)
                 verts, tris = render.step_to_normalized_mesh(step)
@@ -89,9 +107,9 @@ def cmd_preview(family: str, per_diff: int) -> int:
                     view_labels.append(f"{diff}\n{_param_caption(spec, p)}")
                 print(f"  rendered {diff}/seed{seed}")
             rows.append(row)
-            labels.append(diff)
-    out = render.compose_grid(rows, labels, fam_dir / "preview.png")
-    out2 = render.compose_grid(view_rows, view_labels, fam_dir / "preview_views.png")
+            labels.append(f"{diff}\n{_row_caption(spec, row_params)}")
+    out = render.compose_grid(rows, labels, fam_dir / "preview.png", label_w=360)
+    out2 = render.compose_grid(view_rows, view_labels, fam_dir / "preview_views.png", label_w=360)
 
     # extremes: scan cheap samples across all difficulties, pick the overall
     # smallest / largest parameter draw (mean of range-normalized numeric
