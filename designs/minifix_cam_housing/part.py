@@ -160,6 +160,12 @@ def build(
     pmap = {z0: i for i, (z0, _) in enumerate(prepared)}
     if 0.0 in pmap and 0.8 in pmap:
         prepared[pmap[0.0]] = (0.0, prepared[pmap[0.8]][1])
+    # The measured z=-0.8 rim-bottom section is a chainer artefact at R~3.9 (it
+    # grabbed the rim's inner edge, not the flange outer ~R8). Holding the valid
+    # z=-0.5 rim section (R~7.94) down to the rim bottom replaces the spurious
+    # R3.9 cone with a straight flange; only has_rim rows carry the z<0 stations.
+    if -0.8 in pmap and -0.5 in pmap:
+        prepared[pmap[-0.8]] = (-0.8, prepared[pmap[-0.5]][1])
 
     solids = []
     last_good = None
