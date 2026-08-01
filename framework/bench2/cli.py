@@ -51,10 +51,10 @@ def cmd_validate(family: str, seeds: int, fast: bool) -> int:
 def _param_caption(spec, p) -> str:
     """Compact `name=value` summary of the meaningful params (~2 per line) for a
     preview row label — lets a reviewer map the rendered part to its numbers and
-    to the source drawing. Covers askable dimensions plus feature params so
-    every relevant catalog symbol is legible."""
+    to the source drawing. Covers every declared parameter so all catalog
+    symbols stay legible."""
     parts = [f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-             if (e.get("askable") or e.get("feature")) and k in p]
+             if k in p]
     return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
 
 
@@ -128,7 +128,7 @@ def cmd_preview(family: str, per_diff: int) -> int:
             ex_labels.append(f"{tag} ({diff})\n{_param_caption(spec, p)}")
             print(f"  extreme {tag} [{diff}]: "
                   + ", ".join(f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-                              if e.get("askable") and k in p))
+                              if k in p))
     out3 = render.compose_grid(ex_rows, ex_labels, fam_dir / "preview_extremes.png")
 
     # three-view + iso of a hard example — the four benchmark views are all
