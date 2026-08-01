@@ -30,8 +30,10 @@ directions (the "Review order" below is the step-by-step how-to):
 2. **Review material.** The issue carries a true 2D orthographic drawing + a
    product photo; the PR re-embeds them and ships all four renders
    regenerated at the current head; an assembly adds a per-part render. The
-   easy/medium/hard labels must show every catalog column as a value or
-   range (sw, a, d, f, …) so each render is checkable against the table. The
+   easy/medium/hard labels must list every parameter as a value or range;
+   parameter names carry the drawing's dimension symbols (`width_sw`,
+   `bore_d1`), so check that every dimension of the issue's 2D drawing is
+   readable off the renders and consistent with the table. The
    four benchmark views must suffice to reconstruct the geometry — no "solid
    outside, structure inside": fully enclosed internals are either not scored
    bodies or get a cutaway view. The code reads against the drawing:
@@ -114,8 +116,8 @@ directions (the "Review order" below is the step-by-step how-to):
    What's *missing* — think tear-out, thin walls, tool clearance, unstable
    proportions, and check those failure modes are constrained.
 6. **Audit `PARAM_SPEC`.** Ranges sensible per tier; `source` fields specific
-   (a table, a rule, or honest `"proportion"`); `askable` only on parameters
-   visible/derivable from the part; `feature` on optional-feature toggles;
+   (a table, a rule, or honest `"proportion"`); `feature` on optional-feature
+   toggles;
    `coverage` on the table-driving parameter.
 7. **`family.json`.** Name accurate, `standard` correct or null, `base_plane`
    matches the build, `geomlib` lists exactly the helpers used, description
