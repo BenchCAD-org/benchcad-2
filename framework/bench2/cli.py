@@ -159,8 +159,12 @@ def cmd_preview(family: str, per_diff: int) -> int:
         execute_cq_to_step(derive_program(part, hp), step)
         verts, tris = render.step_to_normalized_mesh(step)
         hz = render.render_three_view(verts, tris)
+        # half-section (cutaway): expose internal bores/pockets — counterbore
+        # steps, webs — that every exterior view hides.
+        cw_verts, cw_tris = render.step_cutaway_mesh(step)
+        hz.append(render.render_iso(cw_verts, cw_tris, 380, front=(1.0, -1.0, 1.0)))
     out4 = render.compose_grid(
-        [hz], [f"hard example (front · side · top · iso)\n{_param_caption(spec, hp)}"],
+        [hz], [f"hard example (front · side · top · iso · cutaway)\n{_param_caption(spec, hp)}"],
         # wider label column than the default: this grid is one row of four, and
         # a 2-params-per-line caption overruns 300 px on long parameter names.
         fam_dir / "preview_hard_zoom.png", cell=380, label_w=390)
