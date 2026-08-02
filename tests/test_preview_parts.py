@@ -282,6 +282,9 @@ class PreviewPartsEndToEndTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             fam_dir = _write_family(Path(td) / "fam", SINGLE_PART, SINGLE_SPEC,
                                     _meta())
+            # a stale artifact (e.g. the family stopped being an assembly) is
+            # removed rather than left behind as evidence
+            (fam_dir / "preview_parts.png").write_bytes(b"stale")
             # `bench2 preview` auto-detect path: not an assembly -> no artifact
             self.assertIsNone(build_preview_parts(fam_dir, required=False))
             self.assertFalse((fam_dir / "preview_parts.png").exists())
@@ -297,6 +300,8 @@ class PreviewPartsEndToEndTests(unittest.TestCase):
                 Path(td) / "fam", ASSEMBLY_PART, ASSEMBLY_SPEC,
                 _meta(solids=3, components=[{"name": "base", "quantity": 1},
                                             {"name": "peg", "quantity": 2}]))
+            # a previous successful run's artifact must not survive a failed one
+            (fam_dir / "preview_parts.png").write_bytes(b"stale")
             with self.assertRaisesRegex(ValueError, "matches no family.json component"):
                 build_preview_parts(fam_dir)
             self.assertFalse((fam_dir / "preview_parts.png").exists())

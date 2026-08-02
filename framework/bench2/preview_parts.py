@@ -152,6 +152,12 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
     from .loader import load_family
     from .sampling import sample as sample_params
 
+    out = fam_dir / "preview_parts.png"
+    # remove any previous artifact FIRST: a run that fails must not leave a
+    # stale image behind that reads as current evidence — and a family that
+    # stopped being an assembly sheds its obsolete artifact on the next run
+    out.unlink(missing_ok=True)
+
     part, spec = load_family(fam_dir)
     p = sample_params(spec, "hard", np.random.default_rng(0))
     meta = json.loads((fam_dir / "family.json").read_text())
@@ -214,6 +220,5 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
         rows.append([render.render_actors(actors, front=f) for f in render.BENCH_FRONTS])
         labels.append(f"{row_no}. {label} highlighted\n{detail}\n{others_note}")
 
-    out = fam_dir / "preview_parts.png"
     render.compose_grid(rows, labels, out)
     return out

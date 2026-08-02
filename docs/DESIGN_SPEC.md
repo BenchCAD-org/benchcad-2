@@ -264,8 +264,9 @@ roles are `left_pin`/`right_pin` (two declared components), not
 `pin_01`/`pin_02`. The command **fails clearly instead of producing a
 misleading image** when `result` is not a named assembly, an instance matches
 no declared component, instance names collide, or quantities drift from the
-declaration. `bench2 validate` checks `components`/`solids` consistency as
-part of the family.json gate.
+declaration. The previous `preview_parts.png` is removed before every run, so
+a failed run never leaves a stale image behind as evidence. `bench2 validate`
+checks `components`/`solids` consistency as part of the family.json gate.
 
 A complete runnable example — three semantic components, a repeated
 `bolt_01`/`bolt_02` pair, a nested and rotated sub-assembly — lives in
