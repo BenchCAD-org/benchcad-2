@@ -213,9 +213,17 @@ def _component_shapes(
     ball_r = ball_d / 2.0
     span = outer_d - bore_d
     # SKF 6000 section drawing gives d1 ~= 14.8 and D2 ~= 22.6 for d/D = 10/26.
-    # The same normalized shoulder relationship is used for the 6000-6005 rows.
+    # d1 (inner land) keeps the normalized-span anchor: it yields real shoulder
+    # recesses (0.7-1.0 mm) across all six rows. D2 (outer land) must instead
+    # be derived FROM the groove bottom: the old linear-span anchor happened to
+    # equal the groove-bottom radius by 6005, leaving the outer raceway with no
+    # recess at all. The 6000 cue calibrates the outer shoulder height to
+    # 0.062*ball_d (D2 = 22.6 exactly at 6000), which also lands within
+    # ~0.1 mm of the real 6005 D2.
     inner_shoulder_d = bore_d + 0.30 * span
-    outer_race_d = outer_d - (3.4 / 16.0) * span
+    gap = max(0.16, min(0.20, ball_d * 0.035))
+    outer_groove_bottom_d = pitch_d + ball_d + 2.0 * gap
+    outer_race_d = outer_groove_bottom_d - 2.0 * 0.062 * ball_d
 
     # Inner and outer rings are continuous closed radial-axial profiles,
     # revolved around the bearing axis. The shoulder diameters are anchored to
