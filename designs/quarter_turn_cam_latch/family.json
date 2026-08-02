@@ -2,7 +2,22 @@
   "family": "quarter_turn_cam_latch",
   "standard": "Southco E5 quarter-turn cam latch",
   "base_plane": "XY",
-  "description": "Quarter-turn cam latch: a round head above the panel (slotted tool-recess or plain knob), a double-D body through the panel cutout forming the housing, and a flat cam arm clamping at the grip depth behind the frame. One solid, drawn latched.",
+  "description": "Southco E5-class quarter-turn cam latch as the three parts it is sold as: latch housing (domed head + double-D body), the separate one-sided stepped cam at the full 45 axis-to-tip reach, and the mounting nut.",
   "source": "Southco E5 literature (head, double-D cutout 20.1/14.1 A/F, housing 27.2-68.2, cam 33-45, grip 4-42+); cam width/thickness proportions",
-  "contributor": "BenchCAD-org"
+  "contributor": "BenchCAD-org",
+  "solids": 3,
+  "components": [
+    {
+      "name": "housing",
+      "quantity": 1
+    },
+    {
+      "name": "cam",
+      "quantity": 1
+    },
+    {
+      "name": "mounting_nut",
+      "quantity": 1
+    }
+  ]
 }
