@@ -23,49 +23,42 @@ PARAM_SPEC = {
         unit="mm",
         range={"easy": (48.0, 51.0), "medium": (48.0, 51.0), "hard": (48.0, 51.0)},
         source="Doughty/Riggatec/Global Truss/Kupo: universal Ø48-51 barrel",
-        askable=True,
     ),
     "wall_t": dict(
         desc="ring wall thickness around the barrel",
         unit="mm",
         range={"easy": (5.0, 7.0), "medium": (4.0, 8.0), "hard": (4.0, 9.0)},
         source="proportion (extruded AW6082-T6 clamp body)",
-        askable=True,
     ),
     "body_w": dict(
         desc="body width along the tube axis",
         unit="mm",
         range={"easy": (45.0, 50.0), "medium": (30.0, 50.0), "hard": (30.0, 51.0)},
         source="Doughty width 50 (standard/lightweight) vs 30 (slimline); Riggatec 30-51",
-        askable=True,
     ),
     "base_drop": dict(
         desc="tube centre to the tang base plane",
         unit="mm",
         range={"easy": (50.0, 55.0), "medium": (40.0, 55.0), "hard": (40.0, 55.0)},
         source="Doughty tube-centre->base 40-55 mm across the range",
-        askable=True,
     ),
     "tang_t": dict(
         desc="hanging-tang plate thickness",
         unit="mm",
         range={"easy": (9.0, 12.0), "medium": (7.0, 14.0), "hard": (6.0, 16.0)},
         source="proportion (fixing tang under the ring)",
-        askable=True,
     ),
     "hang_d": dict(
         desc="fixing eye / closing-bolt hole diameter (M10-M12 clearance)",
         unit="mm",
         range={"easy": (12.5, 13.0), "medium": (10.5, 13.0), "hard": (10.5, 13.5)},
         source="Doughty eye Ø12.7 (M12); M10 option on slimline/lightweight",
-        askable=True,
     ),
     "lug_h": dict(
         desc="closure-lug block height over the ring crown",
         unit="mm",
         range={"easy": (14.0, 18.0), "medium": (12.0, 22.0), "hard": (10.0, 24.0)},
         source="proportion (closing-bolt boss)",
-        askable=True,
     ),
     "stud": dict(
         desc="hook-clamp hanging stud protruding from the base (1) vs plain eye (0)",
@@ -100,4 +93,8 @@ def check(p: dict) -> list[str]:
     if p["tang_t"] > 0.5 * p["body_w"]:
         bad.append("tang_t > 0.5*body_w: tang should be a plate under the ring, not a block")
 
+    af = 19.0 if (p["hang_d"] - 0.7) >= 11.0 else 17.0
+    if p["body_w"] < af + 8.0:
+        bad.append("tang too narrow for the captive-nut slot: body_w must exceed "
+                   "slot A/F + 8 (parallel walls hold the hex nut - wider and it spins)")
     return bad

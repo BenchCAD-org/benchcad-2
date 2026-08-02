@@ -25,9 +25,11 @@ gap each side (the shells clamp shut on the barrel, absent here); the tang
 drops -Z to the base plane at z = -base_drop.
 
 Drawing symbols (Doughty sheet): barrel Ø48-51 -> bore_d; body width 50 ->
-body_w; tube centre->base 55 -> base_drop; fixing eye Ø12.7 -> hang_d; tang
-19 wide -> tang_t; overall 107 across -> emerges from x_h; pins at height 55
--> the z=0 pin axes.
+body_w; tube centre->base 55 -> base_drop; fixing eye Ø12.7 -> hang_d; the
+sheet's 19 is the CAPTIVE-NUT SLOT A/F (17 for M10) cut on the eye axis with
+the drawing's 16 slot height, tang_t itself is a proportion; overall 107
+across -> emerges from x_h with the wing nut folded along the tube; pins at
+height 55 -> the z=0 pin axes.
 
 Interface + examples: docs/DESIGN_SPEC.md
 """
@@ -135,6 +137,13 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
             .extrude(tang_t * 2.0, both=True)
             .translate((0.0, 0.0, z_eye))
         )
+        # captive-nut slot on the eye axis (datasheet: 19 A/F for M12, 17 for
+        # M10; drawing slot height 16): parallel walls at the hex A/F so the
+        # nut cannot spin
+        af = 19.0 if bolt_d >= 11.0 else 17.0
+        lower = lower.cut(
+            _y_slab(0.0, 0.0, z_eye - 0.425 * af, tang_t * 4.0, af, 0.85 * af)
+        )
 
     # ---- 2. upper shell ------------------------------------------------------
     upper = half_annulus(+1)
@@ -156,20 +165,20 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
         upper = upper.cut(bore)
 
     # ---- 3./5. hinge pin and bolt pivot pin ----------------------------------
-    hinge_pin = _y_cyl(-x_h, 0.0, body_w - 0.4, pin_d / 2.0)
-    pivot_pin = _y_cyl(x_h, 0.0, body_w - 0.4, pin_d / 2.0)
+    hinge_pin = _y_cyl(0.0, 0.0, body_w - 0.4, pin_d / 2.0)
+    pivot_pin = _y_cyl(0.0, 0.0, body_w - 0.4, pin_d / 2.0)
 
     # ---- 4. closing bolt -----------------------------------------------------
     z_lug_top = z_l0 + lug_h
     z_bolt_top = z_lug_top + 2.0 * bolt_d
     r_minor = bolt_d / 2.0 - 0.61 * pitch
     eye_w = 0.3 * body_w
-    bolt = _y_cyl(x_h, 0.0, eye_w, r_eye).union(
-        cq.Workplane("XY", origin=(x_h, 0.0, 0.0)).circle(r_minor).extrude(z_bolt_top))
-    bolt = bolt.cut(_y_cyl(x_h, 0.0, 2.0 * eye_w, pin_d / 2.0 + 0.15))
+    bolt = _y_cyl(0.0, 0.0, eye_w, r_eye).union(
+        cq.Workplane("XY").circle(r_minor).extrude(z_bolt_top))
+    bolt = bolt.cut(_y_cyl(0.0, 0.0, 2.0 * eye_w, pin_d / 2.0 + 0.15))
     z_t0 = z_lug_top + 0.5                       # thread rings start over the lug
     z_t1 = z_bolt_top - 0.3 * bolt_d             # plain tip above
-    ext = _ring_stack(x_h, z_t0, z_t1, pitch, r_minor - 0.01, bolt_d / 2.0, 0.0)
+    ext = _ring_stack(0.0, z_t0, z_t1, pitch, r_minor - 0.01, bolt_d / 2.0, 0.0)
     if ext is not None:
         bolt = bolt.union(ext)
 
@@ -178,28 +187,36 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
     nut_h = 1.1 * bolt_d
     z_n0 = z_lug_top + 0.3                       # hovers 0.3 over the lug face
     nut = (
-        cq.Workplane("XY", origin=(x_h, 0.0, z_n0)).circle(r_hub).extrude(nut_h))
-    wing_l, wing_t = 2.0 * bolt_d, 0.45 * bolt_d
-    for sx in (-1.0, 1.0):
-        x_wc = x_h + sx * (0.5 * r_hub + wing_l / 2.0)
-        wing = _y_slab(x_wc, 0.0, z_n0 + 0.25 * nut_h,
-                       wing_l, wing_t, nut_h + 0.9 * bolt_d)
-        wing = wing.edges("|Y").fillet(0.3 * bolt_d)
+        cq.Workplane("XY", origin=(0.0, 0.0, z_n0)).circle(r_hub).extrude(nut_h))
+    # DIN 315 proportion: span = 2*(0.5*hub + wing) ~ 3.3*d (~40 on M12); the
+    # wings run along the TUBE axis (Y), matching the folded pose the sheet's
+    # 107 overall width is measured in
+    wing_l, wing_t = 1.2 * bolt_d, 0.45 * bolt_d
+    for sy in (-1.0, 1.0):
+        y_wc = sy * (0.5 * r_hub + wing_l / 2.0)
+        wing = _y_slab(0.0, y_wc, z_n0 + 0.25 * nut_h,
+                       wing_t, wing_l, nut_h + 0.9 * bolt_d)
+        wing = wing.edges("|X").fillet(0.3 * bolt_d)
         nut = nut.union(wing)
     r_bore = bolt_d / 2.0 + 0.35 * pitch         # bore at the nut thread root
     nut = nut.cut(
-        cq.Workplane("XY", origin=(x_h, 0.0, z_n0 - bolt_d))
+        cq.Workplane("XY", origin=(0.0, 0.0, z_n0 - bolt_d))
         .circle(r_bore)
         .extrude(nut_h + 3.0 * bolt_d))
-    inr = _ring_stack(x_h, z_t0, z_n0 + nut_h - 0.2, pitch,
+    inr = _ring_stack(0.0, z_t0, z_n0 + nut_h - 0.2, pitch,
                       bolt_d / 2.0 - 0.25 * pitch, r_bore + 0.01,
                       phase=0.5 * pitch)         # same grid as the bolt rings,
                                                  # half a pitch over: nested
     if inr is not None:
         nut = nut.union(inr)
 
-    result = cq.Compound.makeCompound(
-        [lower.val(), upper.val(), hinge_pin.val(), bolt.val(),
-         pivot_pin.val(), nut.val()]
-    )
+    # shells carry the assembly frame; hardware is built about its own axis
+    # and placed on the hinge (-x_h) / pivot (+x_h) lines by Location
+    result = cq.Assembly(name="truss_half_coupler_hook")
+    result.add(lower, name="lower_shell")
+    result.add(upper, name="upper_shell")
+    result.add(hinge_pin, name="hinge_pin", loc=cq.Location((-x_h, 0.0, 0.0)))
+    result.add(bolt, name="closing_bolt", loc=cq.Location((x_h, 0.0, 0.0)))
+    result.add(pivot_pin, name="pivot_pin", loc=cq.Location((x_h, 0.0, 0.0)))
+    result.add(nut, name="wing_nut", loc=cq.Location((x_h, 0.0, 0.0)))
     return result

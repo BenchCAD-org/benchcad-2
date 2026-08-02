@@ -5,5 +5,31 @@
   "description": "Stage-rigging half coupler / hook clamp (Doughty T57000/T57200 class) as a six-body assembly: hinged upper and lower shell around the standard \u00d848-51 barrel, hinge pin, swivel closing bolt with ring thread, its pivot pin, and a DIN 315-style wing nut whose internal rings nest between the bolt rings. All mates are contact-or-clearance; the hook-clamp variant replaces the tang eye with the protruding M12 stud.",
   "source": "Doughty T57000/T57010/T58080/T58100/T57200 datasheets (bore, width, eye, base drop, stud); cross-checked vs Riggatec/Global Truss/Kupo; wall/tang/lug proportions",
   "contributor": "BenchCAD-org",
-  "solids": 6
+  "solids": 6,
+  "components": [
+    {
+      "name": "lower_shell",
+      "quantity": 1
+    },
+    {
+      "name": "upper_shell",
+      "quantity": 1
+    },
+    {
+      "name": "hinge_pin",
+      "quantity": 1
+    },
+    {
+      "name": "closing_bolt",
+      "quantity": 1
+    },
+    {
+      "name": "pivot_pin",
+      "quantity": 1
+    },
+    {
+      "name": "wing_nut",
+      "quantity": 1
+    }
+  ]
 }
