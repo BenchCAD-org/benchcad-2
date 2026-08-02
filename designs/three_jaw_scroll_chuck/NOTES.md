@@ -1,77 +1,141 @@
-# three_jaw_scroll_chuck — datasheet mapping and derivations
+# three_jaw_scroll_chuck - evidence, derivations, and scope
 
-## Catalog symbol → parameter
+## Catalog mapping
 
-| Table | Symbol | Parameter | Used as |
-|---|---|---|---|
-| chuck p.3048 (DIN 6350) | A | `outer_dia_A` | body OD |
-| | B | `register_dia_B` | rear centering recess diameter (cut into the back, per the section view) |
-| | C | `register_depth_C` | recess depth |
-| | D | `height_D` | axial body height (z ∈ [−D, 0]) |
-| | E | `bore_E` | through-hole |
-| | F | `bolt_circle_F` | rear mounting bolt circle |
-| | G | `mount_thread_G` | mounting hole ⌀, blind from the back, × `mount_hole_count` |
-| | K | `key_square_K` | pinion square socket |
-| jaw BB p.3060 | A/B/C | `jaw_length_A` / `jaw_width_B` / `jaw_height_C` | jaw envelope (C spans foot underside → top) |
-| | D | `jaw_serration_D` | underside serration band → **scroll thread pitch** |
-| | E | `jaw_tongue_E` | guide-tongue band → **T-flange height** |
-| | F/G/H | `jaw_step_F/G/H` | outward step profile |
-| ranges p.3044 | A1 | `grip_min_A1`..`grip_max_A1` | `clamp_d = A1min + f·(A1max − A1min)` |
+The RÖHM DURO-M catalogue supplies the envelope, mounting, jaw, and chucking
+range data for this family. Each `catalog_index` chooses one complete row;
+dimensions are never mixed between catalog products.
 
-The BB side view labels D on the serrated band and E on the tongue band; the
-catalogue does not dimension the serrations further, so D is taken as the
-serration pitch (= the scroll pitch it must match) and E as the flange height.
-This interpretation is documented, not manufacturer-certified.
+| Catalog symbol | Parameter | Model use |
+| --- | --- | --- |
+| A / B / C / D / E / F / G / K | `outer_dia_A` through `key_square_K` | chuck OD, rear register, height, bore, mounting, and key socket |
+| BB jaw A / B / C / D / E / F / G / H | `jaw_length_A` through `jaw_step_H` | stepped jaw, scroll pitch, retained foot, and two H risers |
+| A1 | `grip_min_A1`, `grip_max_A1`, `jaw_open_fraction` | operating clamp diameter |
 
-## Drive train (RÖHM p.3035 cutaway: key → bevel pinion → crown ring on the
-## scroll back → Archimedean spiral → jaw underside teeth)
+Source: RÖHM lathe-chuck catalogue, DURO-M cylindrical centre mount DIN 6350
+and outward-stepped BB jaw tables (printed pages 3044, 3048, and 3060; linked
+in `family.json`). `clamp_d` is derived only from the selected row's A1 range.
 
-All internals derive in `part.py:_layout` from catalog values; the same
-formulas are mirrored in `spec.py:check`. Proportions (documented, not
-catalogued): thread height 0.55·pitch, ridge width 0.42·pitch, jaw tooth
-width 0.34·pitch, ring face width 0.10·A, pinion teeth Z_p = 12, flank
-half-angle 20°, universal running clearance clr = max(0.2, 0.004·D) mm.
+## Kinematic structure
 
-- **Scroll thread**: one Archimedean band r(θ) = r_start + pitch·θ/2π swept
-  over the annulus between the body sleeve and 0.34·A, standing 0.55·pitch
-  proud of the scroll face. Spline-sampled at 36 pts/turn (no polyline facets).
-- **Jaw teeth**: concentric arc segments on the jaw foot at the spiral's
-  *gap* radii evaluated at that jaw's meridian (0°/120°/240°), i.e. radii
-  r_start + pitch·(θ_jaw/360) + (k+½)·pitch. Jaws 1/2/3 therefore carry the
-  real ⅓-pitch stagger and interleave the spiral with clr axial clearance.
-  Modelling one static engagement is equivalent to choosing the scroll's
-  rotation phase; the arc-vs-spiral radial deviation over the jaw width is
-  covered by the 0.24·pitch side gap (verified per size).
-- **Bevel pair**: straight planar-flank teeth, shaft angle 90°, shared pitch
-  apex on the chuck axis at the pinion axis height: tan δ_wheel = Z_w/Z_p,
-  pinion pitch radius r_pp = R_ring·Z_p/Z_w = axial offset between ring pitch
-  point and pinion axis. Z_w solves the axial budget (pocket bottom ≥ cover
-  pocket + 1 mm) and is rounded up to a multiple of 3 so all three pinion
-  meridians see a tooth centre; each pinion's tooth array is phased with a
-  gap toward the ring. Addendum 0.75·m, dedendum 1.25·m, thickness 0.34·π·m
-  → backlash ≈ 0.2–0.4·m and 0.5·m radial clearance (measured 0.18–1.6 mm
-  across sizes, zero interpenetration on all 36 body pairs at every size).
-  Module m = 2·R_ring/Z_w; δ_wheel ranges ≈ 75–82° (crown-like, as in the
-  cutaway), Z_w 45–84 across the 12 rows.
-- **Guideways**: two-tier T-slots (neck 0.60·B_jaw wide, flange tier jaw-width
-  wide, flange height = jaw E), open at the OD; the tier-2 floor is the scroll
-  cavity ceiling, so the jaw feet engage the spiral through the floor opening
-  — the slots are open on the face as on the product.
-- **Pinion seating**: stepped radial bore (head pocket ⌀ + journal ⌀ =
-  1.7·K or 0.9·pinion pitch ⌀, 0.15 mm bore clearance); the head enters via
-  the cavity, the journal seats outward; square K socket in the outer face,
-  recessed 0.015·A below the OD (inside a scallop where present).
-- **Retention**: the scroll is sandwiched between the cavity ceiling and
-  bottom with clr axial float; jaw flanges ride the tier-2 floor; `check()`
-  bounds nose collision (clamp_d ≥ 0.16·jaw_width_B, from the 0.26·B nose at
-  120° spacing), tongue engagement (≥ 30 % of jaw length in the guideway) and
-  spiral engagement (≥ 2 pitches) — all 12 catalog rows stay feasible over
-  the full published A1 range, and at A1 max the jaws overhang the body OD,
-  which the catalogue's own ranges imply.
+```text
+key socket -> radial bevel pinion -> crown wheel on scroll back
+           -> Archimedean scroll thread -> three jaw-foot arc teeth
+           -> retained radial T-guideways
+```
 
-## Not modelled (visible simplifications)
+The body, rear cover, scroll plate, three jaws, and three pinions are nine
+separate solids. The merged #82 foundation is retained: the jaw teeth span the
+whole underside, the T-slot floor is relieved outside the scroll chamber, and
+the scroll key position is selected in whole crown-tooth increments. This
+preserves crown mesh while choosing usable jaw-tooth engagement.
 
-Involute/octoid flank curvature (planar flanks + backlash instead), thread
-flank angle (rectangular section), jaw serration chamfers, cover screws,
-pinion retaining details, edge breaks/fillets smaller than the catalogue
-resolves.
+The guideway axes are at 0 / 120 / 240 degrees. Their underside tooth windows
+are staggered by 0 / 1/3 / 2/3 of one scroll pitch. The common key-position
+rotation changes all three together, so it cannot erase that relative phase.
+
+The BB drawing labels H on each jaw riser. Every catalog row has C > 2H, so
+the two modeled drops are exactly H and 2H; they are not silently clipped.
+
+## Visual review package
+
+All explanatory images below are generated from the same representative
+DURO-M 250 parameter row used by the model. They illustrate modeled geometry
+and assembly relationships; they are not additional dimensional sources.
+
+### Crown-tooth face and rear service chamber
+
+The four-view sheet physically flips the opened chuck so the toothed reverse
+face points upward, making the crown and pinion relationship easy to inspect.
+
+![Crown-tooth face up in four views](preview_crown_teeth_face_up_views.png)
+
+A larger single inspection view is also available in
+[`preview_rear_cover_removed.png`](preview_rear_cover_removed.png).
+
+### Arrowed assembly order
+
+Red identifies the component being installed and blue arrows give the
+insertion direction. Rear-side work is completed first: scroll plate with
+crown teeth upward, three radial pinions, then rear cover. The chuck is then
+flipped and numbered jaws are installed in order 1, 2, 3.
+
+![Arrowed assembly sequence](preview_assembly_sequence.png)
+
+### Three-jaw position and tooth phase
+
+The spatial guideway axes remain 0 / 120 / 240 degrees apart. The linearized
+tooth rows show the separate 0 / 1/3 / 2/3-pitch starting offsets. A common
+scroll rotation adds the same angle to every jaw and therefore preserves the
+relative phase.
+
+![Three-jaw spatial and tooth-phase map](preview_jaw_phase_map.png)
+
+## Teardown-informed details
+
+The supplied teardown video is used only as structural evidence, not as a
+dimensional source: [Pierre's Garage - 3 or 6 jaws lathe scroll chuck
+explanation](https://youtu.be/hxmQ1hP-gUA). It confirms a removable scroll,
+back-side crown drive, radial key pinions, and central support/retention forms.
+
+- The scroll has a stepped annular rear support land around its central opening.
+- The bowl-shaped part with the full ring of radial teeth in the teardown is
+  the removable scroll plate's reverse face, exposed after the rear cover is
+  removed. The model therefore keeps those teeth on the rotating scroll, not
+  on the fixed body. The crown band is widened toward both the central land
+  and outer rim so the reverse face reads as a toothed shallow bowl.
+- The fixed body retains the three front T-guideways. Behind them, a rear
+  service chamber runs from the removable cover seat to the crown clearance
+  plane, retaining only the outer wall and central sleeve. Removing the cover
+  therefore exposes the toothed scroll bowl and three pinions as in the video.
+- The body keeps catalog diameter A at its lower mounting flange and upper
+  front rim, but has a proportioned relieved middle band. This follows the
+  stepped housing visible in the teardown without claiming an unpublished
+  RÖHM section dimension.
+- Each radial pinion has an integrated thrust collar and the body has the
+  matching stepped recess. Each is carried in a substantial integral body
+  boss, rather than a bare rim hole. These remain parts of the pinion/body,
+  not invented loose washers or bearing bodies.
+- The retained scroll diameter is 0.84 A. It leaves a body wall while covering
+  the full published jaw travel with the real scroll band.
+
+## Gear-standard boundary
+
+The three radial pinions and the scroll-back crown wheel are modeled as a
+90-degree straight-bevel pair. [ISO 23509-1:2025](https://www.iso.org/standard/85503.html)
+defines bevel-gear macro geometry; it is the applicable geometry reference for
+this pair. The code retains a transparent planar-flank approximation because
+the public catalog does not disclose the actual tooth system, module, pressure
+angle, correction, or backlash.
+
+[ISO 10300-1:2023](https://www.iso.org/standard/79401.html) concerns bevel-gear
+load-capacity calculation. It would require transmitted torque, material,
+hardness, and service data that are not public for this product, so this model
+makes no strength or manufacturing-quality claim.
+
+[ISO 54:1996](https://www.iso.org/standard/22644.html) lists preferred modules
+for cylindrical gears. It is not used to claim that this bevel pair complies
+with ISO 54. Likewise, [ISO 21771-1:2024](https://www.iso.org/standard/84949.html)
+covers involute cylindrical gear pairs, not the scroll's non-constant-ratio
+Archimedean band and jaw arc teeth. The scroll interface is therefore declared
+as a documented geometric proportion, not mislabeled an ISO involute gear.
+
+## Checks mirrored in `spec.py:check`
+
+- Catalog values must match their selected row and `clamp_d` must stay in A1.
+- The two jaw risers require C > 2H and the three jaw phases are fixed at
+  0 / 1/3 / 2/3 pitch.
+- At 101 equally spaced A1 positions, including both endpoints and every jaw,
+  the exact model helpers must retain at least two engaged scroll teeth.
+- The T-foot retains at least 30 percent of jaw length, and the jaw noses must
+  not collide at the selected clamp diameter.
+- Mounting holes are intentionally labeled proportions where catalog drawings
+  do not publish drill details: 0.85 G blind tapped bores in the body and
+  clearance bores in the cover.
+
+## Deliberate simplifications
+
+This is not a production-manufacturing claim. The model does not assert actual
+octoid/involute flank curvature, tooth modifications, backlash tolerance,
+material, heat treatment, load rating, cover screws, or small edge breaks.
+Those facts are not supplied by the public catalog or teardown video.

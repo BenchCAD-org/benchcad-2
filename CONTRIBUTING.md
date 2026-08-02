@@ -16,6 +16,8 @@ uv run bench2 new <family>
 # fill designs/<family>/{part.py,spec.py,family.json}
 uv run bench2 validate <family>
 uv run bench2 preview <family>     # inspect every generated view yourself
+# assembly family: preview also renders preview_parts.png
+# (or run it alone: uv run bench2 preview-parts <family>)
 # submit one PR with `Closes #<family-issue>`
 ```
 
@@ -24,7 +26,7 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 1. **One family = one issue = one PR.** A family PR touches only
    `designs/<family>/` and includes `Closes #N`.
 2. **`bench2 validate` must pass locally.** CI reruns the same gates.
-3. **A non-author reviews the family** using [`REVIEWING.md`](REVIEWING.md).
+3. **A non-author reviews the family** using [`REVIEWING.md`](docs/REVIEWING.md).
 4. **Merged is not automatically released.** Qualification and versioned
    manifests are produced in batches.
 5. **Do not duplicate a known proposal.** Check [`registry.json`](registry.json)
@@ -83,6 +85,10 @@ licensing permits, with the original source linked in the issue.
 - Difficulty levels and feature coverage are meaningful.
 - Preview views and extremes match the reference evidence.
 - `family.json` labels and contributor information are accurate.
+- An assembly family names every component instance stably, matches its
+  declared `components`/`solids`, and ships an inspected `preview_parts.png`
+  (component four-views, assembly overview, ordered highlight rows — see
+  `docs/DESIGN_SPEC.md`).
 
 **Hard gates (red ✗ = cannot merge)** — so review spends its time on *truth*, not
 structure. A family PR must pass all three:

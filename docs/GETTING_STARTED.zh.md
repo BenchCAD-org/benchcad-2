@@ -91,7 +91,7 @@ family 目录里**只放交付包**——`part.py`、`spec.py`、`family.json`�
     `git add … && git commit -s -m "fix" && git push` —— PR 会自动更新。
     **千万不要为改动重开一个新 PR。**
 14. Merge = 完成。署名自动兑现(CONTRIBUTORS.md、数据卡、论文共同作者)。
-    之后的事(实例生成、难度筛选、发布)全自动——在 [STATUS.md](../STATUS.md)
+    之后的事(实例生成、难度筛选、发布)全自动——在 [STATUS.md](STATUS.md)
     看你的零件走到哪一站。merge 之后你什么都不用做。
 
 ## 出问题了怎么办

@@ -10,6 +10,8 @@ convention): chuck table symbols A/B/C/D/E/F/G/K from catalogue p.3048, jaw BB
 table symbols A/B/C/D/E/F/G/H from p.3060, chucking range A1 from p.3044.
 """
 
+from part import JAW_ANGLES, _engaged_tooth_window, _layout, _scroll_phase
+
 
 CATALOG_ROWS = [
     # chuck: size(A), item, B, C, D, E, F, G, holes; jaw BB: A/B/C/D/E/F/G/H;
@@ -227,9 +229,22 @@ def check(p: dict) -> list[str]:
         bad.append("catalog row requires through-hole E smaller than register B")
     if p["bolt_circle_F"] >= p["outer_dia_A"]:
         bad.append("catalog mounting circle F must lie inside chuck diameter A")
+    if 2.0 * p["jaw_step_H"] >= p["jaw_height_C"]:
+        bad.append(
+            "jaw_height_C must exceed two catalog H risers: the BB stepped jaw "
+            "has two full H drops")
 
-    # geometric validity of the modelled scroll drive (formulas mirror
-    # part.py _layout; keep the two in sync)
+    expected_phases = (0.0, 1.0 / 3.0, 2.0 / 3.0)
+    actual_phases = tuple((angle / 360.0) % 1.0 for angle in JAW_ANGLES)
+    if any(abs(actual - expected) > 1e-12
+           for actual, expected in zip(actual_phases, expected_phases)):
+        bad.append(
+            "jaw guideway axes and scroll-tooth starts must be phased "
+            "0, 1/3, and 2/3 of a pitch")
+
+    # Geometric validity of the modelled scroll drive.  These helpers are the
+    # same formulas build() uses, so the full-travel check cannot drift from
+    # the actual scroll, chosen key position, or three jaw tooth phases.
     A = p["outer_dia_A"]
     x0 = p["clamp_d"] / 2.0
     jA = p["jaw_length_A"]
@@ -240,18 +255,33 @@ def check(p: dict) -> list[str]:
             "needs clamp radius > 0.13*B/tan60)")
     sleeve_od = max(p["bore_E"] + 0.06 * A, 0.20 * A)
     guide_inner = max(p["bore_E"] / 2.0 + 0.04 * A, 0.11 * A, sleeve_od / 2.0)
-    engaged = min(x0 + jA, 0.5 * A) - max(x0, guide_inner)
+    slot_gap = max(0.15, 0.0015 * A)
+    x_f0 = max(x0 + 0.02 * jA, guide_inner + 2.0 * slot_gap)  # as-built flange
+    x_f1 = x0 + 0.98 * jA
+    engaged = min(x_f1, 0.5 * A) - max(x_f0, guide_inner)
     if engaged < 0.30 * jA:
         bad.append(
-            "jaw guide engagement below 0.30*jaw_length_A: the T-tongue must "
-            "keep at least 30% of the jaw length inside its guideway")
-    scroll_id = sleeve_od + 2.0 * max(0.3, 0.0025 * A)
-    ridge_w = 0.42 * p["jaw_serration_D"]
-    r_si = scroll_id / 2.0 + 0.55 * ridge_w + 0.3
-    r_so = 0.36 * A - 0.02 * A
-    overlap = min(x0 + jA, r_so) - max(x0, r_si)
-    if overlap < 2.0 * p["jaw_serration_D"]:
+            "jaw guide engagement below 0.30*jaw_length_A: the as-built "
+            "T-flange must keep at least 30% of the jaw length in its guideway")
+    L = _layout(
+        p["outer_dia_A"], p["height_D"], p["bore_E"],
+        p["register_depth_C"], p["jaw_serration_D"], p["jaw_tongue_E"],
+        p["key_square_K"],
+    )
+    least_teeth = None
+    for step in range(101):
+        fraction = step / 100.0
+        trial_clamp = p["grip_min_A1"] + fraction * (
+            p["grip_max_A1"] - p["grip_min_A1"])
+        phase_alpha = _scroll_phase(L, trial_clamp, p["jaw_length_A"])
+        for jaw_idx in range(3):
+            _, _, k_min, k_max = _engaged_tooth_window(
+                L, jaw_idx, phase_alpha, trial_clamp, p["jaw_length_A"])
+            tooth_count = max(0, k_max - k_min + 1)
+            least_teeth = tooth_count if least_teeth is None else min(
+                least_teeth, tooth_count)
+    if least_teeth is None or least_teeth < 2:
         bad.append(
-            "scroll engagement below two thread pitches: the jaw underside "
-            "must overlap the spiral band [r_si, r_so] by >= 2*jaw_serration_D")
+            "scroll tooth window must retain >=2 engaged jaw teeth at every "
+            "sampled A1 state (101 states, all three jaw phases)")
     return bad
