@@ -11,7 +11,7 @@ DESIGN.md           benchmark architecture and decision record
 docs/DESIGN_SPEC.md the part + spec interface
 CONTRIBUTING.md     contributor loop
 REVIEWING.md        human review checklist
-framework/bench2/   CLI: new / validate / preview
+framework/bench2/   CLI: new / validate / preview / preview-parts
 designs/            one directory per family
 ```
 
