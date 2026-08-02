@@ -1,68 +1,59 @@
 # gusseted_corner_bracket notes
 
-This family models the single `LBSBB 8-3030` right-angle corner bracket only:
+This family models the `LBSBB 8-3030` gusseted right-angle corner bracket as a
+self-contained CadQuery construction. The default no-hole configuration matches
+the validated round24 reference geometry; enabling `panel_mount_holes` matches
+the validated round25 optional side-panel-hole configuration.
 
-- two perpendicular mounting wings;
-- one centered triangular gusset;
-- one elongated through-slot in each wing;
-- an optional pair of mounting holes on the two triangular side panels.
+The model does not load STEP, BREP, round directories, preview images, or any
+absolute-path geometry at build time.
 
-The implementation is fully self-contained CadQuery geometry. It does not load
-or depend on any STEP, BREP, round directory, or local absolute path at build
-time.
+## Coordinate convention
 
-## Modeling convention
+- `X` = overall width across the two outer side panels.
+- `Y` = horizontal mounting-plate length direction.
+- `Z` = vertical mounting-plate height direction.
 
-- `X` = width along the shared connection edge
-- `Y` = first mounting wing length direction
-- `Z` = second mounting wing length direction
+## Constructed features
 
-The part is built as one fused solid from a wing in the `XY` plane, a wing in the `XZ` plane, and a centered triangular gusset prism. The slots are cut after fusion so the final body stays single-piece.
+- central L-shaped body made from the horizontal and vertical mounting plates;
+- left and right stepped side panels with the validated sloped profile and R2
+  outer corner transitions;
+- four small locator tabs on the bottom and rear mounting faces;
+- paired analytic rounded central openings on the horizontal and vertical
+  plates;
+- optional coaxial M5 tap-drill holes through the two side panels only.
 
-## Parameter intent
+## Public parameters
 
-### Fixed product identity
+The product identity is fixed to `Type=LBSBB`, `No.=8-3030`, profile size
+`3030`. The exposed dimensions default to the LBSBB 8-3030 table values but use
+safe engineering-proportion ranges for benchmark variation.
 
-The family targets the single product line `LBSBB 8-3030`:
+| Code parameter | Factory symbol | Default | Unit/type | Controls |
+|---|---:|---:|---|---|
+| `overall_width` | `L` | 28.0 | mm | total X width across both side panels |
+| `slot_width` | `W` | 6.0 | mm | central rounded-opening width and locator-tab X width |
+| `side_step` | `W1` | 7.5 | mm | side-panel top/lower step dimensions |
+| `overall_height` | `H` | 35.0 | mm | side-profile Y/Z extent and mounting-plate length/height |
+| `opening_offset` | `A` | 13.5 | mm | lower datum for the paired rounded central openings |
+| `opening_spacing` | `B` | 8.0 | mm | spacing between paired rounded central-opening centers |
+| `opening_radius` | `R` | 3.5 | mm | larger central-opening arc radius |
+| `plate_thickness` | `T` | 4.5 | mm | horizontal and vertical mounting-plate thickness |
+| `side_thickness` | `T1` | 3.0 | mm | thickness of each side panel along X |
+| `panel_mount_holes` | optional machining | False | bool | toggles the pair of coaxial side-panel holes |
 
-- `Type = LBSBB`
-- `No. = 8-3030`
-- `3030` profile size
+The optional side-panel holes use the validated round25 M5 tap-drill geometry:
+diameter 4.2 mm, centers at the 12 mm by 12 mm side-panel location, and axes
+parallel to X. Hole diameter and placement are intentionally not public
+parameters because the task reference only confirmed the standard optional
+machining location.
 
-These fields identify the product family. The geometric dimensions below are exposed as adjustable parameters with the listed defaults and safe ranges.
+## Difficulty presets
 
-### Geometry mapping
+- `easy`: near-default no-hole baseline (`panel_mount_holes=False`).
+- `medium`: near-default part with the side-panel holes enabled.
+- `hard`: side-panel holes enabled plus wider legal variation of the exposed
+  dimensions.
 
-The drawing/table values used by this family are:
-
-- `leg_length_1` -> `L = 28` (adjustable family parameter)
-- `leg_length_2` -> `H = 35` (adjustable family parameter)
-- `bracket_width` -> overall width span centered on `x = 0` (adjustable family parameter)
-- `plate_thickness` -> `T = 4.5` (adjustable family parameter)
-- `gusset_thickness` -> `T1 = 3` (adjustable family parameter)
-- `gusset_length_1` / `gusset_length_2` -> local gusset reach derived from `A = 13.5` (adjustable family parameters)
-- `slot_width` -> `W = 6` (adjustable family parameter)
-- `slot_length` -> `A = 13.5` (adjustable family parameter)
-- `slot_offset_1` / `slot_offset_2` -> `B`-related slot placement controls (adjustable family parameters)
-- `edge_radius` -> `R = 3.5` (adjustable family parameter)
-- `panel_mount_holes` -> optional on/off switch for the pair of side-panel installation holes
-- `panel_hole_offset` -> shared placement control for the optional side-panel holes
-- `panel_hole_diameter` -> optional side-panel hole diameter, defaulting to the M5 clearance size
-
-### Tentative mapping
-
-The screenshot does not uniquely pin down every placement dimension, so these remain implementation choices constrained by the drawing and the validated geometry:
-
-- `slot_length` -> long-hole total length, defaulting to `13.5`
-- `slot_offset_1`, `slot_offset_2` -> slot center placements along each wing, chosen to keep both slots inside the wing outline and clear of the gusset
-- `panel_hole_offset` -> shared placement control for the optional panel holes, chosen to keep both holes inside their faces and away from slots, fillets, and internal cavities
-- `panel_hole_diameter` -> M5-style clearance hole diameter, defaulting to `4.2`
-
-### Geometry notes
-
-- `X` is the width direction and is symmetric about `x = 0`.
-- `Y` is the first wing direction.
-- `Z` is the second wing direction.
-- The bracket is built from two fused rectangular wings plus one local triangular gusset prism.
-- Each slot is cut in its own wing-local plane so the long axis follows that wing's direction.
-- When `panel_mount_holes` is enabled, the two additional holes are standard M5 clearance through-holes on the two triangular side panels; they are coordinated by `panel_hole_offset` and `panel_hole_diameter`, and must not intersect the long slots, gusset, or central cavities.
+All presets are expected to build as one valid, closed, non-degenerate solid.

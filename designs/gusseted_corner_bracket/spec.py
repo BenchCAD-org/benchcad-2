@@ -1,153 +1,94 @@
-"""Single-model spec for LBSBB 8-3030 gusseted corner bracket."""
+"""Parameter spec for the LBSBB 8-3030 gusseted corner bracket."""
 
 
 PARAM_SPEC = {
-    "leg_length_1": dict(
-        desc="L, first wing length from the shared inner corner",
+    "overall_width": dict(
+        desc="L, total bracket width across the two side panels",
         unit="mm",
         range={"easy": (27.8, 28.2), "medium": (26.0, 30.0), "hard": (24.0, 32.0)},
-        source="LBSBB 8-3030 table row; benchmark-adjustable geometry parameter",
-        askable=True,
-    ),
-    "leg_length_2": dict(
-        desc="H, second wing length from the shared inner corner",
-        unit="mm",
-        range={"easy": (34.8, 35.2), "medium": (32.0, 38.0), "hard": (30.0, 42.0)},
-        source="LBSBB 8-3030 table row; benchmark-adjustable geometry parameter",
-        askable=True,
-    ),
-    "bracket_width": dict(
-        desc="overall width span centered on x=0",
-        unit="mm",
-        range={"easy": (27.8, 28.2), "medium": (26.0, 30.0), "hard": (24.0, 32.0)},
-        source="derived from the L dimension in the 8-3030 drawing; adjustable family geometry parameter",
-        askable=True,
-    ),
-    "plate_thickness": dict(
-        desc="T, thickness of each mounting wing",
-        unit="mm",
-        range={"easy": (4.4, 4.6), "medium": (4.1, 4.9), "hard": (3.9, 5.1)},
-        source="LBSBB 8-3030 table row; adjustable family geometry parameter",
-        askable=True,
-    ),
-    "gusset_thickness": dict(
-        desc="T1, local gusset thickness along x",
-        unit="mm",
-        range={"easy": (2.9, 3.1), "medium": (2.6, 3.4), "hard": (2.4, 3.6)},
-        source="LBSBB 8-3030 table row; adjustable family geometry parameter",
-        askable=True,
-    ),
-    "gusset_length_1": dict(
-        desc="A, gusset reach along wing 1",
-        unit="mm",
-        range={"easy": (13.4, 13.6), "medium": (12.0, 15.0), "hard": (11.5, 15.5)},
-        source="LBSBB 8-3030 merged table cell; adjustable family geometry parameter",
-        askable=True,
-    ),
-    "gusset_length_2": dict(
-        desc="A, gusset reach along wing 2",
-        unit="mm",
-        range={"easy": (13.4, 13.6), "medium": (12.0, 15.0), "hard": (11.5, 15.5)},
-        source="LBSBB 8-3030 merged table cell; adjustable family geometry parameter",
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
         askable=True,
     ),
     "slot_width": dict(
-        desc="W, slot width",
+        desc="W, central rounded opening and locator-tab width",
         unit="mm",
-        range={"easy": (5.9, 6.1), "medium": (5.5, 6.5), "hard": (5.0, 7.0)},
-        source="LBSBB 8-3030 table row; adjustable family geometry parameter",
+        range={"easy": (5.9, 6.1), "medium": (5.5, 6.4), "hard": (5.2, 6.4)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
         askable=True,
     ),
-    "slot_length": dict(
-        desc="A, slot total length",
+    "side_step": dict(
+        desc="W1, side-panel top step and lower step size",
+        unit="mm",
+        range={"easy": (7.4, 7.6), "medium": (7.0, 8.0), "hard": (6.6, 8.4)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
+        askable=True,
+    ),
+    "overall_height": dict(
+        desc="H, total length/height of the side profile",
+        unit="mm",
+        range={"easy": (34.8, 35.2), "medium": (32.0, 38.0), "hard": (30.0, 40.0)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
+        askable=True,
+    ),
+    "opening_offset": dict(
+        desc="A, lower datum for the paired rounded central openings",
         unit="mm",
         range={"easy": (13.4, 13.6), "medium": (12.5, 14.5), "hard": (12.0, 15.0)},
-        source="LBSBB 8-3030 table row; adjustable family geometry parameter",
+        source="LBSBB 8-3030 merged table cell; adjustable engineering-proportion range",
         askable=True,
     ),
-    "slot_offset_1": dict(
-        desc="slot center offset along wing 1",
+    "opening_spacing": dict(
+        desc="B, spacing between the paired rounded central-opening centers",
         unit="mm",
-        range={"easy": (14.9, 15.1), "medium": (14.5, 15.5), "hard": (14.0, 16.0)},
-        source="benchmark placement rule documented in NOTES.md; adjustable family geometry parameter",
+        range={"easy": (7.9, 8.1), "medium": (7.0, 9.0), "hard": (6.5, 9.5)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
         askable=True,
     ),
-    "slot_offset_2": dict(
-        desc="slot center offset along wing 2",
+    "opening_radius": dict(
+        desc="R, radius of the larger rounded central-opening arcs",
         unit="mm",
-        range={"easy": (14.9, 15.1), "medium": (14.5, 15.5), "hard": (14.0, 16.0)},
-        source="benchmark placement rule documented in NOTES.md; adjustable family geometry parameter",
+        range={"easy": (3.45, 3.55), "medium": (3.2, 3.8), "hard": (3.2, 4.0)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
+        askable=True,
+    ),
+    "plate_thickness": dict(
+        desc="T, horizontal and vertical mounting-plate thickness",
+        unit="mm",
+        range={"easy": (4.4, 4.6), "medium": (4.1, 4.9), "hard": (3.8, 5.2)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
+        askable=True,
+    ),
+    "side_thickness": dict(
+        desc="T1, thickness of each outer side panel along X",
+        unit="mm",
+        range={"easy": (2.9, 3.1), "medium": (2.6, 3.4), "hard": (2.4, 3.6)},
+        source="LBSBB 8-3030 table default; adjustable engineering-proportion range",
         askable=True,
     ),
     "panel_mount_holes": dict(
-        desc="optional M5 through-holes on the two triangular side panels",
+        desc="optional pair of coaxial M5 tap-drill holes through the two side panels",
         unit="bool",
         range={"easy": (False, False), "medium": (True, True), "hard": (True, True)},
         choices={"easy": [False], "medium": [True], "hard": [True]},
-        source="derived optional feature for the benchmark family; easy keeps the default no-hole model",
+        source="round25 optional machining variant; easy keeps the round24 no-hole baseline",
         askable=True,
         feature=True,
-    ),
-    "panel_hole_offset": dict(
-        desc="shared in-plane offset for the optional side-panel holes",
-        unit="mm",
-        range={"easy": (11.8, 12.0), "medium": (8.0, 12.0), "hard": (7.0, 12.0)},
-        source="benchmark placement rule for the optional M5 side-panel holes",
-        askable=True,
-        feature=True,
-    ),
-    "panel_hole_diameter": dict(
-        desc="diameter of each optional side-panel M5 clearance hole",
-        unit="mm",
-        range={"easy": (4.15, 4.25), "medium": (4.1, 4.3), "hard": (4.0, 4.5)},
-        source="M5 clearance-hole benchmark default with adjustable family parameterization",
-        askable=True,
-        feature=True,
-    ),
-    "edge_radius": dict(
-        desc="R, outer edge radius",
-        unit="mm",
-        range={"easy": (3.45, 3.55), "medium": (3.2, 3.8), "hard": (3.0, 4.2)},
-        source="LBSBB 8-3030 table row; adjustable family geometry parameter",
-        askable=True,
-    ),
-    "gusset_radius": dict(
-        desc="R, gusset root transition radius",
-        unit="mm",
-        range={"easy": (2.95, 3.05), "medium": (2.5, 3.5), "hard": (2.2, 3.8)},
-        source="LBSBB 8-3030 table row; adjustable family geometry parameter",
-        askable=True,
     ),
 }
 
 
 DEFAULTS = {
-    "leg_length_1": 28.0,
-    "leg_length_2": 35.0,
-    "bracket_width": 28.0,
-    "plate_thickness": 4.5,
-    "gusset_thickness": 3.0,
-    "gusset_length_1": 13.5,
-    "gusset_length_2": 13.5,
+    "overall_width": 28.0,
     "slot_width": 6.0,
-    "slot_length": 13.5,
-    "slot_offset_1": 15.0,
-    "slot_offset_2": 15.0,
+    "side_step": 7.5,
+    "overall_height": 35.0,
+    "opening_offset": 13.5,
+    "opening_spacing": 8.0,
+    "opening_radius": 3.5,
+    "plate_thickness": 4.5,
+    "side_thickness": 3.0,
     "panel_mount_holes": False,
-    "panel_hole_offset": 12.0,
-    "panel_hole_diameter": 4.2,
-    "edge_radius": 3.5,
-    "gusset_radius": 3.0,
 }
-
-
-def _leg_slot_limit(leg_length, slot_length, slot_offset, plate_thickness, edge_radius):
-    half = slot_length / 2.0
-    if slot_offset - half <= plate_thickness + edge_radius:
-        return "slot too close to the corner: slot must clear the gusset and the inner intersection"
-    if slot_offset + half >= leg_length - edge_radius:
-        return "slot too close to the free end: slot must remain inside the wing outline"
-    return None
 
 
 def check(p: dict) -> list[str]:
@@ -159,46 +100,28 @@ def check(p: dict) -> list[str]:
         if p[key] <= 0:
             bad.append(f"{key} must be positive")
 
-    if p["bracket_width"] <= p["slot_width"] + 0.25:
-        bad.append("bracket_width must be wider than the slot itself")
+    if p["overall_width"] <= 2.0 * p["side_thickness"] + p["slot_width"] + 0.5:
+        bad.append("overall_width must leave room for both side panels and the central opening")
 
-    if p["gusset_thickness"] >= p["plate_thickness"]:
-        bad.append("gusset_thickness must stay thinner than the mounting wings so it reads as a local rib")
+    if p["side_thickness"] >= p["plate_thickness"]:
+        bad.append("side_thickness must remain thinner than the main mounting plates")
 
-    if p["gusset_thickness"] >= p["bracket_width"] - 2.0 * p["edge_radius"]:
-        bad.append("gusset_thickness too large for the available bracket width")
+    if p["slot_width"] >= 2.0 * p["opening_radius"]:
+        bad.append("slot_width must be smaller than twice opening_radius so the rounded openings remain real")
 
-    if p["slot_length"] <= p["slot_width"] + 2.0:
-        bad.append("slot_length must exceed slot_width by enough margin to form a real long hole")
+    if p["side_step"] <= 2.0:
+        bad.append("side_step must exceed the fixed side-panel corner radius")
 
-    slot1 = _leg_slot_limit(p["leg_length_1"], p["slot_length"], p["slot_offset_1"], p["plate_thickness"], p["edge_radius"])
-    slot2 = _leg_slot_limit(p["leg_length_2"], p["slot_length"], p["slot_offset_2"], p["plate_thickness"], p["edge_radius"])
-    if slot1:
-        bad.append(slot1)
-    if slot2:
-        bad.append(slot2)
+    if p["overall_height"] <= 2.0 * p["side_step"] + 8.0:
+        bad.append("overall_height must leave enough length for the stepped side-panel slope")
 
-    if p["edge_radius"] <= 0 or p["gusset_radius"] <= 0:
-        bad.append("radii must be positive")
+    if p["opening_offset"] + p["opening_spacing"] + p["opening_radius"] >= p["overall_height"] - 2.0:
+        bad.append("central rounded openings must stay inside the side-profile envelope")
 
-    if p["edge_radius"] >= min(p["plate_thickness"], p["slot_width"]) * 0.95:
-        bad.append("edge_radius too aggressive for the thin wings")
+    if p["opening_offset"] - p["opening_radius"] <= p["plate_thickness"]:
+        bad.append("central rounded openings must clear the mounting-plate corner thickness")
 
-    if p["gusset_radius"] >= min(p["gusset_length_1"], p["gusset_length_2"]) * 0.35:
-        bad.append("gusset_radius too aggressive for the gusset envelope")
-
-    if p["panel_hole_offset"] <= 0:
-        bad.append("panel_hole_offset must be positive")
-    if p["panel_hole_offset"] < 7.0:
-        bad.append("panel_hole_offset too close to the corner for the optional side-panel holes")
-    if p["panel_hole_offset"] > 12.0:
-        bad.append("panel_hole_offset too far from the corner for the optional side-panel holes")
-    if p["panel_hole_diameter"] <= 0:
-        bad.append("panel_hole_diameter must be positive")
-    if p["panel_hole_diameter"] < 4.0 or p["panel_hole_diameter"] > 4.5:
-        bad.append("panel_hole_diameter must remain within the M5 clearance-hole envelope")
-
-    if p["plate_thickness"] + p["gusset_thickness"] >= min(p["leg_length_1"], p["leg_length_2"]):
-        bad.append("combined thickness envelope exceeds the available leg lengths")
+    if p["plate_thickness"] >= p["overall_height"] * 0.25:
+        bad.append("plate_thickness too large for the available profile height")
 
     return bad

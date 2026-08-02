@@ -2,7 +2,7 @@
   "family": "gusseted_corner_bracket",
   "standard": null,
   "base_plane": "XY",
-  "description": "Self-contained parameterized 90-degree gusseted corner bracket family for the LBSBB 8-3030 product line, with two perpendicular mounting wings, one centered triangular gusset, two elongated through-slots, and an optional pair of side-panel mounting holes.",
-  "source": "LBSBB 8-3030 specification table and reference image supplied in the task; geometry parameterization, optional side-panel hole behavior, and difficulty presets documented in NOTES.md",
+  "description": "Self-contained parameterized 90-degree LBSBB-style gusseted corner bracket with perpendicular mounting plates, outer side panels, locator tabs, analytic rounded central openings, and an optional pair of coaxial side-panel holes.",
+  "source": "LBSBB 8-3030 specification table and task reference geometry; adjustable ranges are engineering-proportion ranges documented in NOTES.md",
   "contributor": "codex"
 }
