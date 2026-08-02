@@ -42,32 +42,49 @@ def param_caption(spec, p) -> str:
     return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
 
 
-def component_contract(meta: dict) -> list[tuple[str, int]]:
+def component_contract(meta: dict) -> list[tuple[str, int | str]]:
     """family.json `components` as ordered (name, quantity) pairs, validated:
-    non-empty unique names, positive integer quantities, and `solids` equal to
-    the quantity sum (so the body-count gate and the component contract can
-    never drift apart)."""
+    non-empty unique names and positive integer quantities. A quantity may
+    instead be a string naming an integer build parameter (a bearing's
+    ``ball_count``) when the instance count is itself a catalog value. With
+    only integer quantities `solids` must equal their sum (so the body-count
+    gate and the component contract can never drift apart); with a
+    param-valued quantity the count is instance-dependent, so `solids` must be
+    omitted and every instance is checked against the resolved sum instead."""
     entries = meta.get("components")
     if not isinstance(entries, list) or not entries:
         raise ValueError(
             "family.json: an assembly family must declare `components`, e.g. "
             '"components": [{"name": "body", "quantity": 1}, {"name": "bolt", "quantity": 2}]'
         )
-    contract: list[tuple[str, int]] = []
+    contract: list[tuple[str, int | str]] = []
     for entry in entries:
         name = entry.get("name") if isinstance(entry, dict) else None
         quantity = entry.get("quantity") if isinstance(entry, dict) else None
         if not isinstance(name, str) or not name:
             raise ValueError("family.json components: every entry needs a non-empty string `name`")
+        if isinstance(quantity, str) and quantity:
+            contract.append((name, quantity))
+            continue
         if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity < 1:
             raise ValueError(
-                f"family.json components: {name!r} needs a positive integer `quantity`"
+                f"family.json components: {name!r} needs a positive integer `quantity` "
+                "(or the name of an integer parameter)"
             )
         contract.append((name, quantity))
     names = [name for name, _ in contract]
     if len(names) != len(set(names)):
         dupes = sorted({n for n in names if names.count(n) > 1})
         raise ValueError(f"family.json components: duplicate component name(s) {dupes}")
+    param_valued = [q for _, q in contract if isinstance(q, str)]
+    if param_valued:
+        if meta.get("solids") is not None:
+            raise ValueError(
+                f"family.json: omit `solids` when a component quantity is a parameter "
+                f"name ({param_valued[0]!r} makes the body count instance-dependent); "
+                "every instance is checked against the resolved quantity sum instead"
+            )
+        return contract
     total = sum(quantity for _, quantity in contract)
     if meta.get("solids") != total:
         raise ValueError(
@@ -75,6 +92,30 @@ def component_contract(meta: dict) -> list[tuple[str, int]]:
             f"sum ({total}); found {meta.get('solids')!r}"
         )
     return contract
+
+
+def resolve_contract(contract: list[tuple[str, int | str]],
+                     params: dict) -> list[tuple[str, int]]:
+    """Instance view of the contract: param-valued quantities looked up in the
+    instance's parameters, validated as positive integers."""
+    resolved: list[tuple[str, int]] = []
+    for name, quantity in contract:
+        if isinstance(quantity, int):
+            resolved.append((name, quantity))
+            continue
+        if quantity not in params:
+            raise ValueError(
+                f"components: {name!r} quantity references parameter {quantity!r} "
+                "which is not among the instance parameters"
+            )
+        value = params[quantity]
+        if isinstance(value, bool) or float(value) != int(value) or int(value) < 1:
+            raise ValueError(
+                f"components: quantity parameter {quantity}={value!r} for {name!r} "
+                "must resolve to a positive integer"
+            )
+        resolved.append((name, int(value)))
+    return resolved
 
 
 def classify_instance(instance: str, component_names: list[str]) -> str:
@@ -173,7 +214,13 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
                 "preview-parts is for assembly families (single-part families use "
                 "`bench2 preview`)"
             )
-        contract = component_contract(meta)
+        declared = component_contract(meta)
+        contract = resolve_contract(declared, p)
+        quantity_note = {
+            name: (f"quantity={q}" if isinstance(q, int)
+                   else f"quantity={q}={dict(contract)[name]}")
+            for name, q in declared
+        }
         leaves = manifest["leaves"]
         groups = group_instances(leaves, contract)
         for leaf in leaves:
@@ -185,11 +232,11 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
     rows, labels = [], []
     # one catalog-style row per semantic component: the first instance's RAW
     # local shape, normalized alone, in the four benchmark views
-    for name, quantity in contract:
+    for name, _quantity in contract:
         verts, tris = local_meshes[groups[name][0]]
         dx, dy, dz = (verts.max(axis=0) - verts.min(axis=0)).tolist()
         rows.append(render.render_bench_views(_normalized([verts])[0], tris))
-        labels.append(f"{name}\nquantity={quantity}\nbbox {dx:.1f} x {dy:.1f} x {dz:.1f} mm")
+        labels.append(f"{name}\n{quantity_note[name]}\nbbox {dx:.1f} x {dy:.1f} x {dz:.1f} mm")
 
     # the complete assembly and the highlight rows share ONE normalized frame,
     # so every row shows the identical pose and scale
@@ -207,8 +254,8 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
         ]
     else:
         highlight_rows = [
-            (name, set(groups[name]), f"quantity={quantity}")
-            for name, quantity in contract
+            (name, set(groups[name]), quantity_note[name])
+            for name, _quantity in contract
         ]
     other_style = render.GHOST_STYLE if transparent else render.DIMMED_STYLE
     others_note = "others ghosted (see-through)" if transparent else "assembly stays in place"
