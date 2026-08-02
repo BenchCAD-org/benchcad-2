@@ -38,6 +38,27 @@ def _cage_circle(n=96):
              _RIM_CLIP_R * math.sin(2.0 * math.pi * i / n)) for i in range(n)]
 
 
+def _top_marks(s):
+    # Four raised direction marks embossed on the cage-top face (the OEM carries
+    # two rotation arrows and two triangles, ~0.3 mm raised, at the four cardinal
+    # points R~3.6).  Each is a small triangular wedge pointing radially outward,
+    # fused on the outward (-z) side of the z=0 seating face and straddling it so
+    # the boolean never coincides.  Sub-mm die-cast detail; the 3D oracle is
+    # neutral on it (it cannot resolve marks this small), it is a visual feature.
+    out = []
+    for ang in (0.0, 90.0, 180.0, 270.0):
+        a = math.radians(ang)
+        ca, sa = math.cos(a), math.sin(a)
+        tx, ty = -sa, ca  # tangential
+        tip = (3.8 * ca * s, 3.8 * sa * s)
+        b1 = ((3.4 * ca + 0.25 * tx) * s, (3.4 * sa + 0.25 * ty) * s)
+        b2 = ((3.4 * ca - 0.25 * tx) * s, (3.4 * sa - 0.25 * ty) * s)
+        wp = cq.Workplane("XY").moveTo(*tip).lineTo(*b1).lineTo(*b2).close()
+        sol = wp.extrude(0.35 * s).val()
+        out.append(sol.moved(cq.Location(cq.Vector(0.0, 0.0, -0.30 * s))))
+    return out
+
+
 def _shoelace(pts):
     a = 0.0
     n = len(pts)
@@ -225,6 +246,7 @@ def build(
         _iy = 0.5 * bolt_hole_diameter + 0.3
         _sz = 1.5 * s
         body = body.cut(cq.Solid.makeBox(16.0 * s, (_iy - 1.5) * s, 2.0 * _sz, cq.Vector(-8.0 * s, 1.5 * s, A - _sz)))
+        body = body.fuse(*_top_marks(s))
         body = body.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 180.0)
         bodies = [b for b in body.Solids() if b.Volume() > 1e-4]
         result = cq.Workplane("XY").newObject(bodies).clean()

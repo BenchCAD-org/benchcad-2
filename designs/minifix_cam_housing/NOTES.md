@@ -105,6 +105,7 @@ metric while keeping one solid and exact bbox Z.
 | hold cage section at seating plane | z=0.0 was the rim disc (R~8.1) extruded up to z=0.8 where the OEM has the R7.45 cage; hold the z=0.8 cage section at z=0..0.8 for every row | 30.58% |
 | hold rim section at rim bottom | z=-0.8 contour was a chainer artefact at R~3.9; hold the z=-0.5 rim section (R~7.94) down to the rim bottom | 28.49% |
 | clean cage-top outer circle | z=0.8 outer was a chainer artefact (cam-pocket/drive merged into the outer C, +x concavity) -- replace with a clean R7.45 circle, keeping holes; makes the rim-less top circular | 19.00% |
+| raised top direction marks | four raised triangular wedges at the cardinal points (R~3.6, 0.3 mm out) embossed on the cage-top face, restoring the OEM's raised rotation arrows / triangles (the chainer had baked them as concavities = recessed; the circle step removed them) | 19.01% |
 
 A per-z-band hotspot map (1 mm slabs) drives the next target. At 19.00% the
 residual is almost entirely the z=0..2 band (the cage-top over-builds the OEM's
