@@ -30,6 +30,10 @@ directions (the "Review order" below is the step-by-step how-to):
 2. **Review material.** The issue carries a true 2D orthographic drawing + a
    product photo; the PR re-embeds them and ships all four renders
    regenerated at the current head; an assembly adds a per-part render. The
+   easy/medium/hard labels must list every parameter as a value or range;
+   parameter names carry the drawing's dimension symbols (`width_sw`,
+   `bore_d1`), so check that every dimension of the issue's 2D drawing is
+   readable off the renders and consistent with the table. The
    four benchmark views must suffice to reconstruct the geometry — no "solid
    outside, structure inside": fully enclosed internals are either not scored
    bodies or get a cutaway view. The code reads against the drawing:
@@ -112,14 +116,43 @@ directions (the "Review order" below is the step-by-step how-to):
    What's *missing* — think tear-out, thin walls, tool clearance, unstable
    proportions, and check those failure modes are constrained.
 6. **Audit `PARAM_SPEC`.** Ranges sensible per tier; `source` fields specific
-   (a table, a rule, or honest `"proportion"`); `askable` only on parameters
-   visible/derivable from the part; `feature` on optional-feature toggles;
+   (a table, a rule, or honest `"proportion"`); `feature` on optional-feature
+   toggles;
    `coverage` on the table-driving parameter.
 7. **`family.json`.** Name accurate, `standard` correct or null, `base_plane`
    matches the build, `geomlib` lists exactly the helpers used, description
    honest, `contributor` is the actual author.
 8. **Scope.** PR touches only `designs/<family>/`; description has
    `Closes #N` (CI enforces); commits DCO-signed.
+
+## Copy-paste review template
+
+Copy the block, fill every `<…>`, delete lines that don't apply, and submit it
+as your review (approve / request changes per the verdict). Numbers beat
+adjectives: paste what you measured, not "looks fine". Tip: save it as a
+GitHub *saved reply* (Settings → Saved replies) to fill it in one click.
+
+```markdown
+## Family review — <family> @ <head-sha>
+
+1. Table & parameterization: <ok | issue>
+   source checked: <catalogue/page or standard clause> · recomputed row: <input → computed vs printed>
+   row-lock / coverage / discrete ladders: <ok | gap: …>
+2. Review material: <ok | issue>
+   reference re-embedded: <y/n> · 4 renders at head: <y/n> · per-part render (assembly): <y/n/n-a>
+   reconstructable from the 4 views: <y | hidden internals: …>
+3. Geometry vs table/drawing: <ok | issue>
+   bbox measured vs declared: <a×b×c vs x×y×z> · profile features: <ok | missing: …> · extremes: <sane | …>
+4. Function & fit: <ok | issue>
+   max pairwise intersection: <0.00 | … mm³ (pair, instance)> · interfaces engage: <ok | floating/fused: …>
+   operating-state full travel: <clear | collides at …>
+5. Detail geometry: <ok | issue>
+   fillets/chamfers/run-outs: <ok | sharp: …> · arcs vs polylines: <ok | faceted: …> · consistency: <ok | …>
+6. Process: <ok | issue>
+   scope / files / DCO / body current at head: <ok | …>
+
+Verdict: <approve | request changes — blockers: 4 (interference), … | comment — asks: …>
+```
 
 ## The verdict
 
