@@ -1,0 +1,8 @@
+{
+  "family": "clevis_fork_head",
+  "standard": "DIN 71752",
+  "base_plane": "XY",
+  "description": "A DIN 71752 steel clevis fork head with coupled short and long catalog sizes, a transverse pin hole, and a simplified internal threaded bore.",
+  "source": "Ganter DIN 71752 Fork Heads, Steel, without Pin drawing, article table, and downloadable STEP reference",
+  "contributor": "TimPetrillo"
+}
