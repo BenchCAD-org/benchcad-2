@@ -47,11 +47,8 @@ and assembly relationships; they are not additional dimensional sources.
 
 The four-view sheet physically flips the opened chuck so the toothed reverse
 face points upward, making the crown and pinion relationship easy to inspect.
-
-![Crown-tooth face up in four views](preview_crown_teeth_face_up_views.png)
-
-A larger single inspection view is also available in
-[`preview_rear_cover_removed.png`](preview_rear_cover_removed.png).
+The companion PR review evidence includes this sheet and a larger single
+inspection view; they stay outside the family package as review-only assets.
 
 ### Arrowed assembly order
 
@@ -60,16 +57,12 @@ insertion direction. Rear-side work is completed first: scroll plate with
 crown teeth upward, three radial pinions, then rear cover. The chuck is then
 flipped and numbered jaws are installed in order 1, 2, 3.
 
-![Arrowed assembly sequence](preview_assembly_sequence.png)
-
 ### Three-jaw position and tooth phase
 
 The spatial guideway axes remain 0 / 120 / 240 degrees apart. The linearized
 tooth rows show the separate 0 / 1/3 / 2/3-pitch starting offsets. A common
 scroll rotation adds the same angle to every jaw and therefore preserves the
 relative phase.
-
-![Three-jaw spatial and tooth-phase map](preview_jaw_phase_map.png)
 
 ## Teardown-informed details
 
