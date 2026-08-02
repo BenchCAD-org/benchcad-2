@@ -6,6 +6,13 @@ name: require-issue-link
 # `check` is a REQUIRED status check (repo ruleset), so it must report on EVERY
 # PR. It therefore runs on all PRs (no `paths` filter) and passes immediately for
 # a non-family PR (nothing under designs/), enforcing the link only for family PRs.
+#
+# It also gates the PR body's image links, because a review is worthless when the
+# renders don't load. Every image url must resolve, and anything under designs/
+# must be pinned to a commit SHA — a branch name is not a pin: the image dies the
+# moment the branch is deleted (which is what happens to a fork branch right after
+# its PR merges) or the family dir is renamed. Covers markdown `![alt](url)` AND
+# raw `<img src="url">`, since the latter is what you must write to set a width.
 
 on:
   pull_request:
@@ -15,6 +22,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     permissions:
+      contents: read          # the image check reads blobs via getContent
       issues: read
       pull-requests: read
     steps:
@@ -35,9 +43,7 @@ jobs:
             if (!m) {
               core.setFailed(
                 'PR description must link its family issue, e.g. `Closes #12` ' +
-                '(CONTRIBUTING.md station 3). Edit the PR description — no new push needed. ' +
-                '/ PR 描述里需要写 `Closes #<issue编号>` 关联 family issue,' +
-                '直接编辑 PR 描述即可,不用重新 push。');
+                '(CONTRIBUTING.md station 3). Edit the PR description — no new push needed. ');
               return;
             }
             const n = Number(m[1]);
@@ -52,4 +58,85 @@ jobs:
                 core.info(`links open issue #${n}: ${issue.title}`);
             } catch (e) {
               core.setFailed(`Issue #${n} does not exist in this repo (typo?).`);
+            }
+      - name: PR-body images must be SHA-pinned links that resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+
+            // An image reaches the body two ways and BOTH must be gated: markdown
+            // `![alt](url)` and raw `<img src="url">` (what you must use to set a
+            // width). A markdown-only extractor is why the sibling repo's gate sat
+            // green on two PRs whose previews were 404ing — it found zero URLs.
+            const urls = [...new Set([
+              ...[...body.matchAll(/!\[[^\]]*\]\(\s*([^)\s]+)/g)].map(m => m[1]),
+              ...[...body.matchAll(/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi)].map(m => m[1]),
+            ])];
+
+            const strip = u => u.replace(/[?#].*$/, '');
+
+            // Any GitHub-hosted blob, INCLUDING a contributor fork — a fork-hosted
+            // preview is exactly the kind that rots, so it gets verified too.
+            const parse = (u) => {
+              const s = strip(u);
+              let m = s.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+)$/);
+              if (m) return { o: m[1], r: m[2], ref: m[3], path: m[4] };
+              m = s.match(/^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/);
+              if (m) return { o: m[1], r: m[2], ref: m[3], path: m[4] };
+              return null;   // user-attachments upload / camo-proxied — GitHub-hosted, durable
+            };
+
+            const isSha = r => /^[0-9a-f]{7,40}$/i.test(r);
+            const broken = [], moving = [], movingRefs = [];
+            let checked = 0;
+
+            for (const u of urls) {
+              const p = parse(u);
+              if (!p) continue;
+              checked++;
+              // A branch name is not a pin. Under designs/ it is a guaranteed future
+              // 404 (fork branches get deleted after merge, family dirs get renamed),
+              // so it fails; a docs/assets/refs image only rots if the asset is
+              // renamed, so it warns.
+              if (!isSha(p.ref)) {
+                (p.path.startsWith('designs/') ? moving : movingRefs).push(`${p.path} @ ${p.ref}`);
+              }
+              try {
+                await github.rest.repos.getContent({
+                  owner: p.o, repo: p.r, path: decodeURIComponent(p.path), ref: p.ref });
+              } catch (e) {
+                if (e.status === 403) {   // >1 MB blob, or a repo we cannot read — cannot verify
+                  core.info(`skipped ${p.o}/${p.r} ${p.path}: ${e.message}`);
+                  continue;
+                }
+                broken.push(`${p.o}/${p.r} ${p.path} @ ${p.ref.slice(0, 9)}`);
+              }
+            }
+
+            for (const m of movingRefs) {
+              core.warning(
+                `image pinned to a moving ref: ${m} — re-pin to the commit sha. A branch ref ` +
+                'silently breaks the image the moment the asset is renamed or the branch is deleted. ');
+            }
+
+            const errs = [];
+            if (broken.length) {
+              errs.push(
+                `image url(s) that do not resolve: ${broken.join('; ')} — re-pin to a commit that ` +
+                'actually contains the file. If the family dir was renamed (e.g. to the `_asm` form), ' +
+                'the previews live at the NEW path only from the rename commit onward — bump every ' +
+                'image url to the new head sha. ');
+            }
+            if (moving.length) {
+              errs.push(
+                `designs/ image(s) pinned to a branch instead of a commit sha: ${moving.join('; ')} — ` +
+                'your fork branch is deleted when this PR merges and every one of those images dies ' +
+                'with it, leaving the merged PR unreviewable. Copy the sha from the branch and use ' +
+                'blob/<sha>/<path>?raw=true. ');
+            }
+            if (errs.length) {
+              core.setFailed(errs.join(' || ') + ' Edit the PR description — no new push needed.');
+            } else {
+              core.info(`all ${checked} repo-hosted image link(s) OK (${urls.length} image url(s) in body)`);
             }

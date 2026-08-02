@@ -1,6 +1,6 @@
 # Walkthrough: from proposal to a merged family
 
-*中文: [WALKTHROUGH.zh.md](WALKTHROUGH.zh.md)*
+*Chinese: [WALKTHROUGH.zh.md](WALKTHROUGH.zh.md)*
 
 Every accepted family becomes an auditable BenchCAD 2.0 parametric design.
 
@@ -77,7 +77,10 @@ See [`DEBUGGING.md`](DEBUGGING.md) for viewer options.
 
 ## 5. Submit and review
 
-Commit with DCO sign-off and open one PR touching only the family directory:
+Commit with DCO sign-off and open one PR touching only the family directory,
+which holds **only the package** (`part.py`, `spec.py`, `family.json`, an
+optional `NOTES.md`, and the `preview_*.png`). Reference drawings, photos, and
+datasheets stay in the **issue** — CI rejects them inside `designs/`.
 
 ```bash
 git add designs/my_family
@@ -86,12 +89,12 @@ git push
 ```
 
 Put `Closes #<issue-number>` in the PR description. CI reruns validation and
-generates previews. One non-author follows [`REVIEWING.md`](../REVIEWING.md),
+generates previews. One non-author follows [`REVIEWING.md`](REVIEWING.md),
 checking source evidence, renders, equations, constraints, labels, and scope.
 
 After merge, automation closes the issue, posts acceptance evidence, refreshes
-[`CONTRIBUTORS.md`](../CONTRIBUTORS.md), and updates
-[`STATUS.md`](../STATUS.md).
+[`CONTRIBUTORS.md`](CONTRIBUTORS.md), and updates
+[`STATUS.md`](STATUS.md).
 
 ## Common problems
 
