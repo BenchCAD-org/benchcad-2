@@ -32,6 +32,12 @@ _CONTOURS = [[-0.8, [[[(0.0, 3.9), (0.51, 3.86), (1.01, 3.76), (1.49, 3.59), (1.
 _RIM_CLIP_R = 7.45
 
 
+def _cage_circle(n=96):
+    # the R7.45 cage is a cylinder; a clean circle is its correct outer section
+    return [(_RIM_CLIP_R * math.cos(2.0 * math.pi * i / n),
+             _RIM_CLIP_R * math.sin(2.0 * math.pi * i / n)) for i in range(n)]
+
+
 def _shoelace(pts):
     a = 0.0
     n = len(pts)
@@ -151,13 +157,23 @@ def build(
             ps = [[o, [h for h in hs if _contains(h, 0.0, 0.0)]] for o, hs in ps]
         prepared.append((z0, ps))
 
+    # The measured z=0.8 cage-top section's outer is a chainer artefact: the
+    # cam-pocket/drive interior was merged into the outer C, leaving a large +x
+    # concavity so the cage-top (and the rim-less top, which holds this section
+    # up to z=0) reads non-circular -- cut on +x. The cage is an R7.45 cylinder,
+    # so replace that outer with a clean circle, keeping the section's holes.
+    # Done before the holds below so the held z=0 copy inherits the circle.
+    pmap = {z0: i for i, (z0, _) in enumerate(prepared)}
+    if 0.8 in pmap:
+        cage = _cage_circle()
+        for sol in prepared[pmap[0.8]][1]:
+            sol[0] = [list(p) for p in cage]
     # The OEM z=0 section is the rim disc (outer R~8.1 with the mouth and cam
     # pocket cut). Extruding it up to z=0.8 puts a fat rim disc where the OEM has
     # the R7.45 cage, so the seating-plane band measures the wrong shape. Hold the
     # valid 0.8 cage section up to the seating plane for every row: the rim (z<0,
     # kept by has_rim rows) is unaffected, and the z=0..0.8 band becomes the cage.
     # For rim-less rows this also makes the top flush instead of 0.8 mm short.
-    pmap = {z0: i for i, (z0, _) in enumerate(prepared)}
     if 0.0 in pmap and 0.8 in pmap:
         prepared[pmap[0.0]] = (0.0, prepared[pmap[0.8]][1])
     # The measured z=-0.8 rim-bottom section is a chainer artefact at R~3.9 (it
