@@ -35,5 +35,5 @@ jobs:
         run: |
           git config user.name "benchcad-bot"
           git config user.email "actions@github.com"
-          git add CONTRIBUTORS.md
+          git add docs/CONTRIBUTORS.md
           git diff --cached --quiet || (git commit -m "credits: refresh provenance board [skip ci]" && git pull --rebase origin main && git push)
