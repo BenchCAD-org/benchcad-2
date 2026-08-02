@@ -1,0 +1,14 @@
+{
+  "family": "preview_parts_demo",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "Documentation demo assembly for bench2 preview-parts: a pillow-block-style unit with a block, a flanged bushing, and two hex bolts in a nested, rotated sub-assembly.",
+  "source": "proportion (documentation example, not a benchmark family)",
+  "contributor": "BenchCAD",
+  "solids": 4,
+  "components": [
+    {"name": "block", "quantity": 1},
+    {"name": "bushing", "quantity": 1},
+    {"name": "bolt", "quantity": 2}
+  ]
+}

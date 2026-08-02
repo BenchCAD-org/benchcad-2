@@ -6,7 +6,7 @@ parameter ranges, constraints, reference evidence, and provenance.
 
 Questions → [Discord](https://discord.gg/be9AtvrDyK). New to GitHub? Use the
 step-by-step guides: [English](docs/GETTING_STARTED.md) ·
-[中文](docs/GETTING_STARTED.zh.md).
+[Chinese](docs/GETTING_STARTED.zh.md).
 
 ## The contributor loop
 
@@ -16,6 +16,8 @@ uv run bench2 new <family>
 # fill designs/<family>/{part.py,spec.py,family.json}
 uv run bench2 validate <family>
 uv run bench2 preview <family>     # inspect every generated view yourself
+# assembly family: preview also renders preview_parts.png
+# (or run it alone: uv run bench2 preview-parts <family>)
 # submit one PR with `Closes #<family-issue>`
 ```
 
@@ -24,7 +26,7 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 1. **One family = one issue = one PR.** A family PR touches only
    `designs/<family>/` and includes `Closes #N`.
 2. **`bench2 validate` must pass locally.** CI reruns the same gates.
-3. **A non-author reviews the family** using [`REVIEWING.md`](REVIEWING.md).
+3. **A non-author reviews the family** using [`REVIEWING.md`](docs/REVIEWING.md).
 4. **Merged is not automatically released.** Qualification and versioned
    manifests are produced in batches.
 5. **Do not duplicate a known proposal.** Check [`registry.json`](registry.json)
@@ -45,8 +47,8 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 | 1 | Claim | Self-assign and verify the evidence before coding |
 | 2 | Build | Implement the three family files; add `NOTES.md` for equation-heavy designs |
 | 3 | Validate | Run `bench2 validate` and inspect `bench2 preview` output |
-| 4 | PR | Submit one scoped PR with `Closes #N` |
-| 5 | CI | CI reruns validation and posts the report and previews |
+| 4 | PR | Submit one scoped PR with `Closes #N` — **after** `bench2 validate` passes locally and you inspected the previews. Want early feedback before that? Open the PR as a GitHub **Draft** |
+| 5 | CI | CI reruns validation and posts the report and previews. **Your first PR here:** a maintainer must click *Approve workflows* once before CI runs — no checks yet just means that click is pending |
 | 6 | Review | A non-author audits the evidence, renders, equations, constraints, and labels |
 | 7 | Merge | The issue closes and provenance/status automation runs |
 | 8 | Release | Qualified families enter the next versioned manifest |
@@ -56,8 +58,13 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 The implementer is the first verifier. Confirm:
 
 1. A real standard, catalog, datasheet, handbook, or honest proportion basis.
-2. A dimensioned drawing or equivalent source that maps symbols to geometry.
-3. A table or documented range containing minimum and maximum examples.
+2. A true 2D orthographic dimensioned drawing that maps symbols to geometry —
+   ideally the standard's parametric letter drawing paired with its size table
+   (dimension arrows drawn over a product photo/render do not qualify).
+3. A table or documented range containing minimum and maximum examples,
+   its columns named physical-quantity + drawing symbol (`height_G`,
+   `bore_E`, `pitch_P`) — a bare letter is ambiguous once it leaves the
+   drawing, and carries into the `PARAM_SPEC` names.
 4. At least two source values spot-checked manually.
 5. At least four meaningful parameters and enough geometric variation.
 6. No duplicate or near-duplicate in `registry.json` or active issues.
@@ -78,6 +85,10 @@ licensing permits, with the original source linked in the issue.
 - Difficulty levels and feature coverage are meaningful.
 - Preview views and extremes match the reference evidence.
 - `family.json` labels and contributor information are accurate.
+- An assembly family names every component instance stably, matches its
+  declared `components`/`solids`, and ships an inspected `preview_parts.png`
+  (component four-views, assembly overview, ordered highlight rows — see
+  `docs/DESIGN_SPEC.md`).
 
 **Hard gates (red ✗ = cannot merge)** — so review spends its time on *truth*, not
 structure. A family PR must pass all three:
@@ -85,8 +96,8 @@ structure. A family PR must pass all three:
 | Gate | Enforces |
 |---|---|
 | `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
-| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open) |
-| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one) and the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png` |
+| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open); **and every image url in the body resolves**, with anything under `designs/` pinned to a **commit sha** — a branch name is not a pin: your fork branch is deleted when this PR merges and every preview pinned to it dies with it, leaving the merged family unreviewable. Copy the sha off the branch and use `blob/<sha>/<path>?raw=true`. Both `![alt](…)` and `<img src="…">` are checked, so the width-setting form is covered too |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`, plus `preview_hard_zoom.png` (the fourth render — CI *warns* while PRs opened before it existed backfill it, then it becomes required); **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; the dir name matches the linked issue's family name; and the **PR body shows its evidence** — the issue's drawing + photo re-embedded under `## Reference`, all four renders embedded by name, the parameter/verification table, and for a multi-body family `preview_parts.png` (file **and** embed) |
 
 ## Issue taxonomy
 
