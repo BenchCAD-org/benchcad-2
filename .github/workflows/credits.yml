@@ -1,20 +1,17 @@
 name: credits-board
-# Station 7 of the lifecycle (CONTRIBUTING.md, 📒): after a family PR merges, regenerate
-# CONTRIBUTORS.md from the actual issue/PR provenance records.
+# Station 7 of the lifecycle (CONTRIBUTING.md, 📒): after a family PR merges, check
+# whether CONTRIBUTORS.md still matches the actual issue/PR provenance records.
+#
+# POLICY: bots never push to main (the ruleset requires a PR for every change and
+# github-actions[bot] deliberately has no bypass). This job therefore only
+# regenerates the board and WARNS when the committed copy has drifted — a
+# maintainer regenerates and pushes it (see .github/scripts/gen_credits.py).
 #
 # `pull_request_target`, not `pull_request`: fork PRs (every contributor PR) get a
-# read-only GITHUB_TOKEN under `pull_request` regardless of `permissions:`, so the
-# board push 403'd on #35/#36/#38/#74. Safe: fires only after merge, checks out
-# `main`, and runs main's own script — no PR-supplied code executes. Because this
-# trigger exposes repo secrets on fork-PR events, NEVER check out or execute
-# PR-head code in this workflow.
-#
-# The push needs the `BOT_PUSH_TOKEN` secret: a token owned by a repository
-# admin (admins bypass the main ruleset; the built-in github-actions[bot] is
-# rejected with GH013 and cannot be added to the bypass list because it is not
-# an installed GitHub App). Recommended: a fine-grained PAT scoped to ONLY this
-# repository with Contents read/write. Without the secret the refresh is
-# skipped with a warning instead of failing the run.
+# read-only GITHUB_TOKEN under `pull_request` regardless of `permissions:`, which
+# broke this job on #35/#36/#38/#74. Safe: fires only after merge, checks out
+# `main`, and runs main's own script — no PR-supplied code executes. NEVER check
+# out or execute PR-head code in this workflow.
 
 on:
   pull_request_target:
@@ -27,24 +24,17 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       issues: read
       pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-          token: ${{ secrets.BOT_PUSH_TOKEN != '' && secrets.BOT_PUSH_TOKEN || github.token }}
       - name: regenerate CONTRIBUTORS.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/gen_credits.py
-      - name: commit if changed
+      - name: warn if the committed board is stale
         run: |
-          git config user.name "benchcad-bot"
-          git config user.email "actions@github.com"
-          git add CONTRIBUTORS.md
-          git diff --cached --quiet && exit 0
-          git commit -m "credits: refresh provenance board [skip ci]"
-          git pull --rebase origin main
-          git push || echo "::warning::CONTRIBUTORS.md refresh not pushed — the main ruleset rejects github-actions[bot] (GH013). Add the BOT_PUSH_TOKEN secret (fine-grained PAT of a repo admin, Contents read/write on this repo only) or refresh the boards manually."
+          git diff --quiet -- CONTRIBUTORS.md || echo "::warning::CONTRIBUTORS.md is stale. Maintainer: run .github/scripts/gen_credits.py and push the refresh (bots do not push to main by policy)."
