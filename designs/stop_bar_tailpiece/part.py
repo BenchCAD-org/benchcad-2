@@ -17,16 +17,17 @@ import cadquery as cq
 
 
 def _d_section(wp, w, h):
-    """One D-shaped closed wire: flat back/top/bottom, circular-arc front face
-    (radius 0.75*h, apex on the front plane). Same topology at every station so
-    the loft is clean."""
-    r_d = 0.75 * h
-    s = r_d - math.sqrt(r_d * r_d - (h / 2.0) ** 2)  # front-edge setback
+    """One D-shaped closed wire per the sheet's end view: the straight side is
+    the full-depth BOTTOM face (the 18 direction), short edge lands rise at
+    the front and back, and the crown arc sweeps the HEIGHT with its apex on
+    top — the photo's continuous dome from the back edge over to the string
+    holes. Same topology at every station so the loft is clean."""
+    rise = 0.42 * h
     return (
         wp.moveTo(-w / 2.0, 0.0)
-        .lineTo(-w / 2.0, h)
-        .lineTo(w / 2.0 - s, h)
-        .threePointArc((w / 2.0, h / 2.0), (w / 2.0 - s, 0.0))
+        .lineTo(-w / 2.0, rise)
+        .threePointArc((0.0, h), (w / 2.0, rise))
+        .lineTo(w / 2.0, 0.0)
         .close()
     )
 
@@ -90,6 +91,8 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
             .lineTo(x_join, -(bar_w / 2.0 - 0.15))
             .close()
             .extrude(tab_t)
+            .intersect(_d_section(cq.Workplane("YZ").workplane(offset=x_stud - 2.0 * lobe_r),
+                                  bar_w, tab_t).extrude(4.0 * lobe_r))
         )
         # match the bar's D-section at tab height so the join is flush (the
         # rectangular extrusion's front corner otherwise pokes past the curve)
