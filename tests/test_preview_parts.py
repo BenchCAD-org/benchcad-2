@@ -396,5 +396,95 @@ class RenderRegressionTests(unittest.TestCase):
         self.assertNotEqual(highlighted, ghosted)
 
 
+VARIABLE_PART = '''
+import cadquery as cq
+
+
+def build(base_w, pin_count):
+    base = cq.Workplane("XY").box(base_w, base_w, 4)
+    pin = cq.Workplane("XY").cylinder(10, 2)
+    result = cq.Assembly(name="fixture")
+    result.add(base, name="base")
+    for i in range(int(pin_count)):
+        result.add(pin, name="pin_%02d" % (i + 1),
+                   loc=cq.Location((6.0 * i - base_w / 4.0, 0, 7)))
+    return result
+'''
+
+VARIABLE_SPEC = '''
+PARAM_SPEC = {
+    "base_w": {"desc": "base plate width", "unit": "mm", "source": "proportion",
+               "range": {"easy": (20, 30), "medium": (20, 40), "hard": (20, 50)}},
+    "pin_count": {"desc": "number of pins", "unit": "count",
+                  "source": "proportion", "integer": True,
+                  "range": {"easy": (2, 2), "medium": (2, 3), "hard": (2, 4)}},
+}
+
+
+def check(p):
+    return []
+'''
+
+VARIABLE_META = _meta(
+    components=[{"name": "base", "quantity": 1},
+                {"name": "pin", "quantity": "pin_count"}],
+)
+
+
+class ParamQuantityTests(unittest.TestCase):
+    """`quantity` may name an integer parameter (instance-dependent counts)."""
+
+    def test_param_quantity_accepted_and_solids_omitted(self):
+        from bench2.preview_parts import component_contract
+
+        contract = component_contract(VARIABLE_META)
+        self.assertEqual(contract, [("base", 1), ("pin", "pin_count")])
+
+    def test_param_quantity_rejects_declared_solids(self):
+        from bench2.preview_parts import component_contract
+
+        meta = _meta(solids=3,
+                     components=[{"name": "base", "quantity": 1},
+                                 {"name": "pin", "quantity": "pin_count"}])
+        with self.assertRaisesRegex(ValueError, "omit `solids`"):
+            component_contract(meta)
+
+    def test_resolution_reads_instance_params(self):
+        from bench2.preview_parts import resolve_contract
+
+        resolved = resolve_contract([("base", 1), ("pin", "pin_count")],
+                                    {"pin_count": 3})
+        self.assertEqual(resolved, [("base", 1), ("pin", 3)])
+
+    def test_resolution_rejects_unknown_and_non_integer(self):
+        from bench2.preview_parts import resolve_contract
+
+        with self.assertRaisesRegex(ValueError, "not among the instance"):
+            resolve_contract([("pin", "pin_count")], {})
+        with self.assertRaisesRegex(ValueError, "positive integer"):
+            resolve_contract([("pin", "pin_count")], {"pin_count": 2.5})
+        with self.assertRaisesRegex(ValueError, "positive integer"):
+            resolve_contract([("pin", "pin_count")], {"pin_count": 0})
+
+    def test_pipeline_resolves_and_renders_variable_family(self):
+        from PIL import Image
+
+        from bench2.loader import load_family
+        from bench2.preview_parts import build_preview_parts
+        from bench2.sampling import sample as sample_params
+
+        with tempfile.TemporaryDirectory() as td:
+            fam_dir = _write_family(Path(td) / "fam", VARIABLE_PART,
+                                    VARIABLE_SPEC, VARIABLE_META)
+            _, spec = load_family(fam_dir)
+            p = sample_params(spec, "hard", np.random.default_rng(0))
+            n = int(p["pin_count"])
+            out = build_preview_parts(fam_dir)
+            with Image.open(out) as im:
+                # 2 component rows + assembly + 2 grouped highlight rows
+                self.assertEqual(im.size, (GRID_W, _grid_height(5)))
+            self.assertGreaterEqual(n, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

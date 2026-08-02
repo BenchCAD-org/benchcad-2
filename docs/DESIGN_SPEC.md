@@ -255,6 +255,25 @@ must equal the quantity sum:
 }
 ```
 
+A quantity may instead be the **name of an integer build parameter** when the
+instance count is itself a catalog value — a bearing's ball complement, a
+chain's link count:
+
+```json
+{
+  "components": [
+    {"name": "outer_ring", "quantity": 1},
+    {"name": "inner_ring", "quantity": 1},
+    {"name": "ball", "quantity": "ball_count"}
+  ]
+}
+```
+
+Such a family **omits `solids`** (the body count is instance-dependent); the
+referenced parameter must exist in `PARAM_SPEC` with `integer: true`, and
+`bench2 validate` checks every sampled instance against the resolved quantity
+sum — a stricter per-instance gate than a single fixed number.
+
 Name every shape-bearing assembly node either **exactly** after its component
 (`body` — the quantity-1 case) or `<component>_<NN>` for repeated instances
 (`bolt_01`, `bolt_02`, `bolt_03`). An exact declared name wins over suffix
