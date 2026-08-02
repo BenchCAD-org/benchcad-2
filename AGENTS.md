@@ -7,10 +7,10 @@ A family is one `designs/<family>/` directory containing `part.py`, `spec.py`,
 and `family.json`. Read `docs/DESIGN_SPEC.md` before implementing one.
 
 ```text
-DESIGN.md           benchmark architecture and decision record
+docs/DESIGN.md      benchmark architecture and decision record
 docs/DESIGN_SPEC.md the part + spec interface
 CONTRIBUTING.md     contributor loop
-REVIEWING.md        human review checklist
+docs/REVIEWING.md   human review checklist
 framework/bench2/   CLI: new / validate / preview / preview-parts
 designs/            one directory per family
 ```

@@ -26,7 +26,7 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 1. **One family = one issue = one PR.** A family PR touches only
    `designs/<family>/` and includes `Closes #N`.
 2. **`bench2 validate` must pass locally.** CI reruns the same gates.
-3. **A non-author reviews the family** using [`REVIEWING.md`](REVIEWING.md).
+3. **A non-author reviews the family** using [`REVIEWING.md`](docs/REVIEWING.md).
 4. **Merged is not automatically released.** Qualification and versioned
    manifests are produced in batches.
 5. **Do not duplicate a known proposal.** Check [`registry.json`](registry.json)
