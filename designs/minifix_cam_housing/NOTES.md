@@ -79,15 +79,17 @@ catalogue bolt-hole values geometrically distinct.
 | Bounding box Y | 16.300000 mm | 16.240 mm | -0.060 mm |
 | Bounding box Z | 14.650000 mm | 14.650000 mm | < 0.000001 mm |
 | Solid count | 1 | 1 | 0 |
-| Volume | 801.707894 mm3 | 765.03 mm3 | -36.7 mm3 (-4.6%) |
-| 3D sym-diff vs OEM | 0 | 28.49% | -- |
+| Volume | 801.707894 mm3 | 910.35 mm3 | +108.6 mm3 (+13.5%) |
+| 3D sym-diff vs OEM | 0 | 19.00% | -- |
 
-The Ø7 baseline is 776.48 mm3 (sym-diff 27.08%; the OEM CAD is the Ø7 option, so
-the Ø7 row is the closest match). Bounding box Z is exact. X/Y undershoot the
-OEM's torus-lipped rim (R8.14) because the stored rim is a 48-gon at R7.94; the
-3D sym-diff is the primary fidelity metric and the polygon rim envelope is a
-documented residual. Volume is a useful mass-property check, not a claim of
-identical topology.
+The Ø7 baseline measures sym-diff ~17.5% (the OEM CAD is the Ø7 option, so the
+Ø7 row is the closest match). Bounding box Z is exact; X/Y undershoot the OEM's
+torus-lipped rim (R8.14) because the stored rim is a 48-gon at R7.94. The volume
+now *over*-shoots OEM because the z=0..2 cage-top band (the clean R7.45 circle)
+is a near-solid disc where the OEM has the open drive recess / window / mouth
+openings -- that over-build is the dominant remaining residual (see below) and
+is why volume is only a mass-property check, not a fidelity claim. The 3D
+sym-diff is the primary fidelity metric.
 
 ## 3D sym-diff oracle progress (analytic/hybrid rebuild in progress)
 
@@ -102,12 +104,20 @@ metric while keeping one solid and exact bbox Z.
 | contour stack (committed baseline) | 21 OEM sections, rigid-block axial map | 46.05% |
 | hold cage section at seating plane | z=0.0 was the rim disc (R~8.1) extruded up to z=0.8 where the OEM has the R7.45 cage; hold the z=0.8 cage section at z=0..0.8 for every row | 30.58% |
 | hold rim section at rim bottom | z=-0.8 contour was a chainer artefact at R~3.9; hold the z=-0.5 rim section (R~7.94) down to the rim bottom | 28.49% |
+| clean cage-top outer circle | z=0.8 outer was a chainer artefact (cam-pocket/drive merged into the outer C, +x concavity) -- replace with a clean R7.45 circle, keeping holes; makes the rim-less top circular | 19.00% |
 
-A per-z-band hotspot map (1 mm slabs) drives the next target. After the two
-section-hold fixes the residual concentrates at: the rim band z=-0.85 (33 mm3,
-polygon rim + missing torus lip), the cam/hook band z=6.15 (27 mm3), the
-drive-recess mouth z=1.15 (26 mm3, over-built), the fork z=11.15 (23 mm3) and
-the cam-to-drive transition z=7.15 (22 mm3, over-built).
+A per-z-band hotspot map (1 mm slabs) drives the next target. At 19.00% the
+residual is almost entirely the z=0..2 band (the cage-top over-builds the OEM's
+open drive recess / window / mouth openings): z=0.2 = 72 mm3 over, z=1.2 = 82
+mm3 over. The central drive-recess opening IS captured (the z=0.8 section's
+offset hole covers the centre, and mine(0,0)=0 matches OEM(0,0)=0 there), so
+the over-build is the cage-wall *ring* (R3.5..7.45) where the OEM has the PZ2
+drive lobes, the radial mouth, and the cage windows -- openings whose azimuths
+vary with z (4 drive lobes at the top, 3 webs / 3 windows mid-body). The other
+bands sum to ~0 (the contour stack's C-shape sections match the open cage
+mid-body).
+
+### Rejected patches (oracle-gated, not merged)
 
 ### Rejected patches (oracle-gated, not merged)
 
@@ -116,7 +126,18 @@ Cheap add/remove patches were all prototyped in-memory and rejected or neutral:
   contour rim already overlaps OEM; added material lands outside or in filled
   space).
 - drive-recess deepen (cut a wider/deeper R3.6 cone/cylinder at z=0..2.2):
-  +4.0 to +5.2 (removes OEM-overlapping material).
+  +4.0 to +5.2, and at the 19% baseline a central R3.597 drive cut (straddling
+  the top face, stopping before the z=2.0 boundary) is +3.2 to +3.6 or
+  degenerate (+190 / +209 when the cutter reaches the z=2.0 boundary, whose
+  contour bakes the drive feature, or coincides with the z=0.8 offset hole
+  which already covers the centre). A probe confirms mine(0,0)=0 = OEM(0,0)=0
+  in z=0..2, so the central drive opening is already captured and a central
+  cut is disjoint/degenerate -- the over-build is the ring, not the centre.
+- extending the clean R7.45 circle to z>=2.0 stations: +1.6 to +25 (those
+  contours correctly bake the drive/cam features the circle would lose).
+- holding the z=2.0/2.715/3.685/4.5 outer at z=0.8 to restore the windows:
+  neutral (0.00) or worse -- their +x cam bump is wrong at the cage-top and
+  their window azimuths do not match the z=0..2 openings.
 - full and partial-azimuth cam lobes (eccentric R4.40 cylinder, solid / half /
   z-segmented): +1.2 to +35.5. The cam outer wall is a partial-azimuth patch
   (face bbox xy[-2.42,-1.99]x[-0.52,3.19], a vertical strip on the -x side of
@@ -131,16 +152,20 @@ Cheap add/remove patches were all prototyped in-memory and rejected or neutral:
   not shape-matching: the cam/drive contours are over-built and the small
   fork-tip contour trims the over-fill while rendering the cam region as a fork
   tip. It is rejected as physically incoherent (volume-over-fit, which the
-  coherent-reconstruction principle forbids).
+  coherent-reconstruction principle forbids). Note the 3-D oracle rewards these
+  size matches, so the oracle must be gated on physical coherence too, not only
+  on the number.
 
-The contour stack is therefore at its coherent ceiling (~28.5%). The two
-merged fixes are *section replacements* (reuse an existing measured contour at a
-station where the stored one is a chainer artefact), the same coherent class as
-the rigid-block axial map. Further reduction toward single-digit sym-diff needs
-the analytic rebuild with correctly-extracted cam-region sections (the chainer
-dropped the cam-inner loop at z=5.3/6.6 and merged it into the outer C,
-over-building that band) and the partial-azimuth cam lobe -- a multi-iteration
-effort that must stay oracle-gated.
+The three merged fixes are all *section replacements* (reuse a measured contour
+or a clean analytic circle at a station whose stored contour is a chainer
+artefact), the same coherent class as the rigid-block axial map. The contour
+stack is at its coherent ceiling (~19%); the remaining residual is the z=0..2
+cage-top over-build (the PZ2 drive lobes + radial mouth + cage windows, whose
+azimuths vary with z, are not cut into the clean R7.45 ring). Robust OEM section
+extraction at z=0.8 failed (plane-section edges do not discretise via GCPnts;
+the slab has no horizontal cap because z=0.8 cuts drafted walls), so the next
+milestone needs an analytic open-cage window/mouth cut with z-varying azimuths
+-- a multi-iteration effort that must stay oracle-gated.
 
 ### Section fidelity (chaining-free point-cloud Hausdorff, stored vs OEM)
 
