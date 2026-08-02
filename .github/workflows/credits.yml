@@ -5,9 +5,16 @@ name: credits-board
 # `pull_request_target`, not `pull_request`: fork PRs (every contributor PR) get a
 # read-only GITHUB_TOKEN under `pull_request` regardless of `permissions:`, so the
 # board push 403'd on #35/#36/#38/#74. Safe: fires only after merge, checks out
-# `main`, and runs main's own script — no PR-supplied code executes. NOTE: the
-# push additionally needs "GitHub Actions" on the main ruleset's bypass list,
-# else it is rejected with GH013 (changes must be made through a pull request).
+# `main`, and runs main's own script — no PR-supplied code executes. Because this
+# trigger exposes repo secrets on fork-PR events, NEVER check out or execute
+# PR-head code in this workflow.
+#
+# The push needs the `BOT_PUSH_TOKEN` secret: a token owned by a repository
+# admin (admins bypass the main ruleset; the built-in github-actions[bot] is
+# rejected with GH013 and cannot be added to the bypass list because it is not
+# an installed GitHub App). Recommended: a fine-grained PAT scoped to ONLY this
+# repository with Contents read/write. Without the secret the refresh is
+# skipped with a warning instead of failing the run.
 
 on:
   pull_request_target:
@@ -27,6 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          token: ${{ secrets.BOT_PUSH_TOKEN != '' && secrets.BOT_PUSH_TOKEN || github.token }}
       - name: regenerate CONTRIBUTORS.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -36,4 +44,7 @@ jobs:
           git config user.name "benchcad-bot"
           git config user.email "actions@github.com"
           git add CONTRIBUTORS.md
-          git diff --cached --quiet || (git commit -m "credits: refresh provenance board [skip ci]" && git pull --rebase origin main && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "credits: refresh provenance board [skip ci]"
+          git pull --rebase origin main
+          git push || echo "::warning::CONTRIBUTORS.md refresh not pushed — the main ruleset rejects github-actions[bot] (GH013). Add the BOT_PUSH_TOKEN secret (fine-grained PAT of a repo admin, Contents read/write on this repo only) or refresh the boards manually."

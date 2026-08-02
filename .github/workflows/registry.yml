@@ -21,6 +21,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          # BOT_PUSH_TOKEN: repo-admin fine-grained PAT (Contents read/write, this
+          # repo only). Admins bypass the main ruleset; github-actions[bot] cannot
+          # (GH013, and the built-in Actions app cannot be put on the bypass list).
+          token: ${{ secrets.BOT_PUSH_TOKEN != '' && secrets.BOT_PUSH_TOKEN || github.token }}
       - name: regenerate registry.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -33,4 +37,7 @@ jobs:
           # commit BEFORE pulling: `git pull --rebase` aborts on a dirty index
           # (staged registry.json), so staging then rebasing exits 128 and the
           # refresh is never pushed. Same order as credits.yml.
-          git diff --cached --quiet || (git commit -m "registry: refresh [skip ci]" && git pull --rebase origin main && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "registry: refresh [skip ci]"
+          git pull --rebase origin main
+          git push || echo "::warning::registry.json refresh not pushed — the main ruleset rejects github-actions[bot] (GH013). Add the BOT_PUSH_TOKEN secret or refresh manually."
