@@ -2,7 +2,26 @@
   "family": "guitar_tuning_machine_head",
   "standard": null,
   "base_plane": "XY",
-  "description": "Sealed geared guitar tuning machine (Grover Rotomatic style): baseplate, sealed gear housing, string post with press-in bushing collar, worm/key shaft out the housing side, and a locating-screw hole. One solid.",
+  "description": "Sealed geared guitar tuning machine (Grover Rotomatic 102 class) as a four-part assembly: die-cast housing with outboard screw ear, string post with transverse string hole, pear tuning button on the key shaft, and the separate peghole bushing (press-in collar or hex ferrule).",
   "source": "Grover Rotomatic 102 + Gotoh SG381 dimensioned drawings (post/bushing/housing/mount); proportion for housing depth and key shaft",
-  "contributor": "BenchCAD-org"
+  "contributor": "BenchCAD-org",
+  "solids": 4,
+  "components": [
+    {
+      "name": "housing",
+      "quantity": 1
+    },
+    {
+      "name": "post",
+      "quantity": 1
+    },
+    {
+      "name": "button",
+      "quantity": 1
+    },
+    {
+      "name": "bushing",
+      "quantity": 1
+    }
+  ]
 }
