@@ -226,8 +226,11 @@ renders the components as separate actors — the full pose and every
 parent/child `Location` transform survive. The grid shows, in `family.json`
 `components` order:
 
-1. one four-view row per semantic component — its raw local shape in its own
-   frame, labeled with the component's bounding box in mm;
+1. one row per semantic component — its raw local shape in the four bench
+   views in its own frame plus a half-section CUTAWAY panel (a purely internal
+   concavity — a bearing ring's raceway, a thread, a circlip groove — is
+   invisible in every opaque exterior view), labeled with the component's
+   bounding box in mm;
 2. the complete assembly in its true pose, labeled with the instance's
    parameters;
 3. one red-on-gray highlight row per component (correct depth occlusion, the
