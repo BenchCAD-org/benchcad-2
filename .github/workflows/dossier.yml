@@ -91,7 +91,7 @@ jobs:
               (extras.length ? `Other renders: ${extras.join(' · ')} · ` : '') +
                 `gates: \`bench2 validate ${fam}\` PASS (checked in CI on the PR).`,
               ``,
-              `Next stations: factory batch → release — track on [STATUS.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/STATUS.md).`,
+              `Next stations: factory batch → release — track on [STATUS.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/STATUS.md).`,
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,

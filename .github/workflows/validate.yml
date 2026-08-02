@@ -137,5 +137,5 @@ jobs:
         run: |
           git config user.name "benchcad-bot"
           git config user.email "actions@github.com"
-          git add STATUS.md
+          git add docs/STATUS.md
           git diff --cached --quiet || (git commit -m "status: refresh board [skip ci]" && git push)
