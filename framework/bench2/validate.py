@@ -65,6 +65,20 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
         bad(f"family.json: base_plane must be one of {sorted(BASE_PLANES)}")
     else:
         ok("family.json: keys + base_plane valid")
+    # an assembly family additionally declares `components`; keep it consistent
+    # with `solids` here so the metadata can't drift from the body-count gate
+    # (name-level truth against the built Assembly is checked by preview-parts,
+    # which renders the committed preview_parts.png evidence).
+    if "components" in meta:
+        from .preview_parts import component_contract
+
+        try:
+            contract = component_contract(meta)
+        except ValueError as e:
+            bad(str(e))
+        else:
+            ok(f"family.json components: {len(contract)} component type(s), "
+               f"quantities sum to solids={meta['solids']}")
 
     # -- 2. the pieces: part.build + spec.PARAM_SPEC/check -------------------
     try:
