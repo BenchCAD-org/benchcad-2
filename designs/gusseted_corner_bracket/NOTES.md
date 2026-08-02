@@ -1,9 +1,10 @@
 # gusseted_corner_bracket notes
 
-This family models the `LBSBB 8-3030` gusseted right-angle corner bracket as a
-self-contained CadQuery construction. The default no-hole configuration matches
-the validated round24 reference geometry; enabling `panel_mount_holes` matches
-the validated round25 optional side-panel-hole configuration.
+This family models the `MISUMI` `Economy Black Corner Bracket for
+European-Standard Aluminum Extrusions` (`LBSBB 8-3030`) as a self-contained
+CadQuery construction. The default no-hole configuration matches the validated
+round24 reference geometry; enabling `panel_mount_holes` matches the validated
+round25 optional side-panel-hole configuration.
 
 The model does not load STEP, BREP, round directories, preview images, or any
 absolute-path geometry at build time.
@@ -27,8 +28,13 @@ absolute-path geometry at build time.
 ## Public parameters
 
 The product identity is fixed to `Type=LBSBB`, `No.=8-3030`, profile size
-`3030`. The exposed dimensions default to the LBSBB 8-3030 table values but use
-safe engineering-proportion ranges for benchmark variation.
+`3030`, manufacturer `MISUMI`. The exposed dimensions default to the LBSBB
+8-3030 table values but use safe engineering-proportion ranges for benchmark
+variation.
+
+Source:
+
+- [MISUMI product page](https://www.misumi.com.cn/vona2/detail/110310404279/)
 
 | Code parameter | Factory symbol | Default | Unit/type | Controls |
 |---|---:|---:|---|---|
