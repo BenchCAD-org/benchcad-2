@@ -286,6 +286,14 @@ def build(
         cage_t,
         cage_width,
     )
-    shapes = [outer_ring, inner_ring, lower_cage_half, upper_cage_half] + balls
-    result = cq.Compound.makeCompound(shapes)
+    # named assembly per the preview-parts contract: the two cage halves are
+    # distinct components (opposite pocket lips); the balls are repeated
+    # instances of one component whose count is the catalog value ball_count
+    result = cq.Assembly(name="single_row_deep_groove_ball_bearing")
+    result.add(outer_ring, name="outer_ring")
+    result.add(inner_ring, name="inner_ring")
+    result.add(lower_cage_half, name="cage_lower")
+    result.add(upper_cage_half, name="cage_upper")
+    for i, ball in enumerate(balls):
+        result.add(ball, name="ball_%02d" % (i + 1))
     return result
