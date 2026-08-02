@@ -69,7 +69,7 @@ PARAM_SPEC = {
         coverage=[26.0, 28.0, 32.0, 35.0, 42.0, 47.0],
         askable=True,
     ),
-    "width": dict(
+    "width_B": dict(
         desc="bearing width B",
         unit="mm",
         range={"easy": (8.0, 8.0), "medium": (9.0, 10.0), "hard": (12.0, 12.0)},
@@ -142,7 +142,7 @@ def refine(p: dict, difficulty: str, rng) -> None:
     bore_d, outer_d, width, _cr, _cor, _mass = _row(designation)
     p["bore_d"] = bore_d
     p["outer_d"] = outer_d
-    p["width"] = width
+    p["width_B"] = width
 
     ball_d, ball_count, pitch_d, groove_depth, cage_t, cage_width = INTERNAL_ROWS[designation]
     # Small benchmark perturbations around the image-calibrated 6000 baseline
@@ -171,7 +171,7 @@ def check(p: dict) -> list[str]:
         return bad
 
     bore_d, outer_d, width, _cr, _cor, _mass = _row(designation)
-    if (p["bore_d"], p["outer_d"], p["width"]) != (bore_d, outer_d, width):
+    if (p["bore_d"], p["outer_d"], p["width_B"]) != (bore_d, outer_d, width):
         bad.append("d/D/B must stay coupled to the selected 6000-6005 table row, not independently mixed")
 
     if p["bore_d"] >= p["outer_d"]:
@@ -203,9 +203,9 @@ def check(p: dict) -> list[str]:
     if outer_race_r + p["race_groove_depth"] < pitch_r + ball_r + race_clearance:
         bad.append("outer groove too shallow: ball would not fit the outer raceway opening")
 
-    if p["ball_d"] >= p["width"] * 0.84:
-        bad.append("ball_d >= 0.84*width: balls would protrude beyond open bearing end faces")
-    if p["cage_width"] >= p["width"] * 0.45:
+    if p["ball_d"] >= p["width_B"] * 0.84:
+        bad.append("ball_d >= 0.84*width_B: balls would protrude beyond open bearing end faces")
+    if p["cage_width"] >= p["width_B"] * 0.45:
         bad.append("cage_width >= 0.45*width: cage would dominate the open bearing width")
     if p["cage_t"] >= p["ball_d"] * 0.42:
         bad.append("cage_t >= 0.42*ball_d: cage band would hide the rolling balls")

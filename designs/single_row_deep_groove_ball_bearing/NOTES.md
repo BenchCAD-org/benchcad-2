@@ -25,11 +25,11 @@ for human review under `REVIEWING.md`.
 |---|---|---|
 | `d` | `bore_d` | bearing bore diameter |
 | `D` | `outer_d` | bearing outside diameter |
-| `B` | `width` | bearing width |
+| `B` | `width_B` | bearing width |
 | 6000-6005 row | `designation` | selector for the coupled `d/D/B` catalog row |
 
 The table rows are coupled in `spec.py`: `designation` selects `bore_d`,
-`outer_d`, and `width`. The sampler must not produce mixed rows such as a 6000
+`outer_d`, and `width_B`. The sampler must not produce mixed rows such as a 6000
 bore with a 6005 outside diameter.
 
 ## 6000 image-calibrated ball geometry
@@ -84,6 +84,11 @@ prototype.
 - `raceway_clearance = max(0.16, min(0.20, ball_d * 0.035))`
 - `raceway_radius = ball_d / 2 + raceway_clearance`
 - `groove_half_width = min(width * 0.40, ball_d * (0.46 + min(race_groove_depth / ball_d, 0.24)))`
+- raceway groove cross-section: a TRUE circular arc (`threePointArc`) through
+  shoulder edge - groove bottom - shoulder edge, so the revolved raceway is a
+  smooth toroidal surface (no sampled-polyline facets); the arc radius follows
+  from those three points and stays above the ball radius (loose conformity),
+  which the per-designation clearance probe verifies
 
 `race_groove_depth` is not image-derived. It is a proportion constrained by
 ring-wall continuity, ball-envelope clearance, and the need to keep a readable

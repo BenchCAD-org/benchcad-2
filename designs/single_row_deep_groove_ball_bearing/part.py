@@ -42,24 +42,18 @@ def _z_clip(z_min, z_max):
     return cq.Workplane("XY").box(200.0, 200.0, height).translate((0, 0, z_min + height / 2.0))
 
 
-def _revolved_profile(points):
-    clean = []
-    for r, z in points:
-        if not clean or abs(clean[-1][0] - r) > 1e-6 or abs(clean[-1][1] - z) > 1e-6:
-            clean.append((r, z))
-    return cq.Workplane("XZ").polyline(clean).close().revolve(360, (0, 0, 0), (0, 1, 0))
-
-
-def _race_curve(shoulder_r, groove_r, width, groove_half_w, steps=8):
-    z0 = width / 2.0 - groove_half_w
-    z1 = width / 2.0 + groove_half_w
-    pts = []
-    for i in range(steps + 1):
-        t = i / steps
-        z = z0 + (z1 - z0) * t
-        weight = 0.5 - 0.5 * math.cos(2.0 * math.pi * t)
-        pts.append((shoulder_r + (groove_r - shoulder_r) * weight, z))
-    return pts
+def _revolved_ring(pre_pts, arc_mid, arc_end, post_pts):
+    """Ring cross-section: straight walls/chamfers plus ONE true circular arc
+    for the raceway groove (threePointArc through shoulder edge - groove
+    bottom - shoulder edge), revolved 360 deg. A real arc, not a sampled
+    polyline, so the revolved raceway is a smooth toroidal surface."""
+    wp = cq.Workplane("XZ").moveTo(*pre_pts[0])
+    for pt in pre_pts[1:]:
+        wp = wp.lineTo(*pt)
+    wp = wp.threePointArc(arc_mid, arc_end)
+    for pt in post_pts:
+        wp = wp.lineTo(*pt)
+    return wp.close().revolve(360, (0, 0, 0), (0, 1, 0))
 
 
 def _groove_half_width(width, ball_d, race_groove_depth):
@@ -75,25 +69,23 @@ def _inner_ring_revolved(bore_d, shoulder_d, width, pitch_d, ball_d, race_groove
     groove_half_w = _groove_half_width(width, ball_d, race_groove_depth)
     chamfer = min(width * 0.035, (shoulder_r - bore_r) * 0.12, 0.28)
 
-    outer_curve = _race_curve(shoulder_r, groove_r, width, groove_half_w)
-    points = [
-        (bore_r + chamfer, 0.0),
-        (bore_r, chamfer),
-        (bore_r, width - chamfer),
-        (bore_r + chamfer, width),
-        (shoulder_r - chamfer, width),
-        (shoulder_r, width - chamfer),
-        (shoulder_r, width / 2.0 + groove_half_w),
-    ]
-    points.extend(reversed(outer_curve))
-    points.extend(
+    return _revolved_ring(
         [
-            (shoulder_r, width / 2.0 - groove_half_w),
+            (bore_r + chamfer, 0.0),
+            (bore_r, chamfer),
+            (bore_r, width - chamfer),
+            (bore_r + chamfer, width),
+            (shoulder_r - chamfer, width),
+            (shoulder_r, width - chamfer),
+            (shoulder_r, width / 2.0 + groove_half_w),
+        ],
+        (groove_r, width / 2.0),
+        (shoulder_r, width / 2.0 - groove_half_w),
+        [
             (shoulder_r, chamfer),
             (shoulder_r - chamfer, 0.0),
-        ]
+        ],
     )
-    return _revolved_profile(points)
 
 
 def _outer_ring_revolved(outer_d, shoulder_d, width, pitch_d, ball_d, race_groove_depth):
@@ -105,25 +97,23 @@ def _outer_ring_revolved(outer_d, shoulder_d, width, pitch_d, ball_d, race_groov
     groove_half_w = _groove_half_width(width, ball_d, race_groove_depth)
     chamfer = min(width * 0.035, (outer_r - shoulder_r) * 0.12, 0.28)
 
-    inner_curve = _race_curve(shoulder_r, groove_r, width, groove_half_w)
-    points = [
-        (outer_r - chamfer, 0.0),
-        (outer_r, chamfer),
-        (outer_r, width - chamfer),
-        (outer_r - chamfer, width),
-        (shoulder_r + chamfer, width),
-        (shoulder_r, width - chamfer),
-        (shoulder_r, width / 2.0 + groove_half_w),
-    ]
-    points.extend(reversed(inner_curve))
-    points.extend(
+    return _revolved_ring(
         [
-            (shoulder_r, width / 2.0 - groove_half_w),
+            (outer_r - chamfer, 0.0),
+            (outer_r, chamfer),
+            (outer_r, width - chamfer),
+            (outer_r - chamfer, width),
+            (shoulder_r + chamfer, width),
+            (shoulder_r, width - chamfer),
+            (shoulder_r, width / 2.0 + groove_half_w),
+        ],
+        (groove_r, width / 2.0),
+        (shoulder_r, width / 2.0 - groove_half_w),
+        [
             (shoulder_r, chamfer),
             (shoulder_r + chamfer, 0.0),
-        ]
+        ],
     )
-    return _revolved_profile(points)
 
 
 def _rounded_annular_band(outer_d, inner_d, band_w, z0, radius):
@@ -260,7 +250,7 @@ def build(
     designation,
     bore_d,
     outer_d,
-    width,
+    width_B,
     ball_d,
     ball_count,
     pitch_d,
@@ -278,7 +268,7 @@ def build(
         designation,
         bore_d,
         outer_d,
-        width,
+        width_B,
         ball_d,
         ball_count,
         pitch_d,
