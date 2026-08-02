@@ -76,7 +76,7 @@ jobs:
 
           # 3a) a multi-body family (family.json declares "solids") must also
           # ship the per-part render — every component individually verifiable.
-          if grep -q '"solids"' "designs/${FAM}/family.json" 2>/dev/null; then
+          if grep -qE '"solids"|"components"' "designs/${FAM}/family.json" 2>/dev/null; then
             if [ ! -f "designs/${FAM}/preview_parts.png" ]; then
               echo "::error::designs/${FAM}/ declares a multi-body family (\"solids\" in family.json) but has no preview_parts.png — render every component in isolation next to the assembly and commit it."
               exit 1
@@ -147,7 +147,9 @@ jobs:
             // (d) multi-body: the per-part render embedded too
             try {
               const fj = JSON.parse(fs.readFileSync(`designs/${fam}/family.json`, 'utf8'));
-              if ((fj.solids || 0) >= 2 && !body.includes('preview_parts.png')) {
+              const isAssembly = (fj.solids || 0) >= 2
+                || (Array.isArray(fj.components) && fj.components.length > 0);
+              if (isAssembly && !body.includes('preview_parts.png')) {
                 core.setFailed(
                   'Multi-body family: embed preview_parts.png (each component rendered in isolation next to the assembly) in the PR body. ');
               }
