@@ -1,9 +1,10 @@
 """bench2 — the BenchCAD 2.0 contributor CLI.
 
-    bench2 new <family>        scaffold designs/<family>/ from the template
-    bench2 validate <family>   run every machine gate locally (same as CI)
-    bench2 preview <family>    render a difficulty x seed grid PNG
-    bench2 status              regenerate STATUS.md (the progress board)
+    bench2 new <family>            scaffold designs/<family>/ from the template
+    bench2 validate <family>       run every machine gate locally (same as CI)
+    bench2 preview <family>        render a difficulty x seed grid PNG
+    bench2 preview-parts <family>  render assembly components + highlight rows
+    bench2 status                  regenerate docs/STATUS.md (the progress board)
 
 Run from the repo root (the directory containing designs/).
 """
@@ -48,14 +49,21 @@ def cmd_validate(family: str, seeds: int, fast: bool) -> int:
     return 0 if passed else 1
 
 
-def _param_caption(spec, p) -> str:
-    """Compact `name=value` summary of the meaningful params (~2 per line) for a
-    preview row label — lets a reviewer map the rendered part to its numbers and
-    to the source drawing. Covers askable dimensions plus feature params so
-    every relevant catalog symbol is legible."""
-    parts = [f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-             if (e.get("askable") or e.get("feature")) and k in p]
-    return "\n".join(", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2))
+def _row_caption(spec, plist) -> str:
+    """Per-difficulty label for the easy/medium/hard grid: each param as a
+    value (constant across the row's seeds) or a lo-hi range — the drawing's
+    dimensions stay readable even when seeds vary."""
+    parts = []
+    for k in spec.PARAM_SPEC:
+        vals = [p[k] for p in plist if k in p]
+        if not vals:
+            continue
+        try:
+            lo, hi = min(vals), max(vals)
+            parts.append(f"{k}={lo}" if lo == hi else f"{k}={lo}-{hi}")
+        except TypeError:
+            parts.append(f"{k}={vals[0]}")
+    return "\n".join(parts)
 
 
 def cmd_preview(family: str, per_diff: int) -> int:
@@ -65,6 +73,7 @@ def cmd_preview(family: str, per_diff: int) -> int:
     from .derive import derive_program
     from .execute import execute_cq_to_step
     from .loader import load_family
+    from .preview_parts import build_preview_parts, param_caption as _param_caption
     from .sampling import sample as sample_params
     from .validate import DIFFS
 
@@ -76,8 +85,10 @@ def cmd_preview(family: str, per_diff: int) -> int:
     with tempfile.TemporaryDirectory() as td:
         for diff in DIFFS:
             row = []
+            row_params = []
             for seed in range(per_diff):
                 p = sample_params(spec, diff, np.random.default_rng(seed))
+                row_params.append(p)
                 step = Path(td) / f"{diff}_{seed}.step"
                 execute_cq_to_step(derive_program(part, p), step)
                 verts, tris = render.step_to_normalized_mesh(step)
@@ -89,9 +100,9 @@ def cmd_preview(family: str, per_diff: int) -> int:
                     view_labels.append(f"{diff}\n{_param_caption(spec, p)}")
                 print(f"  rendered {diff}/seed{seed}")
             rows.append(row)
-            labels.append(diff)
-    out = render.compose_grid(rows, labels, fam_dir / "preview.png")
-    out2 = render.compose_grid(view_rows, view_labels, fam_dir / "preview_views.png")
+            labels.append(f"{diff}\n{_row_caption(spec, row_params)}")
+    out = render.compose_grid(rows, labels, fam_dir / "preview.png", label_w=360)
+    out2 = render.compose_grid(view_rows, view_labels, fam_dir / "preview_views.png", label_w=360)
 
     # extremes: scan cheap samples across all difficulties, pick the overall
     # smallest / largest parameter draw (mean of range-normalized numeric
@@ -128,11 +139,56 @@ def cmd_preview(family: str, per_diff: int) -> int:
             ex_labels.append(f"{tag} ({diff})\n{_param_caption(spec, p)}")
             print(f"  extreme {tag} [{diff}]: "
                   + ", ".join(f"{k}={p[k]}" for k, e in spec.PARAM_SPEC.items()
-                              if e.get("askable") and k in p))
+                              if k in p))
     out3 = render.compose_grid(ex_rows, ex_labels, fam_dir / "preview_extremes.png")
+
+    # three-view + iso of a hard example — the four benchmark views are all
+    # diagonal isos, so ship a real front/side/top a reviewer can reconstruct from.
+    with tempfile.TemporaryDirectory() as td:
+        hp = sample_params(spec, "hard", np.random.default_rng(0))
+        step = Path(td) / "hard_zoom.step"
+        execute_cq_to_step(derive_program(part, hp), step)
+        verts, tris = render.step_to_normalized_mesh(step)
+        hz = render.render_three_view(verts, tris)
+        # half-section (cutaway): expose internal bores/pockets — counterbore
+        # steps, webs — that every exterior view hides.
+        cw_verts, cw_tris = render.step_cutaway_mesh(step)
+        hz.append(render.render_iso(cw_verts, cw_tris, 380, front=(1.0, -1.0, 1.0)))
+    out4 = render.compose_grid(
+        [hz], [f"hard example (front · side · top · iso · cutaway)\n{_param_caption(spec, hp)}"],
+        # wider label column than the default: this grid is one row of four, and
+        # a 2-params-per-line caption overruns 300 px on long parameter names.
+        fam_dir / "preview_hard_zoom.png", cell=380, label_w=390)
+
     print(f"preview → {out}")
     print(f"benchmark views (what the model sees) → {out2}")
+    print(f"three-view + iso (hard example) → {out4}")
     print(f"extremes (smallest & largest draw) → {out3}")
+
+    # a named-Assembly family also gets its component artifact, automatically;
+    # single-part families skip this (build_preview_parts returns None). A
+    # broken component contract fails the command instead of shipping a
+    # misleading image.
+    try:
+        out5 = build_preview_parts(fam_dir, required=False)
+    except (ValueError, RuntimeError) as e:
+        sys.exit(f"bench2: preview-parts: {e}")
+    if out5 is not None:
+        print(f"assembly components + highlights → {out5}")
+    return 0
+
+
+def cmd_preview_parts(family: str, per_instance: bool, transparent: bool) -> int:
+    from .preview_parts import build_preview_parts
+
+    fam_dir = _designs_root() / family
+    if not fam_dir.is_dir():
+        sys.exit(f"bench2: designs/{family}/ not found")
+    try:
+        out = build_preview_parts(fam_dir, per_instance=per_instance, transparent=transparent)
+    except (ValueError, RuntimeError) as e:
+        sys.exit(f"bench2: preview-parts: {e}")
+    print(f"assembly components + highlights → {out}")
     return 0
 
 
@@ -160,7 +216,23 @@ def main() -> None:
     p_pre = sub.add_parser("preview", help="render a difficulty x seed grid")
     p_pre.add_argument("family")
     p_pre.add_argument("--per-diff", type=int, default=3, help="seeds per difficulty row")
-    sub.add_parser("status", help="regenerate STATUS.md")
+    p_parts = sub.add_parser(
+        "preview-parts",
+        help="render named-Assembly components, the full assembly, and highlight rows "
+             "(deterministic hard / seed 0)",
+    )
+    p_parts.add_argument("family")
+    p_parts.add_argument(
+        "--per-instance",
+        action="store_true",
+        help="one highlight row per instance (bolt_01, bolt_02) instead of per component",
+    )
+    p_parts.add_argument(
+        "--transparent",
+        action="store_true",
+        help="ghost the non-highlighted components (see-through) so internal parts stay visible",
+    )
+    sub.add_parser("status", help="regenerate docs/STATUS.md")
     a = ap.parse_args()
     if a.cmd == "new":
         sys.exit(cmd_new(a.family))
@@ -168,5 +240,7 @@ def main() -> None:
         sys.exit(cmd_validate(a.family, a.seeds, a.fast))
     if a.cmd == "preview":
         sys.exit(cmd_preview(a.family, a.per_diff))
+    if a.cmd == "preview-parts":
+        sys.exit(cmd_preview_parts(a.family, a.per_instance, a.transparent))
     if a.cmd == "status":
         sys.exit(cmd_status())
