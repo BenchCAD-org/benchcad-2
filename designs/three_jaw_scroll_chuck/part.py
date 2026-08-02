@@ -248,7 +248,7 @@ def _crown_ring(L):
     return boss, teeth
 
 
-def _bevel_pinion(L, meridian_deg):
+def _bevel_pinion(L):
     """Straight bevel pinion + journal + square key socket, one radial unit."""
     m, r_m = L["module"], L["ring_r_mean"]
     z_ax = L["z_pinion_axis"]
@@ -302,8 +302,9 @@ def _bevel_pinion(L, meridian_deg):
         .rect(K, K)
         .extrude(sock_d + 2.0))
     pinion = pinion.cut(socket.val())
-    pinion = pinion.translate(cq.Vector(0.0, 0.0, z_ax))
-    return pinion.rotate(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1), meridian_deg)
+    # LOCAL frame: axis along +X at its working height; the assembly Location
+    # rotates each instance to its meridian
+    return pinion.translate(cq.Vector(0.0, 0.0, z_ax))
 
 
 def _jaw(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
@@ -396,9 +397,10 @@ def _jaw(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
                         2.0 * r_k + w_t, 2.0 * r_k - w_t)
         teeth.append(ring.val().intersect(clip.val()))
 
-    jaw = body.val().fuse(neck.val(), flange.val(), *teeth)
-    return jaw.rotate(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1),
-                      JAW_ANGLES[jaw_idx])
+    # returned in the LOCAL frame (nose along +X); the assembly Location
+    # rotates it to its meridian, so the component preview shows all three
+    # jaws in one comparable frame
+    return body.val().fuse(neck.val(), flange.val(), *teeth)
 
 
 def build(
@@ -541,7 +543,6 @@ def build(
     scroll = plate.val().fuse(*([boss, spiral] + crown_teeth))
     # operator's key position: whole crown pitches, bevel mesh unaffected
     phase_alpha = _scroll_phase(L, clamp_d, jaw_length_A)
-    scroll = scroll.rotate(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1), phase_alpha)
 
     # ---------------- jaws + pinions ----------------
     jaws = [
@@ -549,8 +550,24 @@ def build(
              jaw_height_C, jaw_step_F, jaw_step_G, jaw_step_H, jaw_tongue_E)
         for i in range(3)
     ]
-    pinions = [_bevel_pinion(L, angd) for angd in PINION_ANGLES]
+    pinion = _bevel_pinion(L)
 
-    result = cq.Compound.makeCompound(
-        [body.val(), cover.val(), scroll] + jaws + pinions)
+    # named assembly per the preview-parts contract: components are built in
+    # their LOCAL frames and placed by Location, so the component previews are
+    # comparable; the three jaws are a matched set with distinct tooth phases
+    # (real jaws are marked 1/2/3) and therefore three declared components,
+    # while the pinions are true repeated instances of one component
+    def _rotz(deg):
+        return cq.Location(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1), deg)
+
+    result = cq.Assembly(name="three_jaw_scroll_chuck")
+    result.add(body, name="body")
+    result.add(cover, name="cover")
+    result.add(scroll, name="scroll_plate", loc=_rotz(phase_alpha))
+    result.add(jaws[0], name="jaw_1", loc=_rotz(JAW_ANGLES[0]))
+    result.add(jaws[1], name="jaw_2", loc=_rotz(JAW_ANGLES[1]))
+    result.add(jaws[2], name="jaw_3", loc=_rotz(JAW_ANGLES[2]))
+    result.add(pinion, name="pinion_01", loc=_rotz(PINION_ANGLES[0]))
+    result.add(pinion, name="pinion_02", loc=_rotz(PINION_ANGLES[1]))
+    result.add(pinion, name="pinion_03", loc=_rotz(PINION_ANGLES[2]))
     return result
