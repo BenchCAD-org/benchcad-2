@@ -44,8 +44,10 @@ PARAM_SPEC = {
     "body_l": dict(
         desc="body/housing length behind the panel",
         unit="mm",
-        range={"easy": (25.0, 30.0), "medium": (20.0, 46.0), "hard": (18.0, 69.0)},
-        source="Southco E5 27.2 standard; long housings 45.5/58.2/68.2",
+        range={"easy": (27.0, 28.0), "medium": (27.0, 46.0), "hard": (27.0, 69.0)},
+        choices={"easy": [27.2], "medium": [27.2, 45.5], "hard": [27.2, 45.5, 58.2, 68.2]},
+        coverage=[27.2, 45.5, 58.2, 68.2],
+        source="Southco E5 housing ladder: 27.2 standard, long 45.5/58.2/68.2",
     ),
     "grip": dict(
         desc="grip: panel underside to the cam clamping face",
@@ -63,8 +65,8 @@ PARAM_SPEC = {
     "cam_w": dict(
         desc="cam arm width",
         unit="mm",
-        range={"easy": (11.0, 14.0), "medium": (9.0, 16.0), "hard": (8.0, 18.0)},
-        source="proportion (flat cam arm)",
+        range={"easy": (18.0, 20.0), "medium": (15.0, 21.0), "hard": (13.0, 22.0)},
+        source="Southco E5 sheet: standard flat cam 19 wide",
     ),
     "cam_t": dict(
         desc="cam arm thickness",
