@@ -141,9 +141,11 @@ def _bushing(bushing_od, post_d, plate_t):
 def build(plate_w, plate_t, housing_w, housing_h, housing_d,
           post_d, barrel_d, post_h, bushing_od, string_hole_d, screw_d,
           key_shaft_d, button_w, button_h, button_t):
-    # shaft long enough that the pear's inboard face clears the housing back
-    # face by 3 mm for ANY draw (drawing: button axis 12.6 past the back face)
-    key_len = housing_d * 0.75 + button_t * 1.5 + 3.0
+    # shaft long enough that the pear's inboard face clears BOTH the housing
+    # back face (by 3 mm) and the baseplate lobe overhead (so the pear can
+    # stand UP like the drawing's side view) for any draw
+    key_len = button_t * 1.5 + housing_d * 0.25 + max(
+        housing_d * 0.5 + 3.0, plate_w / 2.0 + 1.5)
     result = cq.Assembly(name="guitar_tuning_machine_head")
     result.add(_housing(plate_w, plate_t, housing_w, housing_h,
                         housing_d, barrel_d, screw_d, key_shaft_d),
@@ -152,10 +154,13 @@ def build(plate_w, plate_t, housing_w, housing_h, housing_d,
                      string_hole_d), name="post")
     # key shaft reaches INTO the housing's key bore (running clearance); the
     # button then sits off the back face like the drawing's 40.8 - 28.2 stack
+    # pear UP, matching the drawing's side-view pose (any rotation is a valid
+    # operating state; this one keeps the bbox at the sheet's 43 stack)
     result.add(_button(button_w, button_h, button_t, key_shaft_d, key_len,
                        housing_d),
                name="button",
                loc=cq.Location((0.0, -housing_d * 0.25,
-                                -(plate_t / 2.0 + housing_h * 0.72))))
+                                -(plate_t / 2.0 + housing_h * 0.72)),
+                               (0.0, 1.0, 0.0), 180.0))
     result.add(_bushing(bushing_od, post_d, plate_t), name="bushing")
     return result
