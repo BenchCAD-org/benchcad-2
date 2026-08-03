@@ -1,0 +1,17 @@
+{
+  "family": "double_locking_tremolo_bridge",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "Gotoh GE1996T double-locking tremolo: a base plate that rocks on two hardened knife edges bearing on posts set in insert bushings, carrying one saddle, clamp block and clamp screw per string, with a sustain block hanging below. Two published sizes (6- and 7-string) drive the whole plan - span, post spacing and saddle radius all follow string count - while plate thickness, post, bushing and saddle block stay fixed across the line. Saddle heights are derived: their tops lie on the fingerboard-radius cylinder, R350 for six strings and R430 for seven. Plate rock about the knife edges is an operating state, not a dimension.",
+  "source": "Gotoh dimension sheets GE1996T-Dim.pdf and GE1996T-7-Dim.pdf (https://g-gotoh.com/images/pdf/GE1996T-Dim.pdf, https://g-gotoh.com/images/pdf/GE1996T-7-Dim.pdf) and the product page https://g-gotoh.com/product/ge1996t/?lang=en; no dimensional standard exists for this part, so everything the sheets do not dimension is documented as proportion in NOTES.md",
+  "contributor": "BenchCAD",
+  "components": [
+    {"name": "base_plate", "quantity": 1},
+    {"name": "sustain_block", "quantity": 1},
+    {"name": "saddle", "quantity": "n_strings"},
+    {"name": "clamp_block", "quantity": "n_strings"},
+    {"name": "clamp_screw", "quantity": "n_strings"},
+    {"name": "post", "quantity": 2},
+    {"name": "insert_bushing", "quantity": 2}
+  ]
+}
