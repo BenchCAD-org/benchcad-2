@@ -1,0 +1,18 @@
+{
+  "family": "snatch_block_single_sheave",
+  "standard": "ASME B30.26 (rigging hardware); dimensions from the Crosby Blocks catalogue p.326",
+  "base_plane": "XZ",
+  "description": "Single-sheave snatch block with shackle fitting, 2-12 t: two side plates with the near one swinging open about the centre pin, a grooved sheave on a bronze bushing or roller bearing, the headed centre pin, a swivel yoke, and an anchor shackle bow with its pin. Thirteen catalogue rows drive two independent ladders - the sheave is sized by wire rope diameter, the fitting by working load limit - and the published overall height A is reproduced exactly by the B/2 + D + E stack rather than tabulated.",
+  "source": "Crosby Blocks catalogue p.326 metric size table (https://kitocrosby.com/wp-content/uploads/2025/07/15_Blocks_MET_326.pdf); groove profile and unpublished fitting proportions documented in NOTES.md",
+  "contributor": "BenchCAD",
+  "solids": 8,
+  "components": [
+    {"name": "side_plate", "quantity": 2},
+    {"name": "sheave", "quantity": 1},
+    {"name": "bushing", "quantity": 1},
+    {"name": "centre_pin", "quantity": 1},
+    {"name": "swivel_yoke", "quantity": 1},
+    {"name": "shackle_bow", "quantity": 1},
+    {"name": "shackle_pin", "quantity": 1}
+  ]
+}
