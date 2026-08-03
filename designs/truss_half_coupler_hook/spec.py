@@ -33,8 +33,10 @@ PARAM_SPEC = {
     "body_w": dict(
         desc="body width along the tube axis",
         unit="mm",
-        range={"easy": (45.0, 50.0), "medium": (30.0, 50.0), "hard": (30.0, 51.0)},
-        source="Doughty width 50 (standard/lightweight) vs 30 (slimline); Riggatec 30-51",
+        range={"easy": (49.0, 51.0), "medium": (29.0, 51.0), "hard": (29.0, 51.0)},
+        choices={"easy": [50.0], "medium": [30.0, 50.0], "hard": [30.0, 50.0, 51.0]},
+        coverage=[30.0, 50.0, 51.0],
+        source="Doughty catalog widths: 30 slimline / 50 standard / 51 Riggatec",
     ),
     "base_drop": dict(
         desc="tube centre to the tang base plane",
@@ -49,10 +51,12 @@ PARAM_SPEC = {
         source="Doughty T57000 drawing: tang 19 across under the 12.7 bore",
     ),
     "hang_d": dict(
-        desc="fixing eye / closing-bolt hole diameter (M10-M12 clearance)",
+        desc="fixing bore / closing-bolt hole diameter (M10-M12 clearance)",
         unit="mm",
-        range={"easy": (12.5, 13.0), "medium": (10.5, 13.0), "hard": (10.5, 13.5)},
-        source="Doughty eye Ø12.7 (M12); M10 option on slimline/lightweight",
+        range={"easy": (12.5, 13.0), "medium": (10.3, 13.0), "hard": (10.3, 13.0)},
+        choices={"easy": [12.7], "medium": [10.5, 12.7], "hard": [10.5, 12.7]},
+        coverage=[10.5, 12.7],
+        source="Doughty catalog: Ø12.7 (M12) or the M10 option's ~10.5 clearance",
     ),
     "lug_h": dict(
         desc="closure-lug block height over the ring crown",

@@ -129,10 +129,18 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
     lower = lower.union(_y_slab(0.0, 0.0, -base_drop, tang_t, body_w, tang_h))
     if stud:
         stud_len = 34.0                          # Doughty T57200: M12x50, 34 proud
+        r_stud_minor = bolt_d / 2.0 - 0.61 * pitch
         lower = lower.union(
-            cq.Workplane("XY").circle(6.0).extrude(-stud_len)
+            cq.Workplane("XY").circle(r_stud_minor).extrude(-stud_len)
             .translate((0.0, 0.0, -base_drop))
         )
+        # ring-thread the stud like the closing bolt (same NOTES-documented
+        # substitution for the helix): rings over the protruding length
+        srings = _ring_stack(0.0, -base_drop - stud_len + 0.3 * bolt_d,
+                             -base_drop - 0.2, pitch,
+                             r_stud_minor - 0.01, bolt_d / 2.0, 0.0)
+        if srings is not None:
+            lower = lower.union(srings)
     else:
         # the sheet's fixing is VERTICAL: a 12.7 bore drilled up from the tang
         # base into the captive-nut window, so the M12 hangs the fixture from
