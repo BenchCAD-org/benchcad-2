@@ -43,10 +43,10 @@ PARAM_SPEC = {
         source="Doughty tube-centre->base 40-55 mm across the range",
     ),
     "tang_t": dict(
-        desc="hanging-tang plate thickness",
+        desc="hanging-tang width across the clamp",
         unit="mm",
-        range={"easy": (9.0, 12.0), "medium": (7.0, 14.0), "hard": (6.0, 16.0)},
-        source="proportion (fixing tang under the ring)",
+        range={"easy": (18.0, 20.0), "medium": (16.0, 22.0), "hard": (14.0, 24.0)},
+        source="Doughty T57000 drawing: tang 19 across under the 12.7 bore",
     ),
     "hang_d": dict(
         desc="fixing eye / closing-bolt hole diameter (M10-M12 clearance)",

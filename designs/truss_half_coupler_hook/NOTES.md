@@ -11,8 +11,8 @@ Riggatec / Global Truss / Kupo equivalents.
 | Ø48-51 | barrel bore | universal truss/scaff tube | `bore_d` |
 | 50 | body width along tube | 30 (slimline) - 51 | `body_w` |
 | 55 | tube centre → base | 40-55 across range | `base_drop` |
-| Ø12.7 | fixing eye (M12 clearance) | M10 option ~Ø10.5 | `hang_d` |
-| 19 | tang width at the eye | proportion band | `tang_t` |
+| Ø12.7 | VERTICAL fixing bore, tang base up into the nut window (front-view hidden lines) | drawing | `hang_d` |
+| 19 | tang width across the clamp AND the captive-nut window A/F (17 for M10) | drawing-anchored | `tang_t` / window in build |
 | 107 | overall width incl. pin bosses | emerges from `x_h = r_out + max(2.2 k_r, r_eye + 1.5)` | derived |
 | 116 / 91 | overall / body height | emerges from ring + lug + nut stack | derived |
 | 16 | eye height above base | `1.2 * hang_d` proportion | `z_eye` |

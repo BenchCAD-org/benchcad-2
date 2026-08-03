@@ -5,8 +5,9 @@ six parts it is assembled from, drawn closed around the (phantom) Ø48-51 mm
 barrel:
 
     1. lower shell  — half ring below the split, hinge ears (-X), bolt-pivot
-                      ears (+X), and the hanging tang with the Ø12.7 fixing eye
-                      (or the hook-clamp's protruding M12 stud)
+                      ears (+X), and the hanging tang with the vertical Ø12.7
+                      fixing bore up into the captive-nut window (or the
+                      hook-clamp's protruding M12 stud)
     2. upper shell  — half ring above the split, centre hinge knuckle (-X) and
                       the crown lug (+X) with the open slot the bolt swings into
     3. hinge pin    — through the ears + knuckle on the -X side
@@ -25,11 +26,13 @@ gap each side (the shells clamp shut on the barrel, absent here); the tang
 drops -Z to the base plane at z = -base_drop.
 
 Drawing symbols (Doughty sheet): barrel Ø48-51 -> bore_d; body width 50 ->
-body_w; tube centre->base 55 -> base_drop; fixing eye Ø12.7 -> hang_d; the
-sheet's 19 is the CAPTIVE-NUT SLOT A/F (17 for M10) cut on the eye axis with
-the drawing's 16 slot height, tang_t itself is a proportion; overall 107
-across -> emerges from x_h with the wing nut folded along the tube; pins at
-height 55 -> the z=0 pin axes.
+body_w; tube centre->base 55 -> base_drop; the Ø12.7 fixing bore -> hang_d,
+drilled VERTICALLY up from the tang base (front view shows it as hidden
+lines) into the captive-nut window; the sheet's 19 is BOTH the tang width
+across the clamp (tang_t anchors on it) and the window's hex A/F (17 for
+M10), window height 16 per the drawing; overall 107 across -> emerges from
+x_h with the wing nut folded along the tube; pins at height 55 -> the z=0
+pin axes.
 
 Interface + examples: docs/DESIGN_SPEC.md
 """
@@ -131,18 +134,21 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
             .translate((0.0, 0.0, -base_drop))
         )
     else:
-        z_eye = -(base_drop - 1.2 * hang_d)
-        lower = lower.cut(
-            cq.Workplane("YZ").circle(hang_d / 2.0)
-            .extrude(tang_t * 2.0, both=True)
-            .translate((0.0, 0.0, z_eye))
-        )
-        # captive-nut slot on the eye axis (datasheet: 19 A/F for M12, 17 for
-        # M10; drawing slot height 16): parallel walls at the hex A/F so the
-        # nut cannot spin
+        # the sheet's fixing is VERTICAL: a 12.7 bore drilled up from the tang
+        # base into the captive-nut window, so the M12 hangs the fixture from
+        # below and threads into the nut sitting in the window
+        z_win = -(base_drop - 1.2 * hang_d)          # window centre height
         af = 19.0 if bolt_d >= 11.0 else 17.0
+        # captive-nut window, THROUGH the tang across the tube (front view
+        # shows it as hidden lines): parallel walls at the hex A/F along the
+        # tube so the nut cannot spin; drawing slot height 16 (= 0.85 * 19)
         lower = lower.cut(
-            _y_slab(0.0, 0.0, z_eye - 0.425 * af, tang_t * 4.0, af, 0.85 * af)
+            _y_slab(0.0, 0.0, z_win - 0.425 * af, tang_t * 4.0, af, 0.85 * af)
+        )
+        lower = lower.cut(
+            cq.Workplane("XY").circle(hang_d / 2.0)
+            .extrude(-(base_drop + 2.0))
+            .translate((0.0, 0.0, z_win))
         )
 
     # ---- 2. upper shell ------------------------------------------------------
