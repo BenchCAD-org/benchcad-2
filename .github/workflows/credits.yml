@@ -1,9 +1,16 @@
 name: credits-board
 # Station 7 of the lifecycle (CONTRIBUTING.md, 📒): after a family PR merges, regenerate
 # CONTRIBUTORS.md from the actual issue/PR provenance records.
+#
+# `pull_request_target`, not `pull_request`: fork PRs (every contributor PR) get a
+# read-only GITHUB_TOKEN under `pull_request` regardless of `permissions:`, so the
+# board push 403'd on #35/#36/#38/#74. Safe: fires only after merge, checks out
+# `main`, and runs main's own script — no PR-supplied code executes. NOTE: the
+# push additionally needs "GitHub Actions" on the main ruleset's bypass list,
+# else it is rejected with GH013 (changes must be made through a pull request).
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
     paths: ["designs/**"]
   workflow_dispatch:
@@ -28,5 +35,5 @@ jobs:
         run: |
           git config user.name "benchcad-bot"
           git config user.email "actions@github.com"
-          git add CONTRIBUTORS.md
+          git add docs/CONTRIBUTORS.md
           git diff --cached --quiet || (git commit -m "credits: refresh provenance board [skip ci]" && git pull --rebase origin main && git push)
