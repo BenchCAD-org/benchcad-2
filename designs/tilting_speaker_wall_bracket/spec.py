@@ -20,8 +20,14 @@ PARAM_SPEC = {
         "range": {"easy": (256.0, 262.0), "medium": (250.0, 268.0), "hard": (244.0, 274.0)},
         "source": "BT77 drawing: 260.4 (254 hole zone + rims)",
     },
+    "plate_d": {
+        "desc": "wall column depth off the wall",
+        "unit": "mm",
+        "range": {"easy": (27.0, 31.0), "medium": (25.0, 33.0), "hard": (23.0, 35.0)},
+        "source": "BT77 side view: 29",
+    },
     "plate_t": {
-        "desc": "wall plate thickness",
+        "desc": "wall column face/wall thickness",
         "unit": "mm",
         "range": {"easy": (2.2, 3.0), "medium": (2.0, 3.4), "hard": (1.8, 3.8)},
         "source": "proportion (stamped steel plate of a 25 kg mount)",
@@ -72,7 +78,7 @@ PARAM_SPEC = {
         "desc": "jaw grip plate height",
         "unit": "mm",
         "range": {"easy": (100.0, 120.0), "medium": (92.0, 128.0), "hard": (84.0, 136.0)},
-        "source": "BT77 drawing: 110.3 side profile",
+        "source": "proportion (grip plate on the cabinet side; no catalog number)",
     },
     "jaw_d": {
         "desc": "jaw grip plate depth (into the room)",

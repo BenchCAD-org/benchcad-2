@@ -34,49 +34,57 @@ CRADLE_PAT_X = 91.5    # pattern span across the plate
 CRADLE_PAT_Y = 45.8
 
 
-def _wall_plate(plate_w, plate_h, plate_t):
-    """Vertical keyhole plate: keyhole at the 30 top offset, plain holes 76
-    and 127 below it, the 8.5 slot at 145 — all on the centreline."""
+def _wall_plate(plate_w, plate_h, plate_t, plate_d):
+    """Wall member per the BT77 side view: a moulded channel column plate_d
+    (drawing: 29) deep, hollow toward the wall, with the hole pattern through
+    its plate_t front face — keyhole at the 30 top offset, plain holes 76 and
+    127 below it, the 8.5 slot at 145, all on the centreline."""
     plate = (
-        cq.Workplane("XY").box(plate_w, plate_t, plate_h)
+        cq.Workplane("XY").box(plate_w, plate_d, plate_h)
         .edges("|Y").fillet(plate_w * 0.12)
-        .translate((0, plate_t / 2.0, 0))
+        .translate((0, plate_d / 2.0, 0))
+    )
+    # hollow the wall side: perimeter walls + the front face remain
+    plate = plate.cut(
+        cq.Workplane("XY")
+        .box(plate_w - 8.0, plate_d - plate_t, plate_h - 8.0)
+        .translate((0, (plate_d - plate_t) / 2.0, 0))
     )
     zk = plate_h / 2.0 - TOP_OFFSET
     cuts = [
-        cq.Workplane("XZ").workplane(offset=plate_t * 2)
-        .center(0, zk).circle(KEYHOLE_D / 2.0).extrude(-plate_t * 4),
-        cq.Workplane("XZ").workplane(offset=plate_t * 2)
+        cq.Workplane("XZ").workplane(offset=plate_d * 2)
+        .center(0, zk).circle(KEYHOLE_D / 2.0).extrude(-plate_d * 4),
+        cq.Workplane("XZ").workplane(offset=plate_d * 2)
         .center(0, zk + 6.0).slot2D(12.0, KEYHOLE_D * 0.55, 90)
-        .extrude(-plate_t * 4),
-        cq.Workplane("XZ").workplane(offset=plate_t * 2)
+        .extrude(-plate_d * 4),
+        cq.Workplane("XZ").workplane(offset=plate_d * 2)
         .center(0, zk - HOLE_STEPS[2]).slot2D(24.0, SLOT_D, 90)
-        .extrude(-plate_t * 4),
+        .extrude(-plate_d * 4),
     ]
     for step in HOLE_STEPS[:2]:
-        cuts.append(cq.Workplane("XZ").workplane(offset=plate_t * 2)
+        cuts.append(cq.Workplane("XZ").workplane(offset=plate_d * 2)
                     .center(0, zk - step).circle(KEYHOLE_D / 2.0)
-                    .extrude(-plate_t * 4))
+                    .extrude(-plate_d * 4))
     for c in cuts:
         plate = plate.cut(c)
     return plate
 
 
-def _arm(arm_reach, arm_h, beam_w, plate_t):
-    """Welded standoff: a vertical channel on the plate face carrying the
-    horizontal beam out to the knuckle."""
+def _arm(arm_reach, arm_h, beam_w, plate_d):
+    """Welded standoff off the column's front face: a vertical channel
+    carrying the horizontal beam out to the knuckle."""
     upright = (
         cq.Workplane("XY").box(beam_w + 10.0, 8.0, arm_h)
         .edges("|Y").fillet(3.0)
-        .translate((0, plate_t + 4.0, 0))
+        .translate((0, plate_d + 4.0, 0))
     )
     beam = (
         cq.Workplane("XY").box(beam_w, arm_reach, beam_w)
-        .translate((0, plate_t + arm_reach / 2.0, 0))
+        .translate((0, plate_d + arm_reach / 2.0, 0))
     )
     gusset = (
         cq.Workplane("XY").box(beam_w * 0.6, arm_reach * 0.35, beam_w * 0.6)
-        .translate((0, plate_t + arm_reach * 0.2, -beam_w * 0.55))
+        .translate((0, plate_d + arm_reach * 0.2, -beam_w * 0.55))
     )
     return upright.union(beam).union(gusset)
 
@@ -152,10 +160,10 @@ def _cradle(cradle_w, cradle_l):
     return cradle
 
 
-def build(plate_w, plate_h, plate_t, arm_reach, arm_h, beam_w,
+def build(plate_w, plate_h, plate_t, plate_d, arm_reach, arm_h, beam_w,
           knuckle_d, knuckle_t, bar_d, jaw_span, jaw_h, jaw_d,
           cradle_w, cradle_l, max_tilt, tilt_pose):
-    arm_y = plate_t + arm_reach + knuckle_d * 0.35
+    arm_y = plate_d + arm_reach + knuckle_d * 0.35
     bar_off = knuckle_d * 0.18
     # bar runs from its jaw through the knuckle, never past the far jaw plate
     bar_len = min(jaw_span / 2.0 + knuckle_d / 2.0 + 15.0, jaw_span - 12.0)
@@ -164,8 +172,8 @@ def build(plate_w, plate_h, plate_t, arm_reach, arm_h, beam_w,
     standoff = math.sin(math.radians(max_tilt)) * cradle_l / 2.0 + 3.0
 
     result = cq.Assembly(name="tilting_speaker_wall_bracket")
-    result.add(_wall_plate(plate_w, plate_h, plate_t), name="wall_plate")
-    result.add(_arm(arm_reach, arm_h, beam_w, plate_t), name="arm")
+    result.add(_wall_plate(plate_w, plate_h, plate_t, plate_d), name="wall_plate")
+    result.add(_arm(arm_reach, arm_h, beam_w, plate_d), name="arm")
     result.add(_knuckle(knuckle_d, knuckle_t, bar_d, beam_w, standoff),
                name="knuckle", loc=cq.Location((0, arm_y, 0)))
     jaw = _jaw(jaw_h, jaw_d, bar_d, bar_len, bar_off)
