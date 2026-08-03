@@ -22,7 +22,7 @@ def _d_section(wp, w, h):
     the front and back, and the crown arc sweeps the HEIGHT with its apex on
     top — the photo's continuous dome from the back edge over to the string
     holes. Same topology at every station so the loft is clean."""
-    rise = 0.42 * h
+    rise = 0.2 * h  # the end view's short ~2.75 edge land under the 12.75 crown
     return (
         wp.moveTo(-w / 2.0, 0.0)
         .lineTo(-w / 2.0, rise)
