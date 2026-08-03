@@ -1,0 +1,9 @@
+{
+  "family": "gn866_pneumatic_power_clamp",
+  "standard": "GN 866",
+  "base_plane": "XY",
+  "description": "Pneumatic power clamp with a vertical cylinder body and paired side grippers.",
+  "source": "Ganter / JW Winco GN 866 catalog drawing and STEP reference",
+  "contributor": "JiusongZhou7",
+  "solids": 3
+}
