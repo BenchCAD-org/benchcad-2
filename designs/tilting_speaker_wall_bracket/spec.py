@@ -35,8 +35,8 @@ PARAM_SPEC = {
     "arm_reach": {
         "desc": "standoff arm length, plate face to knuckle root",
         "unit": "mm",
-        "range": {"easy": (180.0, 240.0), "medium": (150.0, 262.0), "hard": (135.0, 270.3)},
-        "source": "BT77 drawing: 270.3 max reach; BT77 adjustable band 135-280 (issue #7 table)",
+        "range": {"easy": (200.0, 250.0), "medium": (180.0, 265.0), "hard": (170.0, 270.3)},
+        "source": "BT77 drawing: 270.3 OVERALL depth; adjustable band (issue #7 table)",
     },
     "arm_h": {
         "desc": "wall-end upright height of the arm weldment",
@@ -84,7 +84,7 @@ PARAM_SPEC = {
         "desc": "jaw grip plate depth (into the room)",
         "unit": "mm",
         "range": {"easy": (120.0, 140.0), "medium": (110.0, 150.0), "hard": (100.0, 160.0)},
-        "source": "BT77 drawing: 140 over the jaw pair",
+        "source": "proportion (the sheet's 140 is the min overall width, not a depth)",
     },
     "cradle_w": {
         "desc": "cradle top plate width (wall direction)",
@@ -121,6 +121,11 @@ def check(p):
     if p["jaw_span"] < p["knuckle_d"] + 40.0:
         bad.append("jaws would ride onto the knuckle: jaw_span must exceed knuckle_d + 40 "
                    "(slide bars keep engagement)")
+    # the derived beam must stay a real member: overall depth covers plate,
+    # knuckle and half the jaw depth with beam length left over
+    if p["arm_reach"] - 30.0 - p["knuckle_d"] * 0.85 - p["jaw_d"] / 2.0 < 60.0:
+        bad.append("arm_reach too short for its knuckle and jaws: overall depth minus "
+                   "plate/knuckle/jaw shares must leave a >=60 beam (BT77 proportions)")
     if p["cradle_l"] > p["jaw_span"] - 18.0:
         bad.append("cradle plate would strike the jaw plates: cradle_l must stay under "
                    "jaw_span - 18 (speaker sits between the jaws)")

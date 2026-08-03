@@ -23,11 +23,19 @@ import math
 
 import cadquery as cq
 
-# BT77 drawing constants (the catalog pattern itself, not free parameters)
+# BT77 drawing constants (the catalog pattern itself, not free parameters).
+# The rear view measures EVERYTHING from the plate TOP: keyhole circle at
+# 33.3 (slot top 20.8), plain holes at 76 and 127, a 17.2-spaced hole PAIR at
+# 145, the arm-mount window 37.2 tall below them, and the horizontal 8.5 x 24
+# slot near the bottom.
 KEYHOLE_D = 6.5        # wall keyhole
 SLOT_D = 8.5           # lower wall slot
-HOLE_STEPS = (76.0, 127.0, 145.0)  # centreline spacings below the keyhole
-TOP_OFFSET = 30.0      # keyhole centre below the plate top edge
+HOLE_TOPS = (76.0, 127.0)   # single holes, from the plate top
+PAIR_TOP = 145.0            # hole pair level, from the plate top
+PAIR_SPAN = 17.2            # pair spacing
+KEYHOLE_TOP = 33.3          # keyhole circle centre, from the plate top
+WINDOW_H = 37.2             # arm-mount window height
+SLOT_BOT = 25.0             # bottom slot centre above the plate bottom
 PIVOT_D = 10.5         # cradle pivot post
 CRADLE_HOLE_D = 4.5    # 3x THRU pattern
 CRADLE_PAT_X = 91.5    # pattern span across the plate
@@ -50,20 +58,33 @@ def _wall_plate(plate_w, plate_h, plate_t, plate_d):
         .box(plate_w - 8.0, plate_d - plate_t, plate_h - 8.0)
         .translate((0, (plate_d - plate_t) / 2.0, 0))
     )
-    zk = plate_h / 2.0 - TOP_OFFSET
+    top = plate_h / 2.0
+    def zc(from_top):
+        return top - from_top
     cuts = [
+        # keyhole: circle at 33.3 with its slot rising to 20.8 from the top
         cq.Workplane("XZ").workplane(offset=plate_d * 2)
-        .center(0, zk).circle(KEYHOLE_D / 2.0).extrude(-plate_d * 4),
+        .center(0, zc(KEYHOLE_TOP)).circle(KEYHOLE_D / 2.0).extrude(-plate_d * 4),
         cq.Workplane("XZ").workplane(offset=plate_d * 2)
-        .center(0, zk + 6.0).slot2D(12.0, KEYHOLE_D * 0.55, 90)
+        .center(0, (zc(KEYHOLE_TOP) + zc(20.8)) / 2.0)
+        .slot2D(KEYHOLE_TOP - 20.8 + KEYHOLE_D * 0.55, KEYHOLE_D * 0.55, 90)
         .extrude(-plate_d * 4),
+        # arm-mount window between the hole pair and the bottom slot
         cq.Workplane("XZ").workplane(offset=plate_d * 2)
-        .center(0, zk - HOLE_STEPS[2]).slot2D(24.0, SLOT_D, 90)
+        .center(0, zc(PAIR_TOP + 12.0 + WINDOW_H / 2.0))
+        .slot2D(WINDOW_H, 17.0, 90).extrude(-plate_d * 4),
+        # bottom slot is HORIZONTAL: 8.5 x 24 near the plate bottom
+        cq.Workplane("XZ").workplane(offset=plate_d * 2)
+        .center(0, -top + SLOT_BOT).slot2D(24.0, SLOT_D, 0)
         .extrude(-plate_d * 4),
     ]
-    for step in HOLE_STEPS[:2]:
+    for from_top in HOLE_TOPS:
         cuts.append(cq.Workplane("XZ").workplane(offset=plate_d * 2)
-                    .center(0, zk - step).circle(KEYHOLE_D / 2.0)
+                    .center(0, zc(from_top)).circle(KEYHOLE_D / 2.0)
+                    .extrude(-plate_d * 4))
+    for sx in (-PAIR_SPAN / 2.0, PAIR_SPAN / 2.0):
+        cuts.append(cq.Workplane("XZ").workplane(offset=plate_d * 2)
+                    .center(sx, zc(PAIR_TOP)).circle(KEYHOLE_D / 2.0)
                     .extrude(-plate_d * 4))
     for c in cuts:
         plate = plate.cut(c)
@@ -163,17 +184,21 @@ def _cradle(cradle_w, cradle_l):
 def build(plate_w, plate_h, plate_t, plate_d, arm_reach, arm_h, beam_w,
           knuckle_d, knuckle_t, bar_d, jaw_span, jaw_h, jaw_d,
           cradle_w, cradle_l, max_tilt, tilt_pose):
-    arm_y = plate_d + arm_reach + knuckle_d * 0.35
+    # arm_reach is the catalog's OVERALL depth (drawing: 270.3 max): place the
+    # knuckle so the deepest element (jaw front or knuckle rim) lands on it
+    arm_y = arm_reach - max(jaw_d, knuckle_d) / 2.0
+    beam_len = arm_y - knuckle_d * 0.35 - plate_d
     bar_off = knuckle_d * 0.18
     # bar runs from its jaw through the knuckle, never past the far jaw plate
     bar_len = min(jaw_span / 2.0 + knuckle_d / 2.0 + 15.0, jaw_span - 12.0)
     # pivot standoff sized so the cradle clears the knuckle top across the
     # WHOLE +/-max_tilt travel, not just at the sampled pose
-    standoff = math.sin(math.radians(max_tilt)) * cradle_l / 2.0 + 3.0
+    # tilt is about the X axis, so the plate's Y half-extent sets the swing
+    standoff = math.sin(math.radians(max_tilt)) * cradle_w / 2.0 + 3.0
 
     result = cq.Assembly(name="tilting_speaker_wall_bracket")
     result.add(_wall_plate(plate_w, plate_h, plate_t, plate_d), name="wall_plate")
-    result.add(_arm(arm_reach, arm_h, beam_w, plate_d), name="arm")
+    result.add(_arm(beam_len, arm_h, beam_w, plate_d), name="arm")
     result.add(_knuckle(knuckle_d, knuckle_t, bar_d, beam_w, standoff),
                name="knuckle", loc=cq.Location((0, arm_y, 0)))
     jaw = _jaw(jaw_h, jaw_d, bar_d, bar_len, bar_off)
