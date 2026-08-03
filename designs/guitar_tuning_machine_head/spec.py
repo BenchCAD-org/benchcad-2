@@ -44,10 +44,10 @@ PARAM_SPEC = {
     "post_d": {
         "desc": "string post diameter (string section)",
         "unit": "mm",
-        "range": {"easy": (6.0, 6.0), "medium": (6.0, 6.3), "hard": (6.0, 6.3)},
-        "choices": {"easy": [6.0], "medium": [6.0, 6.3], "hard": [6.0, 6.3]},
+        "range": {"easy": (6.0, 6.3), "medium": (6.0, 6.3), "hard": (6.0, 6.3)},
+        "refine": True,
         "coverage": [6.0, 6.3],
-        "source": "catalog: Grover 102/Gotoh Ø6.0, Grover Super Ø6.3 (issue #9 table)",
+        "source": "catalog row-locked to housing_w: Grover 102/Gotoh 6.0, Grover Super 6.3 (issue #9)",
     },
     "barrel_d": {
         "desc": "post lower-barrel diameter, journalled in the housing",
@@ -64,10 +64,10 @@ PARAM_SPEC = {
     "bushing_od": {
         "desc": "peghole bushing body diameter (press-in collar or hex ferrule)",
         "unit": "mm",
-        "range": {"easy": (7.8, 7.8), "medium": (7.8, 14.0), "hard": (7.8, 14.0)},
-        "choices": {"easy": [7.8], "medium": [7.8, 14.0], "hard": [7.8, 14.0]},
+        "range": {"easy": (7.8, 14.0), "medium": (7.8, 14.0), "hard": (7.8, 14.0)},
+        "refine": True,
         "coverage": [7.8, 14.0],
-        "source": "catalog: Grover Ø7.8 press-in collar, Gotoh Ø14 hex ferrule (issue #9 table)",
+        "source": "catalog row-locked to housing_w: Grover 7.8 collar, Gotoh 14.0 hex (issue #9)",
     },
     "string_hole_d": {
         "desc": "transverse string hole diameter through the post",
@@ -108,6 +108,15 @@ PARAM_SPEC = {
 }
 
 
+# catalog model rows: housing envelope -> (post_d, bushing_od) pairs that
+# actually ship together (issue #9 table)
+MODEL_ROWS = {
+    22.4: [(6.0, 7.8)],                  # mini
+    27.05: [(6.0, 7.8), (6.3, 7.8)],     # Grover 102 / Super
+    27.1: [(6.0, 14.0)],                 # Gotoh SG381
+}
+
+
 def check(p):
     bad = []
     # the screw ear must sit OUTBOARD of the sealed gear box (box width is
@@ -131,9 +140,17 @@ def check(p):
         bad.append("button too small to grip: button_h >= 2.5*key_shaft_d (ergonomic rule)")
     if p["string_hole_d"] >= p["post_d"] * 0.5:
         bad.append("string hole >= half the post: post section would be gutted (strength rule)")
+    # the gear-cover boss must fit the housing face
+    if 0.46 * 0.68 * p["plate_w"] > p["housing_h"] / 2.0 - 0.5:
+        bad.append("cover boss taller than the housing face: 0.313*plate_w must stay "
+                   "under housing_h/2 - 0.5 (cover circle fits the die-cast body)")
     return bad
 
 
 def refine(p, difficulty, rng):
     # the plate lobe scales with the casting envelope (drawing: 23.85/27.05)
     p["plate_w"] = round(p["housing_w"] * float(rng.uniform(0.85, 0.92)), 1)
+    # post/bushing come from the same catalog MODEL ROW as the housing —
+    # no 22.4 mini with a 6.3 Super post or a Gotoh hex ferrule
+    rows = MODEL_ROWS[p["housing_w"]]
+    p["post_d"], p["bushing_od"] = rows[int(rng.integers(len(rows)))]

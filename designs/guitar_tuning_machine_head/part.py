@@ -122,20 +122,25 @@ def _bushing(bushing_od, post_d, plate_t):
     hex ferrule with its Ø15 washer flange (Ø14 class)."""
     bore_r = post_d / 2.0 + 0.2
     if bushing_od >= 10.0:
-        # Gotoh-style: Ø15 washer flange + hex body (M8-class ferrule)
+        # Gotoh-style ferrule at the drawing's full 14.6 stack: M8-class
+        # barrel reaching down around the post, Ø15 x 1 washer, hex head
+        barrel_len = 14.6 - 5.5 - 1.0
         bushing = (
-            cq.Workplane("XY").circle(7.5).extrude(1.0)
+            cq.Workplane("XY").circle(4.0).extrude(barrel_len)
+            .faces(">Z").workplane().circle(7.5).extrude(1.0)
             .faces(">Z").workplane().polygon(6, bushing_od).extrude(5.5)
         )
+        z0 = plate_t / 2.0 + 0.3
     else:
         # Grover-style press-in collar
         bushing = (
             cq.Workplane("XY").circle(bushing_od / 2.0 + 1.2).extrude(1.2)
             .faces(">Z").workplane().circle(bushing_od / 2.0).extrude(4.5)
         )
+        z0 = plate_t / 2.0
     return bushing.cut(
-        cq.Workplane("XY").circle(bore_r).extrude(20.0).translate((0, 0, -5.0))
-    ).translate((0, 0, plate_t / 2.0))
+        cq.Workplane("XY").circle(bore_r).extrude(40.0).translate((0, 0, -10.0))
+    ).translate((0, 0, z0))
 
 
 def build(plate_w, plate_t, housing_w, housing_h, housing_d,
