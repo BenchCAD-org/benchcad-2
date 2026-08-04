@@ -25,7 +25,7 @@ designs/<family>/
 Start with:
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution lifecycle and rules
-- [`REVIEWING.md`](REVIEWING.md) — the human review checklist
+- [`REVIEWING.md`](docs/REVIEWING.md) — the human review checklist
 - [`docs/DESIGN_SPEC.md`](docs/DESIGN_SPEC.md) — the part/spec interface
 
 ```bash
@@ -37,11 +37,11 @@ uv run bench2 validate my_family
 uv run bench2 preview my_family   # inspect the renders before submitting
 ```
 
-Progress is tracked in [`STATUS.md`](STATUS.md), contributor provenance in
-[`CONTRIBUTORS.md`](CONTRIBUTORS.md), and active proposals in the
+Progress is tracked in [`STATUS.md`](docs/STATUS.md), contributor provenance in
+[`CONTRIBUTORS.md`](docs/CONTRIBUTORS.md), and active proposals in the
 [family issues](../../issues?q=is%3Aissue+is%3Aopen+label%3Afamily).
 
-The architectural rationale lives in [`DESIGN.md`](DESIGN.md). The scoring
+The architectural rationale lives in [`DESIGN.md`](docs/DESIGN.md). The scoring
 engine is maintained in
 [`BenchCAD/BenchCAD-main`](https://github.com/BenchCAD/BenchCAD-main).
 

@@ -65,6 +65,27 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
         bad(f"family.json: base_plane must be one of {sorted(BASE_PLANES)}")
     else:
         ok("family.json: keys + base_plane valid")
+    # an assembly family additionally declares `components`; keep it consistent
+    # with `solids` here so the metadata can't drift from the body-count gate
+    # (name-level truth against the built Assembly is checked by preview-parts,
+    # which renders the committed preview_parts.png evidence).
+    components_contract = None
+    if "components" in meta:
+        from .preview_parts import component_contract
+
+        try:
+            components_contract = component_contract(meta)
+        except ValueError as e:
+            bad(str(e))
+        else:
+            param_qs = [q for _, q in components_contract if isinstance(q, str)]
+            if param_qs:
+                ok(f"family.json components: {len(components_contract)} component "
+                   f"type(s), param-valued quantities ({', '.join(param_qs)}) "
+                   "resolve per instance")
+            else:
+                ok(f"family.json components: {len(components_contract)} component "
+                   f"type(s), quantities sum to solids={meta['solids']}")
 
     # -- 1b. part.py must be clean source, not an editor scratch file --------
     # `bench2 edit` appends a PARAMS + show_object() block and removes it when
@@ -118,6 +139,19 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
         bad(f"PARAM_SPEC incomplete: {spec_bad[:6]}")
     else:
         ok(f"PARAM_SPEC: {len(spec.PARAM_SPEC)} params, all entries complete")
+
+    # param-valued component quantities must reference declared integer params
+    if components_contract is not None:
+        for cname, q in components_contract:
+            if not isinstance(q, str):
+                continue
+            entry = spec.PARAM_SPEC.get(q)
+            if entry is None:
+                bad(f"components: {cname!r} quantity references {q!r}, "
+                    "which is not a PARAM_SPEC parameter")
+            elif not entry.get("integer"):
+                bad(f"components: quantity parameter {q!r} for {cname!r} "
+                    "must declare integer=True in PARAM_SPEC")
 
     # -- 3-6. sampling, determinism, execution, hashes -----------------------
     programs: dict[str, list[str]] = {diff: [] for diff in DIFFS}
@@ -176,9 +210,19 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
                             bad(f"{diff}/seed{seed}: degenerate/empty solid "
                                 f"(solids={n_solids}, min_volume={min_vol:.3g})")
                             continue
-                        if want_solids is not None and n_solids != want_solids:
+                        expected_solids = want_solids
+                        if components_contract is not None:
+                            from .preview_parts import resolve_contract
+                            try:
+                                expected_solids = sum(
+                                    q for _, q in
+                                    resolve_contract(components_contract, p))
+                            except ValueError as e:
+                                bad(f"{diff}/seed{seed}: {e}")
+                                continue
+                        if expected_solids is not None and n_solids != expected_solids:
                             bad(f"{diff}/seed{seed}: produced {n_solids} solid(s) but "
-                                f"family.json declares solids={want_solids} "
+                                f"the family declares {expected_solids} "
                                 "(a body vanished or unexpectedly merged?)")
                             continue
                         solid_counts.add(n_solids)
@@ -241,7 +285,13 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
     if solid_counts:
         cnt = sorted(solid_counts)
         detail = str(cnt[0]) if len(cnt) == 1 else str(cnt)
-        note = f" (declares solids={want_solids})" if want_solids is not None else ""
+        if components_contract is not None and any(
+                isinstance(q, str) for _, q in components_contract):
+            note = " (components quantities resolved per instance)"
+        elif want_solids is not None:
+            note = f" (declares solids={want_solids})"
+        else:
+            note = ""
         ok(f"solids: every instance non-degenerate, {detail} solid(s) each{note}")
 
     return all(passed for passed, _ in log), log
