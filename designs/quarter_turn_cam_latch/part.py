@@ -33,6 +33,11 @@ def _housing(head_d, head_h, body_d, afl, body_l, slotted):
             .translate((0.0, 0.0, head_h))
         )
         head = head.cut(slot)
+    # the compressed sealing washer under the head (the photo's black ring),
+    # modelled as the thin gasket step it presents when installed
+    head = head.union(
+        cq.Workplane("XY").circle(head_d / 2.0 - 0.8).extrude(-1.2)
+    )
     # double-D body: circle with two parallel flats (across-flats = afl)
     body = cq.Workplane("XY").circle(body_d / 2.0).extrude(-body_l)
     flats = cq.Workplane("XY").box(afl, body_d + 4.0, 2.0 * body_l + 4.0)
@@ -60,12 +65,13 @@ def _cam(cam_l, cam_w, cam_t, tip_flat, rise, step_x):
              centered=(False, True, False))
         .translate((step_x, 0.0, -cam_t))
     )
-    # flat clamping tip: spans exactly step_x .. cam_l (the tip IS the full
-    # axis-to-tip reach; the slot's own end rounding stays inside that span)
+    # flat clamping tip: spans exactly step_x .. cam_l; the stamped tip is
+    # square-ish with corner rounds (the sheet's cam), not a full pill end
     tip = (
         cq.Workplane("XY")
-        .slot2D(tip_flat, cam_w, 0)
+        .rect(tip_flat, cam_w)
         .extrude(-cam_t)
+        .edges("|Z").fillet(cam_w * 0.22)
         .translate(((step_x + cam_l) / 2.0, 0.0, rise))
     )
     cam = hub.union(neck).union(riser).union(tip)
@@ -81,8 +87,9 @@ def _nut(body_d):
     """Mounting nut behind the panel: hex on a round clearance bore."""
     af = body_d + 2.0
     nut = (
-        cq.Workplane("XY").polygon(6, af / 0.866).extrude(-4.0)
-        .cut(cq.Workplane("XY").circle(body_d / 2.0 + 0.15).extrude(-6.0)
+        cq.Workplane("XY").polygon(6, af / 0.866).extrude(-5.5)
+        .edges("<Z").chamfer(0.8)
+        .cut(cq.Workplane("XY").circle(body_d / 2.0 + 0.15).extrude(-8.0)
              .translate((0.0, 0.0, 1.0)))
     )
     return nut

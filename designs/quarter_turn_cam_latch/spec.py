@@ -71,8 +71,8 @@ PARAM_SPEC = {
     "cam_t": dict(
         desc="cam arm thickness",
         unit="mm",
-        range={"easy": (2.5, 3.5), "medium": (2.0, 4.5), "hard": (1.8, 5.0)},
-        source="proportion (stamped/zinc cam)",
+        range={"easy": (1.4, 2.0), "medium": (1.2, 2.4), "hard": (1.0, 2.8)},
+        source="proportion (stamped steel cam, sheet-gauge thin)",
     ),
     "tip_flat": dict(
         desc="flat clamping length past the step",
