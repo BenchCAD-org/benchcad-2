@@ -36,33 +36,33 @@ def _housing(plate_w, plate_t, housing_w, housing_h, housing_d,
                .close().extrude(plate_t))
         .translate((0, 0, -plate_t / 2.0))
     )
-    # rounded gear box below (the sealed cavity, NARROWER than the plate so
-    # the screw ear clears it), with the circular cover boss on its face
-    box_w = plate_w * 0.68
-    box = (
-        cq.Workplane("XY").box(box_w, housing_d, housing_h)
-        .edges("|Z").fillet(box_w * 0.18)
-        .translate((0.0, 0.0, -(plate_t / 2.0 + housing_h / 2.0)))
-    )
-    cover_r = box_w * 0.46
-    cover = (
+    # the die-cast body is a horizontal DRUM on the worm/key axis (drawing:
+    # the 18 height IS the drum diameter; the front face carries the round
+    # GROVER cover), buried 0.8 into the flange so the union is one casting
+    r_d = housing_h / 2.0
+    z_axis = -(plate_t / 2.0 + r_d - 0.8)
+    drum = (
         cq.Workplane("XZ").workplane(offset=housing_d / 2.0)
-        .center(0.0, -(plate_t / 2.0 + housing_h / 2.0))
-        .circle(cover_r).extrude(1.0)
+        .center(0.0, z_axis).circle(r_d).extrude(-housing_d)
+        .edges().chamfer(0.8)
     )
-    body = plate.union(box).union(cover)
-    # post-barrel bore through plate and box top (running clearance)
+    cover = (
+        cq.Workplane("XZ").workplane(offset=housing_d / 2.0 + 1.0)
+        .center(0.0, z_axis).circle(r_d * 0.82).extrude(-1.2)
+    )
+    body = plate.union(drum).union(cover)
+    # post-barrel bore: vertically through the flange into the drum, stopping
+    # over the worm (the wheel-on-barrel meshes the worm below)
+    bore_bot = z_axis + 0.5 * key_shaft_d + 0.3
     body = body.cut(
         cq.Workplane("XY").circle(barrel_d / 2.0 + 0.15)
-        .extrude(-(plate_t + housing_h * 0.55)).translate((0, 0, plate_t / 2.0))
+        .extrude(bore_bot - plate_t / 2.0).translate((0, 0, plate_t / 2.0))
     )
-    # key-shaft through-bore at WORM depth — below the wheel on the post
-    # barrel, like the real gear stack. XZ-plane sign convention: offset=+d
-    # puts the plane at y=-d, extrude(-L) sweeps +Y — so this spans y -d..+d.
+    # key-shaft bore ALONG the drum axis (the worm axis is the drum axis)
     body = body.cut(
-        cq.Workplane("XZ").workplane(offset=housing_d)
-        .center(0.0, -(plate_t / 2.0 + housing_h * 0.72))
-        .circle(key_shaft_d / 2.0 + 0.15).extrude(-housing_d * 2.0)
+        cq.Workplane("XZ").workplane(offset=housing_d * 2.0)
+        .center(0.0, z_axis)
+        .circle(key_shaft_d / 2.0 + 0.15).extrude(-housing_d * 4.0)
     )
     # locating-screw hole through the OUTBOARD ear only
     body = body.cut(
@@ -72,11 +72,13 @@ def _housing(plate_w, plate_t, housing_w, housing_h, housing_d,
     return body
 
 
-def _post(post_d, barrel_d, post_h, plate_t, housing_h, string_hole_d):
-    """String post: Ø9.9-class lower barrel journalled in the housing, the
-    Ø6-class string section above with a turned tip, and the transverse
-    string hole 6 mm under the post top."""
-    barrel_len = plate_t + housing_h * 0.5
+def _post(post_d, barrel_d, post_h, plate_t, housing_h, string_hole_d,
+          key_shaft_d):
+    """String post: Ø9.9-class lower barrel journalled down into the drum
+    (its wheel meshes the worm on the drum axis), the Ø6-class string section
+    above with a turned tip, and the transverse string hole under the top."""
+    z_axis = -(plate_t / 2.0 + housing_h / 2.0 - 0.8)
+    barrel_len = plate_t / 2.0 - (z_axis + 0.5 * key_shaft_d + 1.0)
     post = (
         cq.Workplane("XY").circle(barrel_d / 2.0).extrude(-barrel_len)
         .faces(">Z").workplane().circle(post_d / 2.0).extrude(post_h)
@@ -156,7 +158,7 @@ def build(plate_w, plate_t, housing_w, housing_h, housing_d,
                         housing_d, barrel_d, screw_d, key_shaft_d),
                name="housing")
     result.add(_post(post_d, barrel_d, post_h, plate_t, housing_h,
-                     string_hole_d), name="post")
+                     string_hole_d, key_shaft_d), name="post")
     # key shaft reaches INTO the housing's key bore (running clearance); the
     # button then sits off the back face like the drawing's 40.8 - 28.2 stack
     # pear UP, matching the drawing's side-view pose (any rotation is a valid
@@ -165,7 +167,7 @@ def build(plate_w, plate_t, housing_w, housing_h, housing_d,
                        housing_d),
                name="button",
                loc=cq.Location((0.0, -housing_d * 0.25,
-                                -(plate_t / 2.0 + housing_h * 0.72)),
+                                -(plate_t / 2.0 + housing_h / 2.0 - 0.8)),
                                (0.0, 1.0, 0.0), 180.0))
     result.add(_bushing(bushing_od, post_d, plate_t), name="bushing")
     return result

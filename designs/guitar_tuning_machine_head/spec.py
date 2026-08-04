@@ -30,10 +30,11 @@ PARAM_SPEC = {
         "source": "catalog: Grover 102 27.05, Gotoh SG381 27.1, SG381 mini 22.4 (issue #9 table)",
     },
     "housing_h": {
-        "desc": "gear housing height below the baseplate",
+        "desc": "gear drum diameter (the drawing's 18 housing height)",
         "unit": "mm",
-        "range": {"easy": (17.0, 19.0), "medium": (16.0, 20.0), "hard": (15.0, 21.0)},
-        "source": "Grover 102 drawing: 18 [.709]",
+        "range": {"easy": (13.0, 19.0), "medium": (13.0, 19.0), "hard": (13.0, 19.0)},
+        "refine": True,
+        "source": "coupled 0.60-0.68 of the envelope (drawing: 18 on the 27.05 body)",
     },
     "housing_d": {
         "desc": "gear housing depth (cover face to back)",
@@ -131,19 +132,16 @@ def check(p):
         bad.append("barrel_d must step >=2 mm over post_d (drawing: 9.9 barrel under 6 post)")
     if p["bushing_od"] < 10.0 and p["bushing_od"] <= p["post_d"] + 1.2:
         bad.append("press-in bushing wall too thin: bushing_od must exceed post_d + 1.2")
-    # worm (key) axis sits at 0.72*housing_h, the wheel barrel ends at
-    # 0.5*housing_h: the gap must clear the shaft collar (gear-stack rule)
-    if p["housing_h"] * 0.22 < 0.65 * p["key_shaft_d"] + 0.3:
-        bad.append("key shaft too fat for the housing: 0.22*housing_h must exceed "
-                   "0.65*key_shaft_d + 0.3 (worm clears the wheel barrel)")
+    # the locating screw drops vertically at the ear; its line must clear the
+    # drum surface (3D line-to-axis distance vs drum radius)
+    if (p["housing_w"] / 2.0 - 1.15 * p["screw_d"] - p["screw_d"] / 2.0
+            < p["housing_h"] / 2.0 + 0.2):
+        bad.append("screw line would graze the gear drum: housing_w/2 - 1.65*screw_d "
+                   "must clear housing_h/2 + 0.2 (ear outboard of the drum)")
     if p["button_h"] < p["key_shaft_d"] * 2.5:
         bad.append("button too small to grip: button_h >= 2.5*key_shaft_d (ergonomic rule)")
     if p["string_hole_d"] >= p["post_d"] * 0.5:
         bad.append("string hole >= half the post: post section would be gutted (strength rule)")
-    # the gear-cover boss must fit the housing face
-    if 0.46 * 0.68 * p["plate_w"] > p["housing_h"] / 2.0 - 0.5:
-        bad.append("cover boss taller than the housing face: 0.313*plate_w must stay "
-                   "under housing_h/2 - 0.5 (cover circle fits the die-cast body)")
     return bad
 
 
@@ -154,3 +152,5 @@ def refine(p, difficulty, rng):
     # no 22.4 mini with a 6.3 Super post or a Gotoh hex ferrule
     rows = MODEL_ROWS[p["housing_w"]]
     p["post_d"], p["bushing_od"] = rows[int(rng.integers(len(rows)))]
+    # the drum diameter scales with the casting envelope (drawing: 18/27.05)
+    p["housing_h"] = round(p["housing_w"] * float(rng.uniform(0.60, 0.68)), 1)
