@@ -108,15 +108,25 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
         return ring.intersect(keep)
 
     def knuckle(x_c, y_c, width, sign):
-        """Pin boss (cylinder about the pin axis) + the arm joining it to the
-        shell on its side of the split plane."""
+        """Pin boss (cylinder about the pin axis) + a TAPERED cast arm
+        blending it into the shell — the forging is smooth straps, not
+        rectangular slabs."""
         b = _y_cyl(x_c, y_c, width, k_r)
         x0 = r_out - 0.6 * wall_t                # arm reaches into the shell wall
         x1 = abs(x_c)
-        x_arm = (x0 + x1) / 2.0 * (1.0 if x_c > 0 else -1.0)
+        s = 1.0 if x_c > 0 else -1.0
         z0 = gap if sign > 0 else -k_r
         z1 = k_r if sign > 0 else -gap
-        b = b.union(_y_slab(x_arm, y_c, z0, x1 - x0, width, z1 - z0))
+        arm = (
+            cq.Workplane("XZ", origin=(0.0, y_c + width / 2.0, 0.0))
+            .moveTo(s * x0, z1)
+            .lineTo(s * x1, (z1 - z0) * 0.5 + z0 + (z1 - z0) * 0.28)
+            .lineTo(s * x1, z0 + (z1 - z0) * 0.22)
+            .lineTo(s * x0, z0)
+            .close()
+            .extrude(width)
+        )
+        b = b.union(arm)
         return b
 
     # ---- 1. lower shell ------------------------------------------------------
@@ -126,7 +136,9 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
         for y_c in (-y_ear, y_ear):
             lower = lower.union(knuckle(x_c, y_c, ear_w, -1))
     tang_h = base_drop - r_in
-    lower = lower.union(_y_slab(0.0, 0.0, -base_drop, tang_t, body_w, tang_h))
+    tang = (_y_slab(0.0, 0.0, -base_drop, tang_t, body_w, tang_h)
+            .edges("|Z").fillet(min(2.5, 0.2 * tang_t)))
+    lower = lower.union(tang)
     if stud:
         stud_len = 34.0                          # Doughty T57200: M12x50, 34 proud
         r_stud_minor = bolt_d / 2.0 - 0.61 * pitch
@@ -165,8 +177,9 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
     z_l0 = max(r_eye + 2.5, k_r + 1.5)           # lug underside clears eye + boss
     lug_x0 = 0.35 * r_out                        # lug reaches back over the crown
     lug_x1 = x_h + 1.3 * k_r
-    lug = _y_slab((lug_x0 + lug_x1) / 2.0, 0.0, z_l0,
-                  lug_x1 - lug_x0, body_w, lug_h)
+    lug = (_y_slab((lug_x0 + lug_x1) / 2.0, 0.0, z_l0,
+                   lug_x1 - lug_x0, body_w, lug_h)
+           .edges("|Y").fillet(min(2.5, 0.28 * lug_h)))
     slot_x0 = x_h - (bolt_d / 2.0 + 0.6)
     slot = _y_slab((slot_x0 + lug_x1 + 2.0) / 2.0, 0.0, z_l0 - 1.0,
                    lug_x1 + 2.0 - slot_x0, bolt_d + 1.2, lug_h + 2.0)
