@@ -1,6 +1,6 @@
 # Getting started — for engineers who don't use GitHub
 
-You do **not** need to know GitHub. Follow the steps literally. 中文版:
+You do **not** need to know GitHub. Follow the steps literally. Chinese version:
 [GETTING_STARTED.zh.md](GETTING_STARTED.zh.md)
 
 **Jargon, translated once:** *repository (repo)* = the project folder online ·
@@ -87,6 +87,11 @@ the code.
 
 ### Submit
 
+Your family dir holds **only the package** — `part.py`, `spec.py`, `family.json`,
+an optional `NOTES.md`, and the `preview_*.png` renders. **Keep your datasheet,
+drawing, and photo in the issue, not in `designs/`** — CI rejects reference files
+in the family dir (download them elsewhere so `git add` can't pick them up).
+
 10. ```bash
     git add designs/my_family
     git commit -s -m "Add my_family"     # -s adds your sign-off line (required)
@@ -104,7 +109,7 @@ the code.
 14. Merged = done. Credit is automatic (CONTRIBUTORS.md, dataset card, paper
     co-authorship). What happens next (instance generation, difficulty
     screening, release) is automated — watch your family on
-    [STATUS.md](../STATUS.md). You never need to do anything after merge.
+    [STATUS.md](STATUS.md). You never need to do anything after merge.
 
 ## When something goes wrong
 
