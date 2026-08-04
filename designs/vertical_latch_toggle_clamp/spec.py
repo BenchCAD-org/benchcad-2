@@ -82,13 +82,13 @@ PARAM_SPEC = {
         coverage=[160, 320, 700],
     ),
     "with_u_bolt": dict(
-        desc="variant flag: 1 = type T3 with U-bolt latch and catch, 0 = type T without U-bolt",
+        desc="variant flag retained from GN 851.1: current STEP-matched rebuild samples type T3 with U-bolt latch and catch",
         unit="",
-        range={"easy": (1, 1), "medium": (0, 1), "hard": (0, 1)},
-        source="GN 851.1 type table: T without U-bolt latch, T3 with U-bolt latch and catch",
-        choices={"easy": [1], "medium": [0, 1], "hard": [0, 1]},
+        range={"easy": (1, 1), "medium": (1, 1), "hard": (1, 1)},
+        source="GN 851.1 type table: T3 with U-bolt latch and catch; matched to supplied 851.1-160-T3 STEP",
+        choices={"easy": [1], "medium": [1], "hard": [1]},
         feature=True,
-        coverage=[0, 1],
+        coverage=[1],
     ),
     "handle_angle": dict(
         desc="operating handle angle about the upper latch pivot",

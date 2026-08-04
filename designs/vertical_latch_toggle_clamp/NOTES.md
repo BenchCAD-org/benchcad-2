@@ -17,11 +17,17 @@ Table-driven dimensions:
 - `m1`, `m2`, `m3`, `m4`, `m5`
 - `r`, `s`, `w1`, `w2`
 
+Assembly split:
+
+- The submitted CadQuery model is a five-solid static assembly, matching the
+  main solid count observed in the GN 851.1-160-T3 STEP reference.
+- The solids are the folded base/frame, U-bolt latch rod, lower C-shaped fork,
+  adjuster block, and handle/linkage pack.
+
 Simplifications:
 
-- The part is modeled as one connected solid for deterministic validation, not
-  as a moving assembly of separate stamped and pinned pieces.
-- Small hardware details such as nuts, grip ribs, split pins, spring wire, bend
+- Small hardware details such as split pins, spring wire, exact stamped-bend
   radii, and thread forms are proportion-derived visual approximations.
-- Type T is represented by a hook/catch feature without the U-bolt; type T3
-  includes the U-bolt latch and catch.
+- The current STEP-matched rebuild targets the T3 form. The `with_u_bolt`
+  parameter remains in the function signature, but validation samples the
+  supplied T3 arrangement rather than adding a non-STEP substitute for type T.
