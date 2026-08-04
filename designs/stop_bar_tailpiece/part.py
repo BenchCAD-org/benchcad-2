@@ -73,27 +73,43 @@ def build(overall_l, stud_span, bar_w, bar_h, tab_t, crown_r, ramp_len,
         prev_x = x
     result = wp.loft(ruled=True)
 
-    # Ear plan read directly from the sheet. At nominal dimensions the radius
-    # is (102 - 82)/2 = 10 mm about each stud. Clipping that circle at the
-    # +/-9 mm faces makes the tiny flat nose/curl beyond the 8 mm slot wall.
+    # Ear plan: the sheet's ends are BLUNT — a near-flat end face with plan
+    # corner rounds (the tip lands on the 102 overall), not a half-round nose
+    # that reads as a curled hook.
     join_overlap = 1.0  # bury a real overlap at the join: near-coincident unions leave slivers
-    circle_face_x = math.sqrt(max(lobe_r * lobe_r - (bar_w / 2.0) ** 2, 0.25))  # guard: spec keeps lobe_r > bar_w/2
     for side in (-1.0, 1.0):
         x_stud = side * stud_span / 2.0
         x_join = side * (x_ear - join_overlap)
-        x_face = x_stud + side * circle_face_x
         x_tip = x_stud + side * lobe_r
+        w2 = bar_w / 2.0 - 0.15
+        rc = 0.35 * lobe_r                       # plan corner radius at the end
+        k = 0.2929 * rc                          # 45-degree sagitta for the corner arcs
         ear = (
             cq.Workplane("XY")
-            .moveTo(x_join, bar_w / 2.0 - 0.15)
-            .lineTo(x_face, bar_w / 2.0 - 0.15)
-            .threePointArc((x_tip, 0.0), (x_face, -(bar_w / 2.0 - 0.15)))
-            .lineTo(x_join, -(bar_w / 2.0 - 0.15))
+            .moveTo(x_join, w2)
+            .lineTo(x_tip - side * rc, w2)
+            .threePointArc((x_tip - side * k, w2 - k), (x_tip, w2 - rc))
+            .lineTo(x_tip, -(w2 - rc))
+            .threePointArc((x_tip - side * k, -(w2 - k)), (x_tip - side * rc, -w2))
+            .lineTo(x_join, -w2)
             .close()
             .extrude(tab_t)
             .intersect(_d_section(cq.Workplane("YZ").workplane(offset=x_stud - 2.0 * lobe_r),
                                   bar_w, tab_t).extrude(4.0 * lobe_r))
         )
+        # the sheet's end profile keeps FALLING toward the tip: shave the ear
+        # top on a wedge from full tab height at the join down to ~0.55 tab at
+        # the end, so the curl reads as a low stub, not an upturned horn
+        wedge = (
+            cq.Workplane("XZ").workplane(offset=bar_w)
+            .moveTo(x_join - side * 1.0, 0.0)
+            .lineTo(x_join - side * 1.0, tab_t + 2.0)
+            .lineTo(x_tip + side * 2.0, 0.55 * tab_t)
+            .lineTo(x_tip + side * 2.0, 0.0)
+            .close()
+            .extrude(-2.0 * bar_w)
+        )
+        ear = ear.intersect(wedge)
         # match the bar's D-section at tab height so the join is flush (the
         # rectangular extrusion's front corner otherwise pokes past the curve)
         x_lo = min(x_join, x_tip) - 1.0
