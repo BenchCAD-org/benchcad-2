@@ -78,11 +78,11 @@ git push
 ```
 
 PR 只能修改这一个 family 目录，而且目录里**只放交付包**（`part.py`、`spec.py`、`family.json`、可选的 `NOTES.md` 和 `preview_*.png`）。参考工程图、照片、datasheet 留在 **issue** 里——CI 会拒绝 `designs/` 里的参考文件。描述里写 `Closes #<issue编号>`。CI 会重跑
-验证并生成预览图；一位非作者按 [`REVIEWING.md`](../REVIEWING.md) 检查来源、
+验证并生成预览图；一位非作者按 [`REVIEWING.md`](REVIEWING.md) 检查来源、
 渲染、公式、约束、标签和改动范围。
 
 合并后，机器人会关闭 issue、贴回验收证据、刷新
-[`CONTRIBUTORS.md`](../CONTRIBUTORS.md) 和 [`STATUS.md`](../STATUS.md)。这个
+[`CONTRIBUTORS.md`](CONTRIBUTORS.md) 和 [`STATUS.md`](STATUS.md)。这个
 family 从此永久属于公开集。
 
 ## 常见问题
