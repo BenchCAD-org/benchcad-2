@@ -16,6 +16,8 @@ uv run bench2 new <family>
 # fill designs/<family>/{part.py,spec.py,family.json}
 uv run bench2 validate <family>
 uv run bench2 preview <family>     # inspect every generated view yourself
+# assembly family: preview also renders preview_parts.png
+# (or run it alone: uv run bench2 preview-parts <family>)
 # submit one PR with `Closes #<family-issue>`
 ```
 
@@ -24,7 +26,7 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 1. **One family = one issue = one PR.** A family PR touches only
    `designs/<family>/` and includes `Closes #N`.
 2. **`bench2 validate` must pass locally.** CI reruns the same gates.
-3. **A non-author reviews the family** using [`REVIEWING.md`](REVIEWING.md).
+3. **A non-author reviews the family** using [`REVIEWING.md`](docs/REVIEWING.md).
 4. **Merged is not automatically released.** Qualification and versioned
    manifests are produced in batches.
 5. **Do not duplicate a known proposal.** Check [`registry.json`](registry.json)
@@ -83,6 +85,10 @@ licensing permits, with the original source linked in the issue.
 - Difficulty levels and feature coverage are meaningful.
 - Preview views and extremes match the reference evidence.
 - `family.json` labels and contributor information are accurate.
+- An assembly family names every component instance stably, matches its
+  declared `components`/`solids`, and ships an inspected `preview_parts.png`
+  (component four-views, assembly overview, ordered highlight rows — see
+  `docs/DESIGN_SPEC.md`).
 
 **Hard gates (red ✗ = cannot merge)** — so review spends its time on *truth*, not
 structure. A family PR must pass all three:
@@ -91,7 +97,7 @@ structure. A family PR must pass all three:
 |---|---|
 | `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
 | `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open); **and every image url in the body resolves**, with anything under `designs/` pinned to a **commit sha** — a branch name is not a pin: your fork branch is deleted when this PR merges and every preview pinned to it dies with it, leaving the merged family unreviewable. Copy the sha off the branch and use `blob/<sha>/<path>?raw=true`. Both `![alt](…)` and `<img src="…">` are checked, so the width-setting form is covered too |
-| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`, plus `preview_hard_zoom.png` (the fourth render — CI *warns* while PRs opened before it existed backfill it, then it becomes required); **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; the dir name matches the linked issue's family name; and the **PR body shows its evidence** — the issue's drawing + photo re-embedded under `## Reference`, all four renders embedded by name, the parameter/verification table, and for a multi-body family `preview_parts.png` (file **and** embed) |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one) — the sole exception is a **metadata-only sweep**, a diff whose `designs/` side is `spec.py` files only, which may span families because it can move no geometry and no committed render; the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`, plus `preview_hard_zoom.png` (the fourth render — CI *warns* while PRs opened before it existed backfill it, then it becomes required); **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; the dir name matches the linked issue's family name; and the **PR body shows its evidence** — the issue's drawing + photo re-embedded under `## Reference`, all four renders embedded by name, the parameter/verification table, and for a multi-body family `preview_parts.png` (file **and** embed) |
 
 ## Issue taxonomy
 
