@@ -503,16 +503,18 @@ def build(
         w1,
         w2,
     )
-    solids = [
-        solid_0_base_frame(p),
-        solid_2_front_fork_block(p),
-        solid_3_adjuster_block(p),
-        solid_4_handle_linkage(p),
+    components = [
+        ("base_frame", solid_0_base_frame(p)),
+        ("front_fork_block", solid_2_front_fork_block(p)),
+        ("adjuster_block", solid_3_adjuster_block(p)),
+        ("handle_linkage", solid_4_handle_linkage(p)),
     ]
     if int(round(float(with_u_bolt))):
-        solids.insert(1, solid_1_u_bolt(p))
+        components.insert(1, ("u_bolt_latch", solid_1_u_bolt(p)))
 
-    result = cq.Compound.makeCompound([solid.val() if hasattr(solid, "val") else solid for solid in solids])
+    result = cq.Assembly(name="vertical_latch_toggle_clamp")
+    for name, solid in components:
+        result.add(solid, name=name)
     return result
 
 
