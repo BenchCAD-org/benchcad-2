@@ -194,7 +194,14 @@ def build(
     )
     handle = handle.cut(button_clearance)
 
-    result = cq.Compound.makeCompound(
-        [shaft.val(), handle.val(), button.val(), upper_ball.val(), lower_ball.val()]
-    )
+    # Named assembly, not a bare compound: the component names are what
+    # `bench2 preview-parts` renders per-component rows from, and they must
+    # match family.json's `components` (docs/DESIGN_SPEC.md). The two locking
+    # balls are one component in two instances, so they carry the _NN suffix.
+    result = cq.Assembly(name="t_handle_ball_lock_pin")
+    result.add(shaft, name="shaft")
+    result.add(handle, name="handle")
+    result.add(button, name="button")
+    result.add(upper_ball, name="ball_01")
+    result.add(lower_ball, name="ball_02")
     return result
