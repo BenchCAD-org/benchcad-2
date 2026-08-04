@@ -101,6 +101,7 @@ def _arm(arm_reach, arm_h, beam_w, plate_d):
     )
     beam = (
         cq.Workplane("XY").box(beam_w, arm_reach, beam_w)
+        .edges("|Y").fillet(beam_w * 0.18)
         .translate((0, plate_d + arm_reach / 2.0, 0))
     )
     gusset = (

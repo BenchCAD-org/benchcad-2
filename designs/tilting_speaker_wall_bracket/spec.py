@@ -77,14 +77,14 @@ PARAM_SPEC = {
     "jaw_h": {
         "desc": "jaw grip plate height",
         "unit": "mm",
-        "range": {"easy": (100.0, 120.0), "medium": (92.0, 128.0), "hard": (84.0, 136.0)},
-        "source": "proportion (grip plate on the cabinet side; no catalog number)",
+        "range": {"easy": (60.0, 75.0), "medium": (55.0, 85.0), "hard": (50.0, 95.0)},
+        "source": "proportion read off the product photo (short side channels, no catalog number)",
     },
     "jaw_d": {
         "desc": "jaw grip plate depth (into the room)",
         "unit": "mm",
-        "range": {"easy": (120.0, 140.0), "medium": (110.0, 150.0), "hard": (100.0, 160.0)},
-        "source": "proportion (the sheet's 140 is the min overall width, not a depth)",
+        "range": {"easy": (80.0, 100.0), "medium": (70.0, 110.0), "hard": (65.0, 120.0)},
+        "source": "proportion read off the product photo (jaw hugs the cradle depth)",
     },
     "cradle_w": {
         "desc": "cradle top plate width (wall direction)",
@@ -139,8 +139,8 @@ def check(p):
         bad.append("plate shorter than the 30 + 145 + slot hole pattern needs (BT77 layout)")
     if p["arm_h"] > p["plate_h"] * 0.55:
         bad.append("arm upright taller than half the plate: not a BT77 proportion")
-    if p["jaw_h"] < 60.0:
-        bad.append("jaw plate under 60 cannot steady a cabinet (proportion)")
+    if p["jaw_h"] < 45.0:
+        bad.append("jaw plate under 45 cannot steady a cabinet (proportion)")
     return bad
 
 
