@@ -7,12 +7,33 @@
   "contributor": "sunzhenchuan007",
   "solids": 7,
   "components": [
-    "lower_clamp_body",
-    "upper_clamp_body",
-    "actuator",
-    "hex_nut",
-    "distance_bushing",
-    "lower_compression_spring",
-    "upper_compression_spring"
+    {
+      "name": "lower_clamp_body",
+      "quantity": 1
+    },
+    {
+      "name": "upper_clamp_body",
+      "quantity": 1
+    },
+    {
+      "name": "actuator",
+      "quantity": 1
+    },
+    {
+      "name": "hex_nut",
+      "quantity": 1
+    },
+    {
+      "name": "distance_bushing",
+      "quantity": 1
+    },
+    {
+      "name": "lower_compression_spring",
+      "quantity": 1
+    },
+    {
+      "name": "upper_compression_spring",
+      "quantity": 1
+    }
   ]
 }
