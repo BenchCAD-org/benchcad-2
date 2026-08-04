@@ -3,7 +3,10 @@ name: family-pr-checks
 #   validate.yml            — the design actually runs (bench2 validate)
 #   require-issue-link.yml  — the body links its family issue (Closes #N)
 # This job enforces the "one family = one PR" scope and that the family ships a
-# complete package: its three source files AND the three committed renders
+# complete package. The one exception is a metadata-only sweep — a diff whose
+# designs/ side is spec.py files only, which can move no geometry and no
+# committed render — so repo-wide upkeep is one PR instead of N identical ones
+# (step 0). Complete package: its three source files AND the three committed renders
 # (the easy/medium/hard grid, the four benchmark views, and the min/max
 # extremes). Requirements a human used to eyeball are now red/green.
 # `preview_hard_zoom.png` (the fourth render, front/side/top/iso of a hard
@@ -49,6 +52,21 @@ jobs:
             exit 0
           fi
 
+          # 0) a metadata-only SWEEP may span families: it changes nothing under
+          # designs/ except spec.py files, so no part.py, no family.json and no
+          # committed render can move — the geometry and the acceptance images
+          # are untouchable by construction. That is what repo-wide upkeep looks
+          # like (dropping a spec key the framework no longer reads), and it
+          # would otherwise arrive as N near-identical PRs that differ only in
+          # the family name. validate still runs on every family in the sweep.
+          # Only designs/ scope is judged here; this gate has never restricted
+          # paths outside designs/ (a pure framework PR passes as a no-op above).
+          DESIGN_NONSPEC=$(echo "$DIFF" | grep -E '^designs/' | grep -vE '^designs/[^/]+/spec\.py$' | grep . || true)
+          if [ "$NF" -gt 1 ] && [ -z "$DESIGN_NONSPEC" ]; then
+            echo "Metadata-only sweep across ${NF} families ($(echo $FAMS)) — designs/ diff is spec.py only, so one-family scope is waived."
+            exit 0
+          fi
+
           # 1) exactly one designs/<family>/ touched
           if [ "$NF" -ne 1 ]; then
             echo "::error::A family PR must touch exactly ONE designs/<family>/ (found ${NF}: $(echo $FAMS)). One family = one PR — split it."
@@ -76,7 +94,7 @@ jobs:
 
           # 3a) a multi-body family (family.json declares "solids") must also
           # ship the per-part render — every component individually verifiable.
-          if grep -q '"solids"' "designs/${FAM}/family.json" 2>/dev/null; then
+          if grep -qE '"solids"|"components"' "designs/${FAM}/family.json" 2>/dev/null; then
             if [ ! -f "designs/${FAM}/preview_parts.png" ]; then
               echo "::error::designs/${FAM}/ declares a multi-body family (\"solids\" in family.json) but has no preview_parts.png — render every component in isolation next to the assembly and commit it."
               exit 1
@@ -147,7 +165,9 @@ jobs:
             // (d) multi-body: the per-part render embedded too
             try {
               const fj = JSON.parse(fs.readFileSync(`designs/${fam}/family.json`, 'utf8'));
-              if ((fj.solids || 0) >= 2 && !body.includes('preview_parts.png')) {
+              const isAssembly = (fj.solids || 0) >= 2
+                || (Array.isArray(fj.components) && fj.components.length > 0);
+              if (isAssembly && !body.includes('preview_parts.png')) {
                 core.setFailed(
                   'Multi-body family: embed preview_parts.png (each component rendered in isolation next to the assembly) in the PR body. ');
               }
@@ -164,7 +184,7 @@ jobs:
               try {
                 const { data: issue } = await github.rest.issues.get({
                   owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(m[1]) });
-                const t = (issue.title || '').match(/\[(?:family|proposal)\]\s*([a-z0-9_]+)/i);
+                const t = (issue.title || '').match(/\[(?:family-assembly|family|proposal)\]\s*([a-z0-9_]+)/i);
                 if (t && t[1] !== fam) {
                   core.setFailed(
                     `This PR changes designs/${fam}/ but links issue #${m[1]} ("${t[1]}"). The family dir, ` +

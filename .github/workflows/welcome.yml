@@ -19,7 +19,7 @@ jobs:
         with:
           script: |
             const title = context.payload.issue.title || '';
-            const m = title.match(/\[(?:family|proposal)\]\s+([a-z0-9_]+)/);
+            const m = title.match(/\[(?:family-assembly|family|proposal)\]\s+([a-z0-9_]+)/);
             const name = m ? m[1] : null;
 
             // duplicate check against the registry
