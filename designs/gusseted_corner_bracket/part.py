@@ -19,7 +19,7 @@ def _sqrt_nonnegative(value: float) -> float:
 
 
 def _make_side_panel_solid(x0: float, thickness: float, height: float, side_step: float) -> cq.Solid:
-    """One external side panel, using the LBSBB stepped 45-degree side profile."""
+    """One external side panel, using the validated stepped 45-degree profile."""
 
     r = SIDE_CORNER_RADIUS
     slope_start = height - side_step + SIDE_SLOPE_ADJUST
