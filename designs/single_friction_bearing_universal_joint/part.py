@@ -124,12 +124,15 @@ PIN_FIT = 0.015         # radial running clearance / d1 (both pins, all bores)
 
 
 def _build_pivot_block(d1):
-    """Rounded centre block: 0.50*d1 square, 0.52*d1 tall, bored Z for the
-    pivot pin and Y for the cross pin."""
+    """Centre block: a turned DRUM (the teardown photo shows a cylinder, not
+    a cube), 0.50*d1 across and 0.52*d1 tall, bored Z for the pivot pin and
+    Y for the cross pin, with the ends broken like the reference."""
     blk = (
         cq.Workplane("XY")
-        .box(0.50 * d1, 0.50 * d1, 0.52 * d1)
-        .edges().fillet(0.10 * d1)
+        .circle(0.25 * d1)
+        .extrude(0.52 * d1)
+        .translate((0.0, 0.0, -0.26 * d1))
+        .edges("%CIRCLE").chamfer(0.022 * d1)
     )
     blk = blk.cut(_centered_cylinder((PIVOT_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Z").val())
     blk = blk.cut(_centered_cylinder((CROSS_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Y").val())
@@ -178,26 +181,17 @@ def _build_cross_pin(d1):
 
 
 def _build_retaining_ring(d1):
-    """Split ring seated in the pivot pin's groove (open 50 deg, like the
-    teardown's circlip)."""
+    """Plain thin retaining washer seated in the pivot pin's groove. The
+    teardown photo shows a CONTINUOUS ring, not a split circlip, so it is
+    slid on from the pin end before the cross pin closes the joint."""
     groove_r = PIVOT_PIN_D * d1 / 2.0 - 0.020 * d1
-    ring = (
+    return (
         cq.Workplane("XY")
         .circle(groove_r + 0.055 * d1)
         .circle(groove_r + 0.004 * d1)
         .extrude(0.024 * d1)
         .translate((0.0, 0.0, -0.488 * d1))  # seated in the pin groove
     )
-    gap = (
-        cq.Workplane("XY")
-        .moveTo(0.0, 0.0)
-        .lineTo(0.30 * d1, -0.14 * d1)
-        .lineTo(0.30 * d1, 0.14 * d1)
-        .close()
-        .extrude(0.20 * d1)
-        .translate((0.0, 0.0, -0.56 * d1))
-    )
-    return ring.cut(gap.val())
 
 
 def build(
