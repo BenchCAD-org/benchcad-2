@@ -127,13 +127,32 @@ def _build_pivot_block(d1):
     """Centre block: a turned DRUM (the teardown photo shows a cylinder, not
     a cube), 0.50*d1 across and 0.52*d1 tall, bored Z for the pivot pin and
     Y for the cross pin, with the ends broken like the reference."""
+    r_o = 0.25 * d1
+    half_h = 0.26 * d1
     blk = (
         cq.Workplane("XY")
-        .circle(0.25 * d1)
-        .extrude(0.52 * d1)
-        .translate((0.0, 0.0, -0.26 * d1))
+        .circle(r_o)
+        .extrude(2.0 * half_h)
+        .translate((0.0, 0.0, -half_h))
         .edges("%CIRCLE").chamfer(0.022 * d1)
     )
+    # two milled FLATS on the cross-pin axis, the faces its bores break out
+    # of (the teardown shows a drum with flats, not a plain cylinder)
+    flat_at = 0.205 * d1
+    for sy in (1.0, -1.0):
+        blk = blk.cut(
+            cq.Workplane("XY")
+            .box(2.2 * r_o, 2.0 * r_o, 2.4 * half_h)
+            .translate((0.0, sy * (flat_at + r_o), 0.0))
+        )
+    # counterbored recess around the pivot bore on both end faces
+    for sz in (1.0, -1.0):
+        blk = blk.cut(
+            cq.Workplane("XY")
+            .circle((PIVOT_PIN_D + PIN_FIT) * d1 / 2.0 + 0.035 * d1)
+            .extrude(sz * 0.035 * d1)
+            .translate((0.0, 0.0, sz * half_h - (0.035 * d1 if sz < 0 else 0.0)))
+        )
     blk = blk.cut(_centered_cylinder((PIVOT_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Z").val())
     blk = blk.cut(_centered_cylinder((CROSS_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Y").val())
     return blk
