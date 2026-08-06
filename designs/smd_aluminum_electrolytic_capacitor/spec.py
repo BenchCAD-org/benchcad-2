@@ -9,33 +9,33 @@ PARAM_SPEC = {
     "can_height": {
         "desc": "Height of the cylindrical can above the plastic SMD base",
         "unit": "mm",
-        "range": {"easy": (7.3, 8.0), "medium": (6.9, 8.4), "hard": (6.4, 9.0)},
+        "range": {"easy": (7.2, 8.0), "medium": (6.9, 8.4), "hard": (6.4, 9.0)},
         "source": "STEP measurement; proportion",
         "askable": True,
     },
     "base_length": {
         "desc": "Overall length of the rectangular SMD base and terminal carrier",
         "unit": "mm",
-        "range": {"easy": (8.4, 9.2), "medium": (8.0, 9.7), "hard": (7.5, 10.4)},
+        "range": {"easy": (6.6, 9.2), "medium": (6.6, 9.7), "hard": (6.6, 10.4)},
         "source": "STEP measurement; proportion",
         "askable": True,
     },
     "base_width": {
         "desc": "Overall width of the rectangular SMD base",
         "unit": "mm",
-        "range": {"easy": (7.7, 8.5), "medium": (7.3, 8.9), "hard": (6.9, 9.5)},
+        "range": {"easy": (6.6, 8.5), "medium": (6.6, 8.9), "hard": (6.6, 9.5)},
         "source": "STEP measurement; proportion",
         "askable": True,
     },
     "base_thickness": {
         "desc": "Thickness of the plastic base below the capacitor can",
         "unit": "mm",
-        "range": {"easy": (1.4, 1.8), "medium": (1.25, 2.0), "hard": (1.1, 2.25)},
+        "range": {"easy": (1.4, 2.0), "medium": (1.25, 2.0), "hard": (1.1, 2.25)},
         "source": "STEP measurement; proportion",
         "askable": True,
     },
     "terminal_span": {
-        "desc": "Center-to-center span used to place the two SMD terminal pads",
+        "desc": "Outermost span between the two SMD terminal pads",
         "unit": "mm",
         "range": {"easy": (6.9, 7.7), "medium": (6.5, 8.1), "hard": (6.0, 8.7)},
         "source": "STEP measurement; proportion",
@@ -73,8 +73,6 @@ def check(p):
 
     if p["body_diameter"] >= min(p["base_length"], p["base_width"]) * 0.92:
         bad.append("body_diameter must leave visible plastic base around the can")
-    if p["terminal_span"] >= p["base_length"]:
-        bad.append("terminal_span must fit inside the base length")
     if p["terminal_span"] <= p["body_diameter"] * 0.82:
         bad.append("terminal_span must remain wide enough for opposite SMD terminals")
     if p["terminal_width"] >= p["base_length"] * 0.32:
