@@ -56,17 +56,27 @@ def _revolved_ring(pre_pts, arc_mid, arc_end, post_pts):
     return wp.close().revolve(360, (0, 0, 0), (0, 1, 0))
 
 
-def _groove_half_width(width, ball_d, race_groove_depth):
-    return min(width * 0.40, ball_d * (0.46 + min(race_groove_depth / ball_d, 0.24)))
+# running fit between ball and raceway: flat 0.04 mm so the balls read as
+# seamlessly seated in the grooves while every pairwise intersection stays 0
+RACE_GAP = 0.04
 
 
-def _inner_ring_revolved(bore_d, shoulder_d, width, pitch_d, ball_d, race_groove_depth):
+def _conformal_half_width(shoulder_r, pitch_r, r_g, width):
+    """Half-width where the ball-conformal groove circle (radius r_g about
+    the ball centre) meets the shoulder land, so the revolved raceway is the
+    torus that cradles the ball — a real U in section, not a shallow dish."""
+    depth = r_g - abs(shoulder_r - pitch_r)
+    depth = max(0.12, min(depth, r_g * 0.98))
+    return min(width * 0.40, math.sqrt(depth * (2.0 * r_g - depth)))
+
+
+def _inner_ring_revolved(bore_d, shoulder_d, width, pitch_d, ball_d):
     bore_r = bore_d / 2.0
     shoulder_r = shoulder_d / 2.0
     ball_r = ball_d / 2.0
-    gap = max(0.16, min(0.20, ball_d * 0.035))
-    groove_r = pitch_d / 2.0 - ball_r - gap
-    groove_half_w = _groove_half_width(width, ball_d, race_groove_depth)
+    r_g = ball_r + RACE_GAP
+    groove_r = pitch_d / 2.0 - r_g
+    groove_half_w = _conformal_half_width(shoulder_r, pitch_d / 2.0, r_g, width)
     chamfer = min(width * 0.035, (shoulder_r - bore_r) * 0.12, 0.28)
 
     return _revolved_ring(
@@ -88,13 +98,13 @@ def _inner_ring_revolved(bore_d, shoulder_d, width, pitch_d, ball_d, race_groove
     )
 
 
-def _outer_ring_revolved(outer_d, shoulder_d, width, pitch_d, ball_d, race_groove_depth):
+def _outer_ring_revolved(outer_d, shoulder_d, width, pitch_d, ball_d):
     outer_r = outer_d / 2.0
     shoulder_r = shoulder_d / 2.0
     ball_r = ball_d / 2.0
-    gap = max(0.16, min(0.20, ball_d * 0.035))
-    groove_r = pitch_d / 2.0 + ball_r + gap
-    groove_half_w = _groove_half_width(width, ball_d, race_groove_depth)
+    r_g = ball_r + RACE_GAP
+    groove_r = pitch_d / 2.0 + r_g
+    groove_half_w = _conformal_half_width(shoulder_r, pitch_d / 2.0, r_g, width)
     chamfer = min(width * 0.035, (outer_r - shoulder_r) * 0.12, 0.28)
 
     return _revolved_ring(
@@ -117,6 +127,12 @@ def _outer_ring_revolved(outer_d, shoulder_d, width, pitch_d, ball_d, race_groov
 
 
 def _rounded_annular_band(outer_d, inner_d, band_w, z0, radius):
+    """Annular band with rounded section corners, as ONE revolved profile.
+
+    The earlier construction unioned four tori onto two annular cylinders;
+    that boolean seam soup broke later cuts (the preview cutaway boolean
+    came back EMPTY on the cage in this pinned OCC). A single revolved
+    rounded-rectangle section is seam-free and boolean-friendly."""
     radial_w = (outer_d - inner_d) / 2.0
     r = min(radius, band_w * 0.35, radial_w * 0.35)
     if r <= 0.0 or band_w <= 2.0 * r or radial_w <= 2.0 * r:
@@ -124,12 +140,22 @@ def _rounded_annular_band(outer_d, inner_d, band_w, z0, radius):
 
     outer_r = outer_d / 2.0
     inner_r = inner_d / 2.0
-    body = _annular_cylinder(outer_d - 2.0 * r, inner_d + 2.0 * r, band_w).translate((0, 0, z0))
-    mid = _annular_cylinder(outer_d, inner_d, band_w - 2.0 * r).translate((0, 0, z0 + r))
-    for major_r in (outer_r - r, inner_r + r):
-        for z in (z0 + r, z0 + band_w - r):
-            body = body.union(cq.Solid.makeTorus(major_r, r).translate((0, 0, z)))
-    return body.union(mid.val())
+    c = 0.29289321881 * r  # 1 - cos(45 deg): corner-arc midpoint sagitta
+    wp = (
+        cq.Workplane("XZ")
+        .moveTo(inner_r + r, z0)
+        .lineTo(outer_r - r, z0)
+        .threePointArc((outer_r - c, z0 + c), (outer_r, z0 + r))
+        .lineTo(outer_r, z0 + band_w - r)
+        .threePointArc((outer_r - c, z0 + band_w - c), (outer_r - r, z0 + band_w))
+        .lineTo(inner_r + r, z0 + band_w)
+        .threePointArc((inner_r + c, z0 + band_w - c), (inner_r, z0 + band_w - r))
+        .lineTo(inner_r, z0 + r)
+        .threePointArc((inner_r + c, z0 + c), (inner_r + r, z0))
+        .close()
+        .revolve(360, (0, 0, 0), (0, 1, 0))
+    )
+    return wp
 
 
 def _spherical_cup(ball_d, center, upper):
@@ -146,54 +172,50 @@ def _spherical_cup(ball_d, center, upper):
 
 
 def _cage_halves(pitch_d, ball_d, ball_count, width, cage_t, cage_width, cage_inner_d, cage_outer_d):
+    """Both retainer halves, each built FROM SCRATCH in its final pose with
+    mirrored coordinates. The earlier `lower.mirror("XY").translate(...)`
+    shortcut fed a transformed boolean-heavy solid into further booleans,
+    which this pinned OCC silently corrupts (the preview cutaway cut on the
+    mirrored half came back empty)."""
     ball_r = ball_d / 2.0
     sheet_t = max(0.20, min(cage_width * 0.22, width * 0.035))
     close_gap = max(0.06, min(ball_d * 0.04, 0.20))
     main_fillet = max(0.10, min(0.20, cage_t * 0.16, cage_width * 0.12))
-    lower_half = _rounded_annular_band(cage_outer_d, cage_inner_d, sheet_t, width / 2.0 - close_gap - sheet_t, main_fillet)
-
     # Short inner and outer lips give each half a shallow channel section. The
     # lips face away from the ball-center plane and stay visually secondary.
     lip_radial = max(0.10, min((cage_outer_d - cage_inner_d) * 0.055, cage_t * 0.18))
     lip_h = max(sheet_t * 0.75, min(ball_r * 0.16, cage_width * 0.26))
-    lower_outer_lip = _rounded_annular_band(
-        cage_outer_d,
-        cage_outer_d - 2.0 * lip_radial,
-        lip_h,
-        width / 2.0 - close_gap - lip_h,
-        main_fillet * 0.60,
-    )
-    lower_inner_lip = _rounded_annular_band(
-        cage_inner_d + 2.0 * lip_radial,
-        cage_inner_d,
-        lip_h,
-        width / 2.0 - close_gap - lip_h,
-        main_fillet * 0.60,
-    )
-    lower_half = lower_half.union(lower_outer_lip.val()).union(lower_inner_lip.val())
-
     radial_clip = _annular_cylinder(cage_outer_d, cage_inner_d, width).translate((0, 0, 0))
-    for x, y, z in _ball_centers(pitch_d, ball_count):
-        center = (x, y, width / 2.0 + z)
-        lower_cup = _spherical_cup(ball_d, center, False).intersect(radial_clip)
-        lower_half = lower_half.union(lower_cup.val())
-
-    # Final clearance pass keeps the thin cups visibly wrapped around the balls
-    # while ensuring the rolling elements do not share positive volume.
     clearance_r = ball_r + _cage_clearance(ball_d)
-    for x, y, z in _ball_centers(pitch_d, ball_count):
-        cutter = _sphere_tool(clearance_r, (x, y, width / 2.0 + z))
-        lower_half = lower_half.cut(cutter)
-    upper_half = lower_half.mirror("XY").translate((0, 0, width))
-    for x, y, z in _ball_centers(pitch_d, ball_count):
-        cutter = _sphere_tool(clearance_r, (x, y, width / 2.0 + z))
-        lower_half = lower_half.cut(cutter)
-        upper_half = upper_half.cut(cutter)
-    for x, y, z in _ball_centers(pitch_d, ball_count):
-        cutter = _sphere_tool(clearance_r, (x, y, width / 2.0 + z))
-        lower_half = lower_half.cut(cutter)
-        upper_half = upper_half.cut(cutter)
-    return lower_half, upper_half
+
+    def one_half(upper):
+        # the lip starts 0.05 INSIDE the band, never flush: an exactly
+        # coplanar lip/band face makes this OCC's fuse silently drop the
+        # band, leaving only the pocket cups
+        if upper:
+            band_z0 = width / 2.0 + close_gap
+            lip_z0 = band_z0 + 0.05
+        else:
+            band_z0 = width / 2.0 - close_gap - sheet_t
+            lip_z0 = band_z0 + sheet_t - 0.05 - lip_h
+        half = _rounded_annular_band(cage_outer_d, cage_inner_d, sheet_t,
+                                     band_z0, main_fillet)
+        half = half.union(_rounded_annular_band(
+            cage_outer_d, cage_outer_d - 2.0 * lip_radial, lip_h, lip_z0,
+            main_fillet * 0.60).val())
+        half = half.union(_rounded_annular_band(
+            cage_inner_d + 2.0 * lip_radial, cage_inner_d, lip_h, lip_z0,
+            main_fillet * 0.60).val())
+        for x, y, z in _ball_centers(pitch_d, ball_count):
+            cup = _spherical_cup(ball_d, (x, y, width / 2.0 + z), upper)
+            half = half.union(cup.intersect(radial_clip).val())
+        # Final clearance pass keeps the thin cups visibly wrapped around the
+        # balls while ensuring the rolling elements share no positive volume.
+        for x, y, z in _ball_centers(pitch_d, ball_count):
+            half = half.cut(_sphere_tool(clearance_r, (x, y, width / 2.0 + z)))
+        return half
+
+    return one_half(False), one_half(True)
 
 
 def _component_shapes(
@@ -221,17 +243,20 @@ def _component_shapes(
     # 0.062*ball_d (D2 = 22.6 exactly at 6000), which also lands within
     # ~0.1 mm of the real 6005 D2.
     inner_shoulder_d = bore_d + 0.30 * span
-    gap = max(0.16, min(0.20, ball_d * 0.035))
-    outer_groove_bottom_d = pitch_d + ball_d + 2.0 * gap
-    outer_race_d = outer_groove_bottom_d - 2.0 * 0.062 * ball_d
+    outer_groove_bottom_d = pitch_d + ball_d + 2.0 * RACE_GAP
+    # The outer land (D2) derives from the sampled recess: the shoulder rises
+    # race_groove_depth over the groove bottom, so the section shows a real U
+    # cradling each ball instead of the earlier 0.062*ball_d lip that read as
+    # a flat bore in every view.
+    outer_race_d = outer_groove_bottom_d - 2.0 * race_groove_depth
 
     # Inner and outer rings are continuous closed radial-axial profiles,
     # revolved around the bearing axis. The shoulder diameters are anchored to
     # the SKF 6000 d1/D2 section cues; the deep-groove curve and small entry
     # chamfers are proportion geometry because no editable SW feature data or
     # manufacturer internal radii are available in this workspace.
-    inner_ring = _inner_ring_revolved(bore_d, inner_shoulder_d, width, pitch_d, ball_d, race_groove_depth)
-    outer_ring = _outer_ring_revolved(outer_d, outer_race_d, width, pitch_d, ball_d, race_groove_depth)
+    inner_ring = _inner_ring_revolved(bore_d, inner_shoulder_d, width, pitch_d, ball_d)
+    outer_ring = _outer_ring_revolved(outer_d, outer_race_d, width, pitch_d, ball_d)
 
     # Two-piece style retainer geometry: upper and lower annular halves with
     # spherical pockets facing the balls from each side. This avoids the

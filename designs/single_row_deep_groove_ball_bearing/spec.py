@@ -104,7 +104,7 @@ PARAM_SPEC = {
         askable=True,
     ),
     "race_groove_depth": dict(
-        desc="radial overlap of each ball into the simplified deep race grooves",
+        desc="raceway shoulder recess: how far each ball sinks behind the ring lands",
         unit="mm",
         range={"easy": (1.36, 1.52), "medium": (1.28, 1.52), "hard": (1.58, 1.76)},
         source="proportion: simplified raceway depth constrained by ring-wall continuity and ball-envelope clearance; not manufacturer-measured internal data",
@@ -179,8 +179,11 @@ def check(p: dict) -> list[str]:
 
     span = p["outer_d"] - p["bore_d"]
     inner_shoulder_d = p["bore_d"] + 0.30 * span
-    outer_race_d = p["outer_d"] - (3.4 / 16.0) * span
-    race_clearance = p["ball_d"] * 0.04
+    race_clearance = 0.04  # part.RACE_GAP: flat seamless running fit
+    # part.py: the outer land derives from the sampled recess over the
+    # ball-conformal groove bottom (mirror of _component_shapes)
+    outer_race_d = (p["pitch_d"] + p["ball_d"] + 2.0 * race_clearance
+                    - 2.0 * p["race_groove_depth"])
     inner_shoulder_r = inner_shoulder_d / 2.0
     outer_race_r = outer_race_d / 2.0
     pitch_r = p["pitch_d"] / 2.0
@@ -198,10 +201,19 @@ def check(p: dict) -> list[str]:
         bad.append("race_groove_depth nearly cuts through outer ring wall: outer ring outside surface must remain continuous")
     if not (p["bore_d"] < inner_shoulder_d < p["pitch_d"] < outer_race_d < p["outer_d"]):
         bad.append("raceway ordering invalid: bore < inner shoulder < pitch < outer race diameter < outside diameter must hold")
-    if inner_shoulder_r - p["race_groove_depth"] > pitch_r - ball_r - race_clearance:
-        bad.append("inner groove too shallow: ball would remain hidden behind the inner-ring shoulder")
-    if outer_race_r + p["race_groove_depth"] < pitch_r + ball_r + race_clearance:
-        bad.append("outer groove too shallow: ball would not fit the outer raceway opening")
+    # the U must read in section AND retain the balls: each land rises at
+    # least 0.18*ball_d over its groove bottom, and never past the ball centre
+    inner_recess = inner_shoulder_r - (pitch_r - ball_r - race_clearance)
+    if inner_recess < 0.07 * p["ball_d"]:
+        bad.append("inner raceway recess under 0.07*ball_d: the SKF d1 land cue keeps a real "
+                   "(if shallow) recess; less than this reads as a plain cylinder")
+    if inner_recess > ball_r:
+        bad.append("inner shoulder past the ball centre: balls could not be assembled")
+    if p["race_groove_depth"] < 0.18 * p["ball_d"]:
+        bad.append("outer raceway recess under 0.18*ball_d: groove would read as a flat land, not a U")
+    # the cage bands must keep a real annulus between the two lands
+    if outer_race_d - inner_shoulder_d < 2.0 * p["cage_t"] + 1.0:
+        bad.append("lands leave no annulus for the cage: outer_race_d - inner_shoulder_d must exceed 2*cage_t + 1")
 
     if p["ball_d"] >= p["width_B"] * 0.84:
         bad.append("ball_d >= 0.84*width_B: balls would protrude beyond open bearing end faces")

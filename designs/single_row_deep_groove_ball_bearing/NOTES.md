@@ -81,18 +81,26 @@ cylindrical surfaces, end chamfers, shoulders, and the central deep-groove
 raceway. This replaced an earlier simple annular-cylinder plus torus-cut
 prototype.
 
-- `raceway_clearance = max(0.16, min(0.20, ball_d * 0.035))`
-- `raceway_radius = ball_d / 2 + raceway_clearance`
-- `groove_half_width = min(width * 0.40, ball_d * (0.46 + min(race_groove_depth / ball_d, 0.24)))`
+- `RACE_GAP = 0.04` — flat running fit between ball and raceway, so the balls
+  read as seamlessly seated while every pairwise intersection stays exactly 0
+- `groove circle radius r_g = ball_d / 2 + RACE_GAP` — the raceway section is
+  the BALL-CONFORMAL circle about the ball centre, not a loose wider arc
+- `groove_half_width = min(width * 0.40, sqrt(depth * (2*r_g - depth)))` where
+  `depth` is how far the land recesses below the groove bottom — the exact
+  chord where the conformal circle meets the shoulder land
 - raceway groove cross-section: a TRUE circular arc (`threePointArc`) through
-  shoulder edge - groove bottom - shoulder edge, so the revolved raceway is a
-  smooth toroidal surface (no sampled-polyline facets); the arc radius follows
-  from those three points and stays above the ball radius (loose conformity),
-  which the per-designation clearance probe verifies
+  shoulder edge - groove bottom - shoulder edge; since all three points lie on
+  the conformal circle, the revolved raceway is the torus of radius r_g that
+  cradles the ball — a real U in section
+- outer land (SKF D2 cue retired): `outer_race_d = pitch_d + ball_d +
+  2*RACE_GAP - 2*race_groove_depth` — the sampled recess drives how far each
+  ball sinks behind the outer land (0.23-0.30 ball_d across the rows), so the
+  outer U is obvious in the cutaway instead of the earlier 0.062*ball_d lip;
+  the inner land keeps the SKF 6000 d1 anchor (its real recess is shallower)
 
 `race_groove_depth` is not image-derived. It is a proportion constrained by
-ring-wall continuity, ball-envelope clearance, and the need to keep a readable
-deep-groove shoulder in the preview.
+ring-wall continuity, ball retention (never past the ball centre), and the
+need to keep a readable deep-groove shoulder in the preview.
 
 ## Cage construction
 
