@@ -5,7 +5,7 @@ dimension is refined from that row; L/T types and dimensions are never mixed.
 ``shaft_rotation_deg`` is an operating pose only and changes no catalog value.
 """
 
-from part import GEAR_TEETH, TOOTH_FRACTION, _layout
+from part import _layout
 
 
 CATALOG_ROWS = [
@@ -299,7 +299,17 @@ def check(p: dict) -> list[str]:
 
     # Tooth thickness is chosen so equal gears reproduce the published
     # circumferential backlash at the pitch circle.
-    backlash = (1.0 - 2.0 * TOOTH_FRACTION) * 360.0 / GEAR_TEETH
+    # the tooth thickness is solved FROM the published backlash at this
+    # instance's tooth count, so the figure is reproduced by construction;
+    # what still needs checking is that the gear is proportioned like a real
+    # straight bevel: face width in the b/m 5.0-12 band, and b <= R/3
+    backlash = (1.0 - 2.0 * L["gear_tooth_fraction"]) * 360.0 / L["gear_teeth"]
     if not 2.5 <= backlash <= 3.5:
         bad.append("gear proportion must reproduce GN 3971 backlash 3 +/- 0.5 deg")
+    face = (L["gear_s_outer"] - L["gear_s_inner"]) * 2.0 ** 0.5
+    if not 5.0 <= face / L["gear_module"] <= 12.0:
+        bad.append("bevel face width outside the b/m 5.0-12 band: the rim would read "
+                   "as a sawblade (too few teeth) or the module is unrealistically fine")
+    if face > L["gear_s_outer"] * 2.0 ** 0.5 / 3.0 + 1e-6:
+        bad.append("bevel face width over R/3: outside straight-bevel practice")
     return bad

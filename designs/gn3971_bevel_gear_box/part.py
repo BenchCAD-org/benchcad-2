@@ -18,14 +18,16 @@ import cadquery as cq
 import math
 
 
-# z=24 rather than 16: with 16 the mean module came out so coarse that the
-# face width was only ~4.5 modules, below the 6-12 band a straight bevel gear
-# is normally proportioned to, and the teeth read as a sawblade rim instead of
-# a bevel gear. 24 teeth put b/m near 7 at every catalog size.
-# TOOTH_FRACTION follows so the PUBLISHED backlash is unchanged:
-# (1 - 2*0.395)*360/24 = 3.15 deg, the same figure the 16-tooth 0.43 gave.
-GEAR_TEETH = 24
-TOOTH_FRACTION = 0.395
+# The catalog publishes no gear data, so the tooth count follows from a REAL
+# module rather than being picked: choose the coarsest ISO 54 preferred module
+# that still leaves the face width at least 5.5 modules (straight bevel gears
+# are normally proportioned with b/m in the 6-12 band), then z = 2*r_mean/m.
+# A fixed 16 gave b/m 4.2-4.5 — the rim read as a sawblade; a fixed 24 fixed
+# that but drove the module to 0.45 on the smallest boxes, finer than a real
+# steel gearbox that size would use. The ladder keeps both honest.
+ISO54_MODULES = (0.6, 0.8, 1.0, 1.25)
+MIN_FACE_MODULES = 5.0
+BACKLASH_DEG = 3.15     # published GN 3971 circumferential backlash (3 +/- 0.5)
 FLANK_HALF_DEG = 20.0
 # Standard tooth proportions, measured PERPENDICULAR to the pitch cone:
 # addendum 1.0*m, dedendum 1.25*m (whole depth 2.25*m).  The tooth sections
@@ -39,8 +41,6 @@ ADDENDUM_RADIAL = 1.00 * _RADIAL
 DEDENDUM_RADIAL = 1.25 * _RADIAL
 # both are proportional to the module, and m = 2*r_mean/z, so the tip and root
 # cones are fixed multiples of the pitch cone regardless of size
-TIP_RATIO = 1.0 + 2.0 * ADDENDUM_RADIAL / GEAR_TEETH
-ROOT_RATIO = 1.0 - 2.0 * DEDENDUM_RADIAL / GEAR_TEETH
 RIM_WALL_FACTOR = 1.2   # heel rim under the root cone, in modules
 
 
@@ -93,10 +93,26 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     # wall on every catalog size
     s_outer = min(0.40 * b1, s_inner + 0.12 * b1)
     pitch_mean = 0.5 * (s_inner + s_outer)
-    module = 2.0 * pitch_mean / GEAR_TEETH
+    face = (s_outer - s_inner) * math.sqrt(2.0)     # face width along the cone
+    teeth, module = None, None
+    for m_pref in ISO54_MODULES:
+        # EVEN tooth counts only: the half-pitch mesh phase between two
+        # identical 45-degree gears only lands tooth-in-gap when z is even
+        z_try = max(12, 2 * int(round(pitch_mean / m_pref)))
+        m_act = 2.0 * pitch_mean / z_try
+        if face / m_act >= MIN_FACE_MODULES:
+            teeth, module = z_try, m_act
+    if teeth is None:                                # smallest module still wins
+        teeth = max(12, 2 * int(round(pitch_mean / ISO54_MODULES[0])))
+        module = 2.0 * pitch_mean / teeth
+    # tooth thickness follows from the PUBLISHED backlash at this tooth count,
+    # so the catalog figure is reproduced exactly at every size
+    tooth_fraction = 0.5 - BACKLASH_DEG * teeth / 720.0
     hub_length = 0.02 * b1
-    tip_outer = s_outer * TIP_RATIO
-    root_inner = s_inner * ROOT_RATIO
+    root_ratio = 1.0 - 2.0 * DEDENDUM_RADIAL / teeth
+    tip_ratio = 1.0 + 2.0 * ADDENDUM_RADIAL / teeth
+    tip_outer = s_outer * tip_ratio
+    root_inner = s_inner * root_ratio
     L.update({
         "gear_s_inner": s_inner,
         "gear_s_outer": s_outer,
@@ -105,7 +121,9 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
         "gear_hub_length": hub_length,
         "gear_tip_outer": tip_outer,
         "gear_root_inner": root_inner,
-        "gear_root_outer": s_outer * ROOT_RATIO,
+        "gear_root_outer": s_outer * root_ratio,
+        "gear_teeth": teeth,
+        "gear_tooth_fraction": tooth_fraction,
         "shaft_start": max(s_inner - hub_length,
                            0.5 * d1 + 0.02 * b1),
     })
@@ -450,6 +468,8 @@ def _bevel_gear_z(L, shaft_diameter_d1):
     s_o = L["gear_s_outer"]
     s_m = L["gear_pitch_mean"]
     module = L["gear_module"]
+    teeth = L["gear_teeth"]
+    tooth_fraction = L["gear_tooth_fraction"]
     tan_flank = math.tan(math.radians(FLANK_HALF_DEG))
 
     def root_radius(s):
@@ -467,7 +487,7 @@ def _bevel_gear_z(L, shaft_diameter_d1):
         root = root_radius(s)
         tip = tip_radius(s)
         height = tip - root
-        half_pitch_thickness = 0.5 * TOOTH_FRACTION * math.pi * module * scale
+        half_pitch_thickness = 0.5 * tooth_fraction * math.pi * module * scale
         # thickness tapers with the distance from the PITCH cone, measured
         # perpendicular to it — and the pitch line is not at mid-height
         # (addendum 1.0*m above, dedendum 1.25*m below).  Using half the total
@@ -492,8 +512,8 @@ def _bevel_gear_z(L, shaft_diameter_d1):
     tooth = cq.Solid.makeLoft(sections, True)
     teeth = [
         tooth.rotate(cq.Vector(0.0, 0.0, 0.0), cq.Vector(0.0, 0.0, 1.0),
-                     k * 360.0 / GEAR_TEETH)
-        for k in range(GEAR_TEETH)
+                     k * 360.0 / teeth)
+        for k in range(teeth)
     ]
     gear = core.fuse(*teeth)
 
@@ -573,7 +593,7 @@ def build(
         cq.Vector(0.0, 0.0, 0.0), cq.Vector(0.0, 1.0, 0.0), 90.0)
     # A half-pitch phase puts an input tooth in an output gap.  Equal and
     # opposite angular displacement then preserves the 1:1 bevel mesh.
-    mesh_phase = 180.0 / GEAR_TEETH
+    mesh_phase = 180.0 / L["gear_teeth"]
     input_gear = input_gear.rotate(
         cq.Vector(0.0, 0.0, 0.0), cq.Vector(1.0, 0.0, 0.0), mesh_phase)
 
