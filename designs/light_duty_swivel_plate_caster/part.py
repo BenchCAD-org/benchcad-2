@@ -34,7 +34,26 @@ def _derived_geometry(
     slot_w = max(3.0, 0.55 * axle_d) * slot_scale
     slot_l = 1.65 * slot_w
     wheel_edge_r = min(0.08 * wheel_width, 0.04 * wheel_d)
+    # Tread shoulder. The catalog publishes d1 and b but no section, so the
+    # shoulder is a proportion: a sphere through the shoulder radius rolls the
+    # tread off tangentially instead of cutting a fillet into a square corner.
+    # drop_max is where that sphere degenerates to the wheel radius itself;
+    # staying at 3/4 of it keeps every catalog row well inside that limit.
+    wheel_r = wheel_d / 2.0
+    half_b = wheel_width / 2.0
+    drop_max = wheel_r - math.sqrt(max(wheel_r * wheel_r - half_b * half_b, 0.0))
+    crown_drop = min(0.045 * wheel_d, 0.75 * drop_max)
+    crown_sphere_r = math.sqrt((wheel_r - crown_drop) ** 2 + half_b * half_b)
+    # Drawn seat + kingpin hole in the plate, both proportions (unpublished).
+    seat_d = 0.92 * upper_race_d
+    seat_depth = min(0.45 * plate_t, 0.9)
+    kingpin_d = max(3.0, 0.30 * upper_race_d)
     return {
+        "crown_drop": crown_drop,
+        "crown_sphere_r": crown_sphere_r,
+        "seat_d": seat_d,
+        "seat_depth": seat_depth,
+        "kingpin_d": kingpin_d,
         "plate_t": plate_t,
         "plate_corner_r": min(2.0, 0.04 * plate_min),
         "upper_race_d": upper_race_d,
@@ -111,7 +130,25 @@ def build_mounting_plate(
         .circle(g["upper_race_d"] / 2.0)
         .extrude(g["upper_race_h"] + 0.05)
     )
-    return plate.union(upper_race)
+    plate = plate.union(upper_race)
+
+    # The plate is a pressing, not a flat sheet: the product photo shows a
+    # drawn circular seat around the swivel axis with the kingpin hole through
+    # its floor. Neither is published, so both are proportions — and the seat
+    # is drawn DOWNWARD so the plate top stays exactly at overall_h.
+    seat = (
+        cq.Workplane("XY")
+        .workplane(offset=overall_h - g["seat_depth"])
+        .circle(g["seat_d"] / 2.0)
+        .extrude(g["seat_depth"] + 0.5)
+    )
+    kingpin = (
+        cq.Workplane("XY")
+        .workplane(offset=plate_bottom - g["upper_race_h"] - 0.5)
+        .circle(g["kingpin_d"] / 2.0)
+        .extrude(g["upper_race_h"] + plate_t + 1.0)
+    )
+    return plate.cut(seat).cut(kingpin)
 
 
 def build_swivel_fork(
@@ -167,21 +204,16 @@ def build_swivel_fork(
     )
 
     leg_top_z = lower_bottom + 0.15
+    # The leg stops at the axle centre line and is closed by a round lug
+    # concentric with the axle, the way the pressed leg ends on the product
+    # photo — not the square corner the straight polyline left below the bore.
+    lug_r = 0.95 * axle_d
     leg_profile = [
         (-0.28 * g["lower_race_d"], leg_top_z),
         (0.32 * g["lower_race_d"], leg_top_z),
-        (
-            swivel_offset + 0.95 * axle_d,
-            axle_z + 0.95 * axle_d,
-        ),
-        (
-            swivel_offset + 0.95 * axle_d,
-            axle_z - 0.85 * axle_d,
-        ),
-        (
-            swivel_offset - 0.95 * axle_d,
-            axle_z - 0.85 * axle_d,
-        ),
+        (swivel_offset + lug_r, axle_z + 0.95 * axle_d),
+        (swivel_offset + lug_r, axle_z),
+        (swivel_offset - lug_r, axle_z),
     ]
     centered_leg = (
         cq.Workplane("XZ")
@@ -189,6 +221,13 @@ def build_swivel_fork(
         .close()
         .extrude(g["fork_t"] / 2.0, both=True)
     )
+    lug = (
+        cq.Workplane("XZ")
+        .center(swivel_offset, axle_z)
+        .circle(lug_r)
+        .extrude(g["fork_t"] / 2.0, both=True)
+    )
+    centered_leg = centered_leg.union(lug)
     leg_y = (
         wheel_width / 2.0
         + g["side_clearance"]
@@ -243,7 +282,22 @@ def build_wheel(
         cq.Vector(0.0, 1.0, 0.0),
     )
     wheel = cq.Workplane("XY").newObject([wheel_solid])
-    wheel = wheel.edges("%CIRCLE").fillet(g["wheel_edge_r"])
+    # Shoulder the tread: intersecting the full-diameter cylinder with a sphere
+    # centred on the wheel keeps d1 across the middle of the band and then
+    # rolls the radius off tangentially to the shoulders, which is the rubber
+    # tyre section on the product photo. It replaces a constant-radius fillet
+    # on a square corner with one continuous surface. The flat side faces
+    # survive inside the shoulder radius, so the side recesses below still
+    # read as the wheel core.
+    crown = cq.Solid.makeSphere(
+        g["crown_sphere_r"],
+        cq.Vector(swivel_offset, 0.0, axle_z),
+        cq.Vector(0.0, 1.0, 0.0),
+        -90.0,
+        90.0,
+        360.0,
+    )
+    wheel = wheel.intersect(cq.Workplane("XY").newObject([crown]))
 
     # Shallow side recesses leave a raised tread rim and hub in one solid.
     recess_depth = min(1.5, 0.10 * wheel_width)

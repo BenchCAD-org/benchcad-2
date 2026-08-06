@@ -127,6 +127,22 @@ axle, but this benchmark returns one deterministic assembled reference pose.
   envelopes. Production bend radii, draft, ribs, and local blends are omitted.
 - Plate mounting slots are proportioned capsules because the catalog publishes
   their pitch but not their length or width.
+- The tread section is a proportion. `d1` and `b` are catalog values, the
+  profile is not, so the tread holds `d1` across the middle of the band and
+  rolls off tangentially to the shoulders — the rubber-tyre section on the
+  product photo. It is built as the full-diameter cylinder intersected with a
+  sphere of radius `sqrt((d1/2 - drop)^2 + (b/2)^2)` on the wheel centre, with
+  `drop = min(0.045*d1, 0.75*drop_max)` and `drop_max = d1/2 - sqrt((d1/2)^2 -
+  (b/2)^2)`, the drop at which that sphere degenerates to the wheel radius.
+  Measured: Ø60x24 holds 60.000 to y = ±6.7 and reaches 56.598 at the
+  shoulder; Ø80x24 holds 80.000 and reaches 77.495.
+- The plate is drawn, not flat: a circular seat around the swivel axis with the
+  kingpin hole through its floor, both proportions (`0.92 * upper_race_d`,
+  `min(0.45*t, 0.9)` deep, hole `max(3, 0.30 * upper_race_d)`). The seat is
+  pressed downward so the plate top stays exactly at the catalog `h`.
+- Each fork leg closes on a round lug of radius `0.95 * d2` concentric with the
+  axle rather than a square corner below the bore — the pressed leg end on the
+  photo. Still a proportion; the catalog dimensions no part of the leg.
 - Axle head and nut are simplified cylindrical envelopes. Threads, washers,
   wrench flats, and secondary fasteners are omitted.
 - Surface finish, tread hardness, temperature range, load rating, molded
