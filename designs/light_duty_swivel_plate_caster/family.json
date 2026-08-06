@@ -2,12 +2,12 @@
   "family": "light_duty_swivel_plate_caster",
   "standard": "JW Winco EN 22870 Form L",
   "base_plane": "XY",
-  "solids": 4,
+  "solids": 5,
   "components": [
     {
       "name": "mounting_plate",
       "quantity": 1,
-      "role": "Mounting plate and simplified upper swivel-race envelope"
+      "role": "Mounting plate, drawn swivel seat and upper race envelope"
     },
     {
       "name": "swivel_fork",
@@ -20,12 +20,17 @@
       "role": "Connected rubber-tread and polypropylene-core wheel envelope"
     },
     {
-      "name": "axle_fastener",
+      "name": "axle_bolt",
       "quantity": 1,
-      "role": "Simplified connected axle, head, and nut envelope"
+      "role": "ISO 4014 hex-head axle bolt, threaded end"
+    },
+    {
+      "name": "axle_nut",
+      "quantity": 1,
+      "role": "ISO 4032 hex nut on the axle bolt"
     }
   ],
-  "description": "Four-component unbraked Form L light-duty swivel plate caster with complete EN 22870 catalog-row coupling.",
+  "description": "Five-component unbraked Form L light-duty swivel plate caster with complete EN 22870 catalog-row coupling and a standard ISO 4014/4032 axle fastener pair.",
   "source": "JW Winco EN 22870 product page, metric dimension PDF, engineering drawing, product photograph, and documented proportion rules for unpublished construction details",
   "contributor": "sunzhenchuan007"
 }

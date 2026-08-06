@@ -143,8 +143,33 @@ axle, but this benchmark returns one deterministic assembled reference pose.
 - Each fork leg closes on a round lug of radius `0.95 * d2` concentric with the
   axle rather than a square corner below the bore — the pressed leg end on the
   photo. Still a proportion; the catalog dimensions no part of the leg.
-- Axle head and nut are simplified cylindrical envelopes. Threads, washers,
-  wrench flats, and secondary fasteners are omitted.
+- The axle is a **standard part, not a proportion**. The product photo shows a
+  hex head bearing on the fork leg, and the catalog publishes its nominal size
+  as `d2`, so it is modelled as an ISO 4014 hex-head bolt with an ISO 4032 hex
+  nut at ISO 261 coarse pitch:
+
+  | `d2` | rows | ISO 4014 `s` | ISO 4014 `k` | ISO 4032 `m` | pitch |
+  |---:|---|---:|---:|---:|---:|
+  | 5 | 40 | 8 | 3.5 | 4.7 | 0.8 |
+  | 6 | 50 / 60 / 80 | 10 | 4 | 5.2 | 1.0 |
+
+  Measured on the built solids, all four rows: head and nut across flats
+  8.000 / 10.000 and nut height 4.700 / 5.200 — the table values exactly.
+  Only these two sizes are tabulated; any other `d2` would fall back to
+  declared proportions rather than invent a standard row.
+- Thread form is the repo's axisymmetric ring stack, not a helix: one ring of
+  axial width `0.4*pitch` every pitch, because `makeHelix` silently no-ops on
+  scattered size/geometry combinations in the pinned cadquery/OCP. A thin
+  annulus between the minor and major radii measures **40 % fill on every
+  catalog size**, which is the ring duty cycle — the crests are present, not
+  silently missing. The core is turned down to the minor diameter over the
+  threaded length, as a cut thread is; the nut's internal rings sit on the
+  same axial grid offset half a pitch, so the pair reads engaged and measures
+  0.0000 mm³ of intersection.
+- Thread run length, and where the thread starts along the shank, are
+  proportions — ISO 4014 tabulates them but the caster catalog does not say
+  which bolt length is fitted.
+- Washers, wrench marks, thread coating and secondary fasteners are omitted.
 - Surface finish, tread hardness, temperature range, load rating, molded
   lettering, and thread-guard material are provenance metadata, not geometry.
 - No rigid bracket, brake, center hole, threaded stud, swivel animation, wheel
