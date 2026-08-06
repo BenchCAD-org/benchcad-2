@@ -7,6 +7,8 @@ hole pattern (keyhole 6.5 at the 30 offset, holes at 76 / 127, slot 8.5 at
 145) and the 10.5 pivot are drawing constants inside part.py.
 """
 
+import math
+
 PARAM_SPEC = {
     "plate_w": {
         "desc": "wall plate width",
@@ -37,12 +39,6 @@ PARAM_SPEC = {
         "unit": "mm",
         "range": {"easy": (200.0, 250.0), "medium": (180.0, 265.0), "hard": (170.0, 270.3)},
         "source": "BT77 drawing: 270.3 OVERALL depth; adjustable band (issue #7 table)",
-    },
-    "arm_h": {
-        "desc": "wall-end upright height of the arm weldment",
-        "unit": "mm",
-        "range": {"easy": (104.0, 116.0), "medium": (98.0, 122.0), "hard": (92.0, 128.0)},
-        "source": "BT77 drawing: 110.3",
     },
     "beam_w": {
         "desc": "arm beam square section",
@@ -107,11 +103,18 @@ PARAM_SPEC = {
         "source": "catalog: BT77 +/-10, BT332 +/-20 (issue #7 table)",
     },
     "tilt_pose": {
-        "desc": "sampled operating tilt of the cradle",
+        "desc": "sampled operating tilt of the whole arm about the wall pivot",
         "unit": "deg",
         "range": {"easy": (-10.0, 10.0), "medium": (-20.0, 20.0), "hard": (-20.0, 20.0)},
         "refine": True,
         "source": "operating state within the max_tilt class",
+    },
+    "swivel_pose": {
+        "desc": "sampled operating swivel of the clamp head about its post",
+        "unit": "deg",
+        "range": {"easy": (0.0, 0.0), "medium": (-60.0, 60.0), "hard": (-180.0, 180.0)},
+        "source": "operating state: the catalog swivel is 360 deg (issue #7 table); "
+                  "the tiers step from square-on to the full catalog travel",
     },
 }
 
@@ -137,8 +140,19 @@ def check(p):
         bad.append("knuckle disc too small for two offset slide bores (bar_off = 0.18*knuckle_d)")
     if p["plate_h"] < 230.0:
         bad.append("plate shorter than the 30 + 145 + slot hole pattern needs (BT77 layout)")
-    if p["arm_h"] > p["plate_h"] * 0.55:
-        bad.append("arm upright taller than half the plate: not a BT77 proportion")
+    # the lock bolt hangs 26 below the tilt axis and swings with the arm, so
+    # its rise across +/-max_tilt has to fit inside the 37.2 window with the
+    # bolt's own diameter subtracted — otherwise the bolt jams on the window
+    # end before the class's rated tilt is reached
+    rise = 26.0 * (1.0 - math.cos(math.radians(p["max_tilt"])))         + 26.0 * math.sin(math.radians(p["max_tilt"])) * 0.0
+    swing = 26.0 * math.sin(math.radians(p["max_tilt"]))
+    if max(rise, swing) > (37.2 - 8.0 - 0.4) / 2.0:
+        bad.append("tilt bolt would jam against the window ends before max_tilt: "
+                   "the 37.2 window only clears +/-(37.2 - bolt)/2 of travel")
+    # the clamp head must not swivel its jaws into the arm beam: the jaw bar
+    # sits above the beam top by the seat, and the jaw itself rises from there
+    if p["knuckle_t"] < p["bar_d"] + 8.0:
+        bad.append("knuckle too thin to capture the slide bars above the beam")
     if p["jaw_h"] < 45.0:
         bad.append("jaw plate under 45 cannot steady a cabinet (proportion)")
     return bad

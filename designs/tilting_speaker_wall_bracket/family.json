@@ -1,31 +1,35 @@
 {
-  "family": "tilting_speaker_wall_bracket",
-  "standard": "B-Tech BT77 / BT-series tilt+swivel speaker wall mount",
-  "base_plane": "YZ",
-  "description": "B-Tech BT77-class tilting speaker wall mount as a six-body clamp assembly: keyhole wall plate, welded standoff arm, round clamp knuckle, two sliding jaw bars with grip plates, and the tilting cradle on its 10.5 pivot post.",
-  "source": "B-Tech BT77 spec sheet (wall-plate holes, arm reach, tilt); BT1/BT15/BT332 line (reach/tilt ranges); plate/arm proportions",
-  "contributor": "BenchCAD-org",
-  "solids": 6,
-  "components": [
-    {
-      "name": "wall_plate",
-      "quantity": 1
-    },
-    {
-      "name": "arm",
-      "quantity": 1
-    },
-    {
-      "name": "knuckle",
-      "quantity": 1
-    },
-    {
-      "name": "jaw",
-      "quantity": 2
-    },
-    {
-      "name": "cradle",
-      "quantity": 1
-    }
-  ]
+ "family": "tilting_speaker_wall_bracket",
+ "standard": "B-Tech BT77 / BT-series tilt+swivel speaker wall mount",
+ "base_plane": "YZ",
+ "description": "B-Tech BT77-class tilt/swivel speaker wall mount modelled as the working mechanism: keyhole wall plate with the tilt boss and the 17.2 x 37.2 travel window, the arm clevis pivoting on it, the lock bolt riding that window (tilt), the clamp knuckle swivelling on the arm post (360 deg), and two jaw bars sliding through the knuckle under their clamp screws (grip width 132.4 to 280.3).",
+ "source": "B-Tech BT77 spec sheet (wall-plate holes, arm reach, tilt); BT1/BT15/BT332 line (reach/tilt ranges); plate/arm proportions",
+ "contributor": "BenchCAD-org",
+ "solids": 8,
+ "components": [
+  {
+   "name": "wall_plate",
+   "quantity": 1
+  },
+  {
+   "name": "arm",
+   "quantity": 1
+  },
+  {
+   "name": "tilt_bolt",
+   "quantity": 1
+  },
+  {
+   "name": "knuckle",
+   "quantity": 1
+  },
+  {
+   "name": "jaw",
+   "quantity": 2
+  },
+  {
+   "name": "clamp_screw",
+   "quantity": 2
+  }
+ ]
 }
