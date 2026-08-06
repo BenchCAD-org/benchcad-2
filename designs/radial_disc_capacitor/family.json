@@ -2,7 +2,7 @@
   "family": "radial_disc_capacitor",
   "standard": null,
   "base_plane": "XY",
-  "description": "Generic radial disc capacitor with two radial leads.",
+  "description": "Generic radial disc capacitor with a vertical disc body and two bent radial leads.",
   "source": "user-provided STEP measurements; proportion ranges",
   "contributor": "Zijian Guo"
 }

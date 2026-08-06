@@ -13,7 +13,7 @@ Generic radial disc capacitor family built from a user-provided STEP reference a
 
 ## Modeling notes
 
-- The body is a simple cylindrical disc.
-- The two leads are straight radial wires placed symmetrically about the centerline.
+- The body is a vertical cylindrical disc with a subtle domed top.
+- The two leads are bent radial wires, placed symmetrically about the centerline.
 - The default parameter set is chosen to produce a single valid solid with clean fusion.
 - Ranges marked as `proportion` are benchmark sampling ranges, not catalog limits.
