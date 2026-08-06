@@ -124,22 +124,32 @@ def _housing(module, z_ring, width, outer_d, face_t):
 
 
 def _carrier(pin_circle_r, n_planets, pin_d, width, disc_t, hub_d, out_d, out_len):
-    """Two discs, the planet pins between them and the output shaft, fused into
-    one body: nothing here moves relative to anything else here."""
-    z0 = -disc_t
-    back = cq.Workplane("XY").circle(pin_circle_r + pin_d).extrude(disc_t).translate((0, 0, z0))
-    front = cq.Workplane("XY").circle(pin_circle_r + pin_d).extrude(disc_t).translate((0, 0, width))
-    result = back.union(front)
+    """Disc-design carrier: ONE plate on the output side, the planet pins
+    cantilevered from it, and the output shaft — all one body, since nothing
+    here moves relative to anything else here.
+
+    A plate on both sides would box the gear train in. Neugart calls this
+    "planet carrier in disc design" and the reference cutaway shows the planets
+    open on the input side; the reference carrier measures 25.1 across against a
+    45.65 housing, i.e. a hub, not a lid."""
+    # The pin must sit strictly INSIDE the plate rim. Making the plate exactly
+    # tangent to the pin (plate_r == pin_circle_r + pin_d/2) leaves a zero-
+    # thickness knife edge that OCC cannot tessellate — it fails late, in the
+    # renderer, as `NbNodes` on a null triangulation.
+    plate_r = pin_circle_r + pin_d / 2.0 + max(0.4, 0.10 * pin_d)
+    result = (
+        cq.Workplane("XY").circle(plate_r).extrude(disc_t).translate((0, 0, width))
+    )
     for k in range(int(n_planets)):
         a = 2.0 * math.pi * k / n_planets
         result = result.union(
-            cq.Workplane("XY").circle(pin_d / 2.0).extrude(width + 2.0 * disc_t)
-            .translate((pin_circle_r * math.cos(a), pin_circle_r * math.sin(a), z0))
+            cq.Workplane("XY").circle(pin_d / 2.0).extrude(width + disc_t)
+            .translate((pin_circle_r * math.cos(a), pin_circle_r * math.sin(a), 0.0))
         )
-    hub = cq.Workplane("XY").circle(hub_d / 2.0).extrude(width + 2.0 * disc_t).translate((0, 0, z0))
+    hub = cq.Workplane("XY").circle(hub_d / 2.0).extrude(width + disc_t)
     shaft = (
-        cq.Workplane("XY").circle(out_d / 2.0).extrude(out_len + disc_t)
-        .translate((0.0, 0.0, width))
+        cq.Workplane("XY").circle(out_d / 2.0).extrude(out_len)
+        .translate((0.0, 0.0, width + disc_t))
     )
     return result.union(hub).union(shaft)
 
