@@ -276,21 +276,6 @@ def step_cutaway_mesh(step_path: Path):
     verts_raw, tris_raw = half.tessellate(0.05)
     verts = np.array([[v.x, v.y, v.z] for v in verts_raw], dtype=np.float64)
     tris = np.array([[a, b, c] for a, b, c in tris_raw], dtype=np.int64)
-    if len(verts) == 0 or len(tris) == 0:
-        # this pinned OCC's booleans can come back EMPTY on seam-heavy
-        # solids (observed on a cage half built from band+lip+cup unions).
-        # Fall back to a mesh-level half-section: tessellate the full solid
-        # and keep only triangles that reach the -Y half — no boolean at
-        # all, same reviewable half-view (just without the cap face).
-        verts_raw, tris_raw = solid.tessellate(0.05)
-        verts = np.array([[v.x, v.y, v.z] for v in verts_raw], dtype=np.float64)
-        tris = np.array([[a, b, c] for a, b, c in tris_raw], dtype=np.int64)
-        keep = (verts[tris][:, :, 1] <= yc + 1e-9).any(axis=1)
-        tris = tris[keep]
-        used = np.unique(tris)
-        remap = np.full(len(verts), -1, dtype=np.int64)
-        remap[used] = np.arange(len(used))
-        verts, tris = verts[used], remap[tris]
     lo, hi = verts.min(axis=0), verts.max(axis=0)
     center = (lo + hi) / 2.0
     longest = (hi - lo).max()
