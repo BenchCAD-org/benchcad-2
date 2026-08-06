@@ -274,8 +274,13 @@ def check(p: dict) -> list[str]:
     if usable_d7_depth >= input_shaft_length:
         bad.append("proportion: modeled d7 usable depth must fit inside each shaft solid")
 
-    if L["gear_root_inner"] <= 0.5 * p["shaft_diameter_d1"]:
-        bad.append("proportion: bevel-gear small-end root must surround the d1 shaft bore")
+    # the rim that carries the teeth is measured at the HEEL, where the root
+    # cone is largest; the toe of a bevel gear on a through shaft is always
+    # thin, so a toe-only rule would either be meaningless or reject the line
+    heel_rim = L["gear_root_outer"] - 0.5 * p["shaft_diameter_d1"]
+    if heel_rim < 1.2 * L["gear_module"]:
+        bad.append("proportion: bevel-gear heel rim under 1.2*m between root cone and "
+                   "bore: the toothed rim would be a shell, not a blank")
     if L["shaft_start"] <= 0.5 * p["shaft_diameter_d1"]:
         bad.append("proportion: each shaft end must stop outside the perpendicular shaft radius")
     if L["shaft_start"] >= L["gear_s_inner"]:

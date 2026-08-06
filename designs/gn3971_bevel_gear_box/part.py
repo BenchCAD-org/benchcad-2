@@ -18,8 +18,14 @@ import cadquery as cq
 import math
 
 
-GEAR_TEETH = 16
-TOOTH_FRACTION = 0.43
+# z=24 rather than 16: with 16 the mean module came out so coarse that the
+# face width was only ~4.5 modules, below the 6-12 band a straight bevel gear
+# is normally proportioned to, and the teeth read as a sawblade rim instead of
+# a bevel gear. 24 teeth put b/m near 7 at every catalog size.
+# TOOTH_FRACTION follows so the PUBLISHED backlash is unchanged:
+# (1 - 2*0.395)*360/24 = 3.15 deg, the same figure the 16-tooth 0.43 gave.
+GEAR_TEETH = 24
+TOOTH_FRACTION = 0.395
 FLANK_HALF_DEG = 20.0
 # Standard tooth proportions, measured PERPENDICULAR to the pitch cone:
 # addendum 1.0*m, dedendum 1.25*m (whole depth 2.25*m).  The tooth sections
@@ -35,6 +41,7 @@ DEDENDUM_RADIAL = 1.25 * _RADIAL
 # cones are fixed multiples of the pitch cone regardless of size
 TIP_RATIO = 1.0 + 2.0 * ADDENDUM_RADIAL / GEAR_TEETH
 ROOT_RATIO = 1.0 - 2.0 * DEDENDUM_RADIAL / GEAR_TEETH
+RIM_WALL_FACTOR = 1.2   # heel rim under the root cone, in modules
 
 
 def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
@@ -76,12 +83,15 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     # Both pitch cones are 45 degrees because the documented ratio is 1:1
     # and the shaft angle is 90 degrees.  The tooth count and face width are
     # proportions; the shaft bore sets the lower bound on the small end.
-    # the small end must sit far enough out that the FULL-depth root cone still
-    # clears the shaft bore (root_inner = ROOT_RATIO * s_inner)
-    s_inner = max(0.24 * b1, (0.5 * d1 + 0.30) / ROOT_RATIO)
+    # Face limits from the casting envelope. With the full-depth root cone the
+    # blank must still be a blank: the rim that carries the teeth is checked at
+    # the HEEL (spec.check), where the root cone is largest. Deepening the root
+    # without that guard is what left the teeth standing on a 0.3 mm shell, so
+    # the gear read as a crown of loose fins rather than a bevel gear.
+    s_inner = max(0.24 * b1, 0.5 * d1 + 0.035 * b1)
     # the large end is capped so the full-depth tip cone still leaves a b1 side
     # wall on every catalog size
-    s_outer = min(0.38 * b1, s_inner + 0.12 * b1)
+    s_outer = min(0.40 * b1, s_inner + 0.12 * b1)
     pitch_mean = 0.5 * (s_inner + s_outer)
     module = 2.0 * pitch_mean / GEAR_TEETH
     hub_length = 0.02 * b1
@@ -95,6 +105,7 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
         "gear_hub_length": hub_length,
         "gear_tip_outer": tip_outer,
         "gear_root_inner": root_inner,
+        "gear_root_outer": s_outer * ROOT_RATIO,
         "shaft_start": max(s_inner - hub_length,
                            0.5 * d1 + 0.02 * b1),
     })
@@ -495,6 +506,8 @@ def _bevel_gear_z(L, shaft_diameter_d1):
         hub_outer, L["gear_hub_length"] + 0.20 * module,
         cq.Vector(0.0, 0.0, hub_start), cq.Vector(0.0, 0.0, 1.0))
     gear = gear.fuse(hub)
+    # Through bore: on the Type-T box the output shaft runs the full height of
+    # the housing to its second bearing, so it must pass through its gear.
     bore = cq.Solid.makeCylinder(
         0.5 * shaft_diameter_d1,
         s_o - hub_start + 1.0,
