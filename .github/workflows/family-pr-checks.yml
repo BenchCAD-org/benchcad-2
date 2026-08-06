@@ -3,7 +3,10 @@ name: family-pr-checks
 #   validate.yml            — the design actually runs (bench2 validate)
 #   require-issue-link.yml  — the body links its family issue (Closes #N)
 # This job enforces the "one family = one PR" scope and that the family ships a
-# complete package: its three source files AND the three committed renders
+# complete package. The one exception is a metadata-only sweep — a diff whose
+# designs/ side is spec.py files only, which can move no geometry and no
+# committed render — so repo-wide upkeep is one PR instead of N identical ones
+# (step 0). Complete package: its three source files AND the three committed renders
 # (the easy/medium/hard grid, the four benchmark views, and the min/max
 # extremes). Requirements a human used to eyeball are now red/green.
 # `preview_hard_zoom.png` (the fourth render, front/side/top/iso of a hard
@@ -46,6 +49,21 @@ jobs:
           # non-family PR (nothing under designs/): nothing to gate — pass
           if [ "$NF" -eq 0 ]; then
             echo "Not a family PR (no designs/ changes) — family-pr-checks passes as a no-op."
+            exit 0
+          fi
+
+          # 0) a metadata-only SWEEP may span families: it changes nothing under
+          # designs/ except spec.py files, so no part.py, no family.json and no
+          # committed render can move — the geometry and the acceptance images
+          # are untouchable by construction. That is what repo-wide upkeep looks
+          # like (dropping a spec key the framework no longer reads), and it
+          # would otherwise arrive as N near-identical PRs that differ only in
+          # the family name. validate still runs on every family in the sweep.
+          # Only designs/ scope is judged here; this gate has never restricted
+          # paths outside designs/ (a pure framework PR passes as a no-op above).
+          DESIGN_NONSPEC=$(echo "$DIFF" | grep -E '^designs/' | grep -vE '^designs/[^/]+/spec\.py$' | grep . || true)
+          if [ "$NF" -gt 1 ] && [ -z "$DESIGN_NONSPEC" ]; then
+            echo "Metadata-only sweep across ${NF} families ($(echo $FAMS)) — designs/ diff is spec.py only, so one-family scope is waived."
             exit 0
           fi
 
@@ -166,7 +184,7 @@ jobs:
               try {
                 const { data: issue } = await github.rest.issues.get({
                   owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(m[1]) });
-                const t = (issue.title || '').match(/\[(?:family|proposal)\]\s*([a-z0-9_]+)/i);
+                const t = (issue.title || '').match(/\[(?:family-assembly|family|proposal)\]\s*([a-z0-9_]+)/i);
                 if (t && t[1] !== fam) {
                   core.setFailed(
                     `This PR changes designs/${fam}/ but links issue #${m[1]} ("${t[1]}"). The family dir, ` +
