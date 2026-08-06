@@ -95,7 +95,7 @@ verified the issue's evidence at claim time, per CONTRIBUTING.md) · Verified =
 approving [reviewer](REVIEWING.md).
 "bootstrap (pre-SOP)" marks the reference designs that predate this workflow.*
 """
-    (root / "CONTRIBUTORS.md").write_text(out)
+    (root / "docs" / "CONTRIBUTORS.md").write_text(out)
     print(f"CONTRIBUTORS.md: {len(rows)} families")
 
 
