@@ -213,7 +213,11 @@ one solid:
 - `output_bearing_inner`, `output_bearing_outer` × 2, `output_bearing_ball`
 - `case_screw` × `n_case_screws`
 
-Fourteen component types; 38 bodies at three planets, 51 at six.
+Fourteen component types. The body count runs 38 to 57 across the difficulty
+range — `bench2 validate --seeds 2` measured 38, 40, 44, 47, 48 and 57. The
+largest is six planets with eight tie bolts and a twenty-ball bearing pair:
+1 housing + 1 sun + 1 adapter + 1 clamp hub + 1 head + 1 seal + 1 carrier
++ 6 planets + 6 bushings + 6 rings + 2 + 2 races + 20 balls + 8 screws = 57.
 
 **The sun is deliberately not carried on its own bearing.** A floating sun is how
 this class shares load between the planets — the clamping hub and the motor shaft
