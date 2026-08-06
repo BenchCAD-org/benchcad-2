@@ -11,8 +11,8 @@ One command, no manual setup:
 1. installs CQ-editor on first use (`uv run --group editor`, ~1 min, then cached);
 2. appends a *scratch block* to `part.py` — a sampled `PARAMS` dict plus the
    `show_object(build(**PARAMS))` call CQ-editor needs in order to draw anything;
-3. opens CQ-editor on that file — edit `build()`/`PARAMS`, press **F5** to
-   re-render, save with ⌘S/Ctrl-S;
+3. opens CQ-editor on that file — press **F5** to render (the part appears
+   on the first F5, not on open), edit `build()`/`PARAMS`, save with ⌘S/Ctrl-S;
 4. removes the scratch block again when you close the editor, so `part.py` goes
    back to the clean `build()` the benchmark derives its programs from. Your
    edits above the block are kept. (`bench2 validate` fails if a block is still
@@ -43,7 +43,7 @@ PARAMS = dict(
     {params}
 )
 try:
-    show_object(build(**PARAMS), name="{family}")   # press F5 in CQ-editor
+    show_object(build(**PARAMS), name="{family}")   # F5 in CQ-editor draws this
 except NameError:                                   # plain import: no viewer
     pass
 {end}
@@ -74,6 +74,12 @@ def strip_block(path: Path) -> bool:
             continue
         head, _, tail = src.partition(mark)
         rest = tail.partition(MARK_END)[2] if (mark == MARK_START and MARK_END in tail) else ""
+        if mark == LEGACY_MARK and "def " in tail:
+            # legacy blocks have no end sentinel; a mark that still has code
+            # after it was hand-moved mid-file — refuse to eat that code
+            print(f"bench2 edit: legacy debug mark mid-file in {path} (code "
+                  "follows it) — not stripping; remove it by hand")
+            return False
         path.write_text((head.rstrip() + "\n" + rest.lstrip("\n")).rstrip() + "\n")
         return True
     return False
@@ -139,7 +145,7 @@ def _launch(path: Path) -> int:
             return 1
         cmd = [sys.executable, "-c", _BOOT, str(path)]
 
-    print(f"  editor    : opening {path} — edit build()/PARAMS, press F5 to re-render.")
+    print(f"  editor    : opening {path} — press F5 to render (first draw included), edit build()/PARAMS.")
     print("              Close the editor window when you're done; the scratch")
     print("              block is removed automatically.")
     try:
@@ -176,6 +182,16 @@ def edit_part(path: Path, family: str, fam_dir: Path | None,
 def cmd_edit(family: str | None, file: str | None, diff: str, seed: int,
              overrides: list[str], strip_only: bool) -> int:
     if file:
+        if family:
+            # with --file the family positional is unused, so argparse parks
+            # the first k=v override there — reclaim it, and refuse a real
+            # family name so nothing is ever silently swallowed
+            if "=" in family:
+                overrides = [family] + list(overrides)
+            else:
+                print("bench2 edit: --file and a family name are mutually "
+                      f"exclusive (got --file {file} and {family!r})")
+                return 2
         path = Path(file).resolve()
         if not path.is_file():
             print(f"bench2 edit: no such file: {file}")

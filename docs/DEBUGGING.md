@@ -3,7 +3,7 @@
 `bench2 preview` gives you PNGs. To *rotate, section, and tweak* a part live:
 
 ```bash
-uv run bench2 edit my_family      # opens part.py in CQ-editor — edit, press F5
+uv run bench2 edit my_family      # opens part.py in CQ-editor — press F5 to draw
 ```
 
 That is the whole setup — the editor installs itself on first run. Details in
@@ -49,8 +49,8 @@ One command, no setup step. It
 2. samples a valid instance (honouring `spec.check`), applies any `key=value`
    overrides, and appends a **scratch block** to `part.py` — the `PARAMS` dict
    plus the `show_object(build(**PARAMS))` call CQ-editor needs to draw anything;
-3. opens the editor on that file: edit `build()` / `PARAMS`, press **F5** to
-   re-render, ⌘S/Ctrl-S to save;
+3. opens the editor on that file: press **F5** to render (the part appears on
+   the first F5, not on open), edit `build()` / `PARAMS`, ⌘S/Ctrl-S to save;
 4. **removes the scratch block when you close the editor**, so `part.py` goes back
    to the clean `build()` the benchmark derives programs from. Your edits above
    the block are kept.
@@ -90,7 +90,7 @@ viewer the tool writes a `*.step` you can open in FreeCAD.
 ```bash
 bench2 new my_family          # scaffolds designs/my_family/{part,spec,family}.py
 # write build() in part.py — keep it clean; iterate on it live in CQ-editor:
-uv run bench2 edit my_family  # F5 to re-render; the scratch block auto-removes on close
+uv run bench2 edit my_family  # F5 renders; the scratch block auto-removes on close
 bench2 validate my_family     # the machine gates
 ```
 

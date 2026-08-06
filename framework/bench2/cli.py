@@ -1,7 +1,7 @@
 """bench2 — the BenchCAD 2.0 contributor CLI.
 
     bench2 new <family>            scaffold designs/<family>/ from the template
-    bench2 edit <family>           open part.py in CQ-editor (live 3D, F5 to re-render)
+    bench2 edit <family>           open part.py in CQ-editor (live 3D; F5 renders)
     bench2 validate <family>       run every machine gate locally (same as CI)
     bench2 preview <family>        render a difficulty x seed grid PNG
     bench2 preview-parts <family>  render assembly components + highlight rows
