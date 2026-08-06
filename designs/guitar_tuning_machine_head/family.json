@@ -1,27 +1,31 @@
 {
-  "family": "guitar_tuning_machine_head",
-  "standard": null,
-  "base_plane": "XY",
-  "description": "Sealed geared guitar tuning machine (Grover Rotomatic 102 class) as a four-part assembly: die-cast housing with outboard screw ear, string post with transverse string hole, pear tuning button on the key shaft, and the separate peghole bushing (press-in collar or hex ferrule).",
-  "source": "Grover Rotomatic 102 + Gotoh SG381 dimensioned drawings (post/bushing/housing/mount); proportion for housing depth and key shaft",
-  "contributor": "BenchCAD-org",
-  "solids": 4,
-  "components": [
-    {
-      "name": "housing",
-      "quantity": 1
-    },
-    {
-      "name": "post",
-      "quantity": 1
-    },
-    {
-      "name": "button",
-      "quantity": 1
-    },
-    {
-      "name": "bushing",
-      "quantity": 1
-    }
-  ]
+ "family": "guitar_tuning_machine_head",
+ "standard": null,
+ "base_plane": "XY",
+ "description": "Sealed geared guitar tuning machine (Grover Rotomatic 102 class) as a five-part assembly with its real gear train: die-cast housing, string post, worm WHEEL on the post (tooth count = catalog ratio, 14:1 Grover / 16:1 Gotoh), the tuning button whose key shaft carries the single-start WORM, and the separate peghole bushing.",
+ "source": "Grover Rotomatic 102 + Gotoh SG381 dimensioned drawings (post/bushing/housing/mount); gear ratios: grotro.com (102 series 14:1), g-gotoh.com (SG381 1:16); proportion for housing depth and key shaft",
+ "contributor": "BenchCAD-org",
+ "solids": 5,
+ "components": [
+  {
+   "name": "housing",
+   "quantity": 1
+  },
+  {
+   "name": "post",
+   "quantity": 1
+  },
+  {
+   "name": "worm_wheel",
+   "quantity": 1
+  },
+  {
+   "name": "button",
+   "quantity": 1
+  },
+  {
+   "name": "bushing",
+   "quantity": 1
+  }
+ ]
 }
