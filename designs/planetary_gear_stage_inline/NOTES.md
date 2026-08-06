@@ -94,27 +94,132 @@ from it and the file is not in this repository.
 
 | quantity | value | basis |
 |---|---|---|
-| involute samples per flank | 14 | enough that the flank error is well under a render pixel at these sizes |
-| housing rim | `0.16 × m·z_ring` over the ring root | proportion |
-| planet pin diameter | `0.42 × m·z_planet` | proportion — a pin that fits under the planet root with a bearing seat |
-| planet bore clearance | `0.12 × pin` | proportion |
+| involute samples per flank | 14 | measured: raising it to 22 or 30 changes the mesh interference by 0.001 mm³, so 14 is not the limiting error |
+| circumferential backlash | `0.08 × module`, taken off the external members | real gears are cut with backlash (DIN 3967 tolerance series). Measured contribution to mesh clearance is small; it is here because zero-backlash is not a manufacturable condition, not because it fixes anything |
+| planet pin diameter | `0.34 × m·z_planet` | proportion — a pin that fits under the planet root with a bushing wall over it |
+| bushing wall | `0.18 × pin`, floor 0.35 mm | proportion |
 | carrier disc thickness | `0.55 × face_width` | proportion |
-| carrier hub diameter | `1.9 × pin` | proportion |
+| carrier plate radius | pin circle + pin/2 + `max(0.4, 0.10 × pin)` | proportion, and the margin is load-bearing: making the plate tangent to the pins leaves a knife edge OCC cannot tessellate |
+| planet end float | `max(0.15, 0.03 × face_width)` | proportion; it also keeps the carrier plate from sharing a face with the planets, which turns a contact into a boolean sliver |
 | sun shaft diameter | `0.62 ×` sun root diameter | proportion; `check()` also forbids it reaching the root circle |
 | face width band | 3–16 × module | shop practice; this class runs about 6–12 × |
+| clamp hub OD | `1.85 × sun_shaft_d` | proportion |
+| minimum wall over a bolt or bearing seat | 1.5 mm | proportion |
 
-`carrier_angle` is an operating state, not a dimension. Each planet is counter-
-rotated by `−angle · z_sun/z_planet` as the carrier turns so the teeth stay
-meshed — without that the planets would slide through the sun in the preview.
+**`housing_od` is no longer a proportion.** It is now the larger of the old rim
+formula and `housing_od_min()` — the diameter at which the tie bolts clear both
+the ring root and the output bearing seat with a wall on each side. That function
+lives in `part.py` and is called by `spec.refine()`, `spec.check()` and the build,
+so the three cannot disagree about the wall.
+
+**The bearings, the seal, the retaining rings and the screws are selected, not
+proportioned.** `_BEARING_60` is ISO 15 / DIN 625-1 series 60, `_SEAL_A` is
+DIN 3760 form A, `_SHCS` is ISO 4762. The output journal picks the smallest row
+that accepts it; if the shaft runs off the top of the table the draw is rejected
+rather than a bearing invented for it.
+
+## Tooth phase and the rolling ratio — derived, then measured
+
+Two things here were wrong in the first revision and are worth writing down,
+because neither is visible in any rendered view.
+
+**The planets were on the wrong rolling ratio.** The old code spun each planet by
+`−angle · z_sun/z_planet`. That is the planet's speed *relative to the carrier*.
+With the ring held, the absolute planet rotation is
+
+```
+w_planet / w_carrier = 1 − z_ring/z_planet = −(z_sun + z_planet)/z_planet
+```
+
+**And the sun was never rotated at all.** With the ring held, a carrier at
+`carrier_angle` implies a sun at `(1 + z_ring/z_sun) · carrier_angle`. Leaving it
+still is not a still picture of the mechanism; it is a picture of the sun's teeth
+driven through the planets'.
+
+**The tooth phases have to satisfy two meshes at once.** `_gear_profile` puts a
+tooth centre at angle 0 for both the external and the internal form. A planet on
+the +X axis needs a tooth space facing the sun (local 180°) and, against a ring
+with a tooth at 0°, a space facing the ring too (local 0°). Both are space centres
+only when 180° is a whole number of space pitches — that is, only when
+`z_planet` is **even**. For an odd planet the ring takes a half-pitch shift
+instead and the planet presents a tooth to the ring, a space to the sun:
+
+```
+z_planet even :  ring_phase = 0          planet_phase = 180 − 180/z_planet
+z_planet odd  :  ring_phase = 180/z_ring planet_phase = 0
+```
+
+This was checked rather than assumed: sweeping the planet phase ±half a tooth
+about the derived value, the mesh interference volume is a symmetric minimum
+exactly at it, in both the even and the odd branch.
+
+## The undercut that made every mesh interfere
+
+The first revision clamped the external root radius to the **base** circle:
+`r_root = max(r_pitch − 1.25m, r_base)`. Below 17 teeth at 20° the base circle
+sits *above* the dedendum circle, so that clamp leaves the tooth space too
+shallow and the mating tip drives into solid metal. Every sun/planet and
+planet/ring pair interfered, by 2–15 mm³ each.
+
+It looked like a tolerance problem and it is not one — tripling the backlash
+moved it by 25% and doubling the flank sampling moved it by 0.05%. The flank now
+runs to the true dedendum circle; `_half_angle` clamps `r` to `r_base`, so below
+the base circle the profile continues as a radial line, the usual stand-in for
+the trochoid. Mesh interference then measures **exactly zero**.
+
+## Three ways one small part fell apart
+
+The input clamping hub is a C-ring with a slit and a screw across it, and it took
+three separate fixes to stay a single body. All three showed up in `validate` only
+as "produced 59 solid(s) but the family declares 57":
+
+1. **The clamp screw was drilled down the axis.** It has to pass through a boss
+   beside the slit, not through the bore.
+2. **The screw envelope reached back inside the tube wall**, which cuts a slot
+   through the wall for its whole length and severs the ring. The boss is now
+   placed so the hole clears the outside diameter.
+3. **The boss was shorter than the screw diameter**, so its own hole cut it in
+   half and the two ears fell off. `clamp_boss_h()` now sizes the boss from the
+   screw and `clamp_length()` sizes the hub from the boss.
+
+A fourth, found by the interference check rather than the solid count: **the boss
+is a box, so its corners sweep further than its radial extent**, and the adapter
+cavity has to clear `hypot(boss_r, boss_w/2)` rather than `boss_r`.
+
+## Interference is checked, not assumed
+
+Every pair of solids in the assembly is intersected and the common volume
+measured, at both the smallest and the largest instance. The result is 0 for
+every pair. This is worth doing because `bench2 validate` cannot catch it: it
+checks solid count and non-degeneracy, and two solids occupying the same space
+are individually perfectly valid. The first revision shipped a carrier with
+**31% of its volume inside the housing** and passed 12/12.
 
 ## Body decomposition
 
 Per the category rule (#178), bodies that never move relative to each other are
 one solid:
 
-- `housing_ring_gear` — the ring is machined into the bore, not pressed in
+- `housing_ring_gear` — the ring is machined into the bore, not pressed in; the
+  rear wall and the tie-bolt holes are the same body
 - `sun_shaft` — sun cut on the input shaft
-- `carrier_output` — two discs, the planet pins and the output shaft
-- `planet_gear` × `n_planets` — the only parts with a degree of freedom
+- `carrier_output` — the plate, the planet pins, the bearing journal and the
+  output shaft. There is deliberately **no hub on the gear side**: the sun
+  occupies that axis
+- `output_bearing_head` — bearing seats, seal seat and the machine mounting
+  flange are one casting
+- `motor_adapter`, `input_clamp_hub`, `output_shaft_seal`
+- `planet_gear`, `planet_bushing`, `planet_retaining_ring` × `n_planets`
+- `output_bearing_inner`, `output_bearing_outer` × 2, `output_bearing_ball`
+- `case_screw` × `n_case_screws`
 
-Bearings are omitted. Four component types, `3 + n_planets` bodies.
+Fourteen component types; 38 bodies at three planets, 51 at six.
+
+**The sun is deliberately not carried on its own bearing.** A floating sun is how
+this class shares load between the planets — the clamping hub and the motor shaft
+are its only support. That is why the hub is modelled: it is what makes the
+floating sun an explicit design decision rather than a missing part.
+
+**The planet bushing is flanged** rather than a plain sleeve plus two loose thrust
+washers. Both are real constructions; the flanged one is one body per planet
+instead of three, and it puts the thrust face where the load actually is.
