@@ -1,19 +1,36 @@
-# radial_disc_capacitor
+# smd_aluminum_electrolytic_capacitor
 
-Generic radial disc capacitor family built from a user-provided STEP reference and proportion-based ranges.
+Generic SMD aluminum electrolytic capacitor family built from a user-provided
+STEP reference and proportion-based sampling ranges.
 
-## Geometric interpretation
+## STEP interpretation
 
-- `body_diameter`: overall disc diameter
-- `body_thickness`: axial thickness of the disc body
-- `lead_spacing`: center-to-center spacing between the two radial leads
-- `lead_diameter`: lead wire diameter
-- `lead_length`: exposed lead length below the body
-- `lead_embed`: overlap used to fuse the leads into the body
+- The reference is a CAP-SMD style aluminum electrolytic capacitor, not a
+  through-hole radial disc capacitor.
+- The visible package has a vertical cylindrical can, a molded rectangular
+  base, and two surface-mount terminal pads.
+- The measured reference envelope is approximately 8.8 mm x 8.1 mm x 9.3 mm.
+- The cylindrical can diameter is approximately 6.3 mm.
+- The can body above the base is approximately 7.7 mm tall.
+- The base is approximately 1.6 mm thick.
+
+## Geometric parameters
+
+- `body_diameter`: can diameter.
+- `can_height`: can height above the molded SMD base.
+- `base_length`: overall base length, including the terminal carrier.
+- `base_width`: overall base width.
+- `base_thickness`: molded plastic base thickness.
+- `terminal_span`: placement span for the two SMD terminal pads.
+- `terminal_width`: visible terminal pad width.
+- `terminal_thickness`: terminal pad thickness.
+- `rim_radius`: small can rim / edge blend radius.
 
 ## Modeling notes
 
-- The body is a vertical cylindrical disc with a subtle domed top.
-- The two leads are bent radial wires, placed symmetrically about the centerline.
-- The default parameter set is chosen to produce a single valid solid with clean fusion.
-- Ranges marked as `proportion` are benchmark sampling ranges, not catalog limits.
+- The formal CAD is self-contained and does not load the source STEP file.
+- The reference STEP is used only as measurement evidence during development.
+- Ranges marked as `proportion` are benchmark sampling ranges, not catalog
+  limits or capacitance-to-size rules.
+- Manufacturer branding, printed polarity marks, material color, and fine
+  stamping details are deliberately omitted.

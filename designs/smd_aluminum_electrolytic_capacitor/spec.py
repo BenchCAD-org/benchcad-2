@@ -1,72 +1,66 @@
-from bench2 import Resample
-
-
 PARAM_SPEC = {
     "body_diameter": {
-        "desc": "Overall capacitor body diameter",
+        "desc": "Diameter of the vertical aluminum capacitor can",
         "unit": "mm",
-        "range": {
-            "easy": (6.0, 6.6),
-            "medium": (5.8, 6.9),
-            "hard": (5.6, 7.3),
-        },
-        "source": "user-provided STEP measurements; proportion",
+        "range": {"easy": (6.1, 6.5), "medium": (5.8, 6.9), "hard": (5.5, 7.4)},
+        "source": "STEP measurement; proportion",
         "askable": True,
     },
-    "body_thickness": {
-        "desc": "Axial thickness of the disc body",
+    "can_height": {
+        "desc": "Height of the cylindrical can above the plastic SMD base",
         "unit": "mm",
-        "range": {
-            "easy": (2.2, 2.8),
-            "medium": (2.0, 3.2),
-            "hard": (1.9, 3.6),
-        },
-        "source": "user-provided STEP measurements; proportion",
+        "range": {"easy": (7.3, 8.0), "medium": (6.9, 8.4), "hard": (6.4, 9.0)},
+        "source": "STEP measurement; proportion",
         "askable": True,
     },
-    "lead_spacing": {
-        "desc": "Center-to-center spacing between the radial leads",
+    "base_length": {
+        "desc": "Overall length of the rectangular SMD base and terminal carrier",
         "unit": "mm",
-        "range": {
-            "easy": (6.8, 7.8),
-            "medium": (6.4, 8.2),
-            "hard": (6.0, 8.6),
-        },
-        "source": "user-provided STEP measurements; proportion",
+        "range": {"easy": (8.4, 9.2), "medium": (8.0, 9.7), "hard": (7.5, 10.4)},
+        "source": "STEP measurement; proportion",
         "askable": True,
     },
-    "lead_diameter": {
-        "desc": "Diameter of each radial lead wire",
+    "base_width": {
+        "desc": "Overall width of the rectangular SMD base",
         "unit": "mm",
-        "range": {
-            "easy": (0.6, 0.8),
-            "medium": (0.5, 0.9),
-            "hard": (0.45, 1.0),
-        },
-        "source": "user-provided STEP measurements; proportion",
+        "range": {"easy": (7.7, 8.5), "medium": (7.3, 8.9), "hard": (6.9, 9.5)},
+        "source": "STEP measurement; proportion",
         "askable": True,
     },
-    "lead_length": {
-        "desc": "Free lead length below the body",
+    "base_thickness": {
+        "desc": "Thickness of the plastic base below the capacitor can",
         "unit": "mm",
-        "range": {
-            "easy": (4.8, 5.8),
-            "medium": (4.6, 6.6),
-            "hard": (4.4, 7.0),
-        },
-        "source": "user-provided STEP measurements; proportion",
+        "range": {"easy": (1.4, 1.8), "medium": (1.25, 2.0), "hard": (1.1, 2.25)},
+        "source": "STEP measurement; proportion",
         "askable": True,
     },
-    "lead_embed": {
-        "desc": "How far each lead penetrates into the body for fusion",
+    "terminal_span": {
+        "desc": "Center-to-center span used to place the two SMD terminal pads",
         "unit": "mm",
-        "range": {
-            "easy": (0.35, 0.7),
-            "medium": (0.3, 0.9),
-            "hard": (0.25, 1.0),
-        },
+        "range": {"easy": (6.9, 7.7), "medium": (6.5, 8.1), "hard": (6.0, 8.7)},
+        "source": "STEP measurement; proportion",
+        "askable": True,
+    },
+    "terminal_width": {
+        "desc": "Width of each visible SMD terminal pad",
+        "unit": "mm",
+        "range": {"easy": (0.8, 1.1), "medium": (0.7, 1.3), "hard": (0.6, 1.5)},
+        "source": "proportion",
+        "askable": True,
+    },
+    "terminal_thickness": {
+        "desc": "Thickness of the metal SMD terminal pads below the base",
+        "unit": "mm",
+        "range": {"easy": (0.18, 0.28), "medium": (0.14, 0.34), "hard": (0.1, 0.4)},
         "source": "proportion",
         "askable": False,
+    },
+    "rim_radius": {
+        "desc": "Small radius used on the can rim and vertical can edges",
+        "unit": "mm",
+        "range": {"easy": (0.18, 0.32), "medium": (0.12, 0.42), "hard": (0.08, 0.55)},
+        "source": "proportion",
+        "askable": True,
     },
 }
 
@@ -77,19 +71,19 @@ def check(p):
         if p[name] <= 0:
             bad.append(f"{name} must be positive")
 
-    if p["lead_embed"] >= p["body_thickness"]:
-        bad.append("lead_embed must be smaller than body_thickness so the leads exit the body")
-
-    if p["lead_spacing"] <= p["lead_diameter"] * 1.5:
-        bad.append("lead_spacing must comfortably exceed lead_diameter so the leads do not overlap")
-
-    if p["lead_length"] <= p["lead_embed"]:
-        bad.append("lead_length must exceed lead_embed so there is exposed lead below the body")
-
-    if p["body_diameter"] <= p["lead_spacing"] * 0.65:
-        bad.append("body_diameter must stay large enough to cover the radial lead roots")
-
-    if p["lead_length"] < 3.5:
-        bad.append("lead_length must preserve the long, radial lead look of a disc capacitor")
+    if p["body_diameter"] >= min(p["base_length"], p["base_width"]) * 0.92:
+        bad.append("body_diameter must leave visible plastic base around the can")
+    if p["terminal_span"] >= p["base_length"]:
+        bad.append("terminal_span must fit inside the base length")
+    if p["terminal_span"] <= p["body_diameter"] * 0.82:
+        bad.append("terminal_span must remain wide enough for opposite SMD terminals")
+    if p["terminal_width"] >= p["base_length"] * 0.32:
+        bad.append("terminal_width must stay smaller than the base end features")
+    if p["terminal_thickness"] >= p["base_thickness"] * 0.45:
+        bad.append("terminal_thickness must stay thinner than the plastic base")
+    if p["rim_radius"] >= p["body_diameter"] * 0.12:
+        bad.append("rim_radius must remain a small capacitor-can edge blend")
+    if p["can_height"] <= p["base_thickness"] * 2.2:
+        bad.append("can_height must dominate the SMD base thickness")
 
     return bad
