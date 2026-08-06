@@ -127,14 +127,29 @@ The benchmark uses these declared proportions:
 - 45-degree pitch cones because equal gears meet at a 90-degree shaft angle;
 - one shared pitch-cone apex at the shaft-axis intersection;
 - mean module `m = 2*r_mean/16`;
-- face limits `s_inner=max(0.24*b1, d1/2+0.035*b1)` and
-  `s_outer=min(0.40*b1, s_inner+0.12*b1)` measured from the apex;
+- face limits `s_inner=max(0.24*b1, (d1/2+0.30)/ROOT_RATIO)` and
+  `s_outer=min(0.38*b1, s_inner+0.12*b1)` measured from the apex.  The small
+  end is set from the ROOT cone so the full-depth root still clears the shaft
+  bore; the large end is capped so the full-depth tip still leaves a `b1` side
+  wall on every catalog size.  Face width along the cone stays near `0.29` of
+  the cone distance, the usual bevel proportion;
 - a short `0.02*b1` hub; each shaft begins at the greater of the hub start
   and `d1/2+0.02*b1`, so perpendicular shafts cannot cross at the apex while
   both retain a positive cylindrical seat inside their gear bore;
-- straight planar tooth flanks at 20 degrees;
-- addendum `0.50*m`, dedendum `0.60*m`, and a 0.15*m root overlap that fuses
-  every tooth to its gear core;
+- straight planar tooth flanks at 20 degrees, tapering over the WORKING depth
+  (one addendum either side of the pitch line).  The remaining `0.25*m` of
+  dedendum is root clearance at constant thickness: continuing the taper into
+  it thickens the root past an involute-equivalent flank and eats the
+  published backlash before the flanks reach contact;
+- standard depth: addendum `1.00*m` and dedendum `1.25*m` measured
+  PERPENDICULAR to the pitch cone (whole depth `2.25*m`).  The tooth sections
+  are sketched at constant `z` and the tip/root cones run parallel to the
+  45-degree pitch cone, so a perpendicular offset `a` becomes a radial offset
+  `a/cos(45 deg)` — hence `TIP_RATIO = 1 + 2*1.4142/16` and
+  `ROOT_RATIO = 1 - 2*1.7678/16`, both independent of size.  (Radial figures
+  of `0.50*m`/`0.60*m` were used before that conversion was applied, which
+  left only `0.78*m` of real tooth depth — about a third of standard.)  A
+  `0.15*m` root overlap fuses every tooth to its gear core;
 - tooth thickness fraction 0.43 of circular pitch.  For two equal gears this
   gives `(1-2*0.43)*360/16 = 3.15 deg` circumferential backlash, within the
   official `3 +/- 0.5 deg` range;

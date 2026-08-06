@@ -21,6 +21,20 @@ import math
 GEAR_TEETH = 16
 TOOTH_FRACTION = 0.43
 FLANK_HALF_DEG = 20.0
+# Standard tooth proportions, measured PERPENDICULAR to the pitch cone:
+# addendum 1.0*m, dedendum 1.25*m (whole depth 2.25*m).  The tooth sections
+# below are sketched at constant z, and the tip/root cones are parallel to the
+# 45-degree pitch cone, so a perpendicular offset a becomes a RADIAL offset
+# a/cos(45 deg) at constant z.  Skipping that conversion is what made the
+# earlier 0.50*m / 0.60*m radial figures only 0.78*m of real tooth depth.
+PITCH_ANGLE_DEG = 45.0
+_RADIAL = 1.0 / math.cos(math.radians(PITCH_ANGLE_DEG))
+ADDENDUM_RADIAL = 1.00 * _RADIAL
+DEDENDUM_RADIAL = 1.25 * _RADIAL
+# both are proportional to the module, and m = 2*r_mean/z, so the tip and root
+# cones are fixed multiples of the pitch cone regardless of size
+TIP_RATIO = 1.0 + 2.0 * ADDENDUM_RADIAL / GEAR_TEETH
+ROOT_RATIO = 1.0 - 2.0 * DEDENDUM_RADIAL / GEAR_TEETH
 
 
 def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
@@ -62,13 +76,17 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     # Both pitch cones are 45 degrees because the documented ratio is 1:1
     # and the shaft angle is 90 degrees.  The tooth count and face width are
     # proportions; the shaft bore sets the lower bound on the small end.
-    s_inner = max(0.24 * b1, 0.5 * d1 + 0.035 * b1)
-    s_outer = min(0.40 * b1, s_inner + 0.12 * b1)
+    # the small end must sit far enough out that the FULL-depth root cone still
+    # clears the shaft bore (root_inner = ROOT_RATIO * s_inner)
+    s_inner = max(0.24 * b1, (0.5 * d1 + 0.30) / ROOT_RATIO)
+    # the large end is capped so the full-depth tip cone still leaves a b1 side
+    # wall on every catalog size
+    s_outer = min(0.38 * b1, s_inner + 0.12 * b1)
     pitch_mean = 0.5 * (s_inner + s_outer)
     module = 2.0 * pitch_mean / GEAR_TEETH
     hub_length = 0.02 * b1
-    tip_outer = s_outer + 0.50 * module * (s_outer / pitch_mean)
-    root_inner = s_inner - 0.60 * module * (s_inner / pitch_mean)
+    tip_outer = s_outer * TIP_RATIO
+    root_inner = s_inner * ROOT_RATIO
     L.update({
         "gear_s_inner": s_inner,
         "gear_s_outer": s_outer,
@@ -424,10 +442,10 @@ def _bevel_gear_z(L, shaft_diameter_d1):
     tan_flank = math.tan(math.radians(FLANK_HALF_DEG))
 
     def root_radius(s):
-        return s - 0.60 * module * (s / s_m)
+        return s - DEDENDUM_RADIAL * module * (s / s_m)
 
     def tip_radius(s):
-        return s + 0.50 * module * (s / s_m)
+        return s + ADDENDUM_RADIAL * module * (s / s_m)
 
     core = cq.Solid.makeCone(
         root_radius(s_i), root_radius(s_o), s_o - s_i,
@@ -439,9 +457,19 @@ def _bevel_gear_z(L, shaft_diameter_d1):
         tip = tip_radius(s)
         height = tip - root
         half_pitch_thickness = 0.5 * TOOTH_FRACTION * math.pi * module * scale
-        root_half = half_pitch_thickness + 0.5 * height * tan_flank
-        tip_half = max(0.20 * half_pitch_thickness,
-                       half_pitch_thickness - 0.5 * height * tan_flank)
+        # thickness tapers with the distance from the PITCH cone, measured
+        # perpendicular to it — and the pitch line is not at mid-height
+        # (addendum 1.0*m above, dedendum 1.25*m below).  Using half the total
+        # height instead, as before, sharpened every tooth to a spike.
+        addendum = 1.00 * module * scale
+        # the flank tapers over the WORKING depth only (one addendum either
+        # side of the pitch line).  The extra 0.25*m of dedendum is root
+        # clearance, kept at constant thickness: continuing the 20 deg taper
+        # into it thickens the root past an involute and takes up the
+        # published backlash before the flanks reach their contact point.
+        root_half = half_pitch_thickness + addendum * tan_flank
+        tip_half = max(0.18 * module * scale,
+                       half_pitch_thickness - addendum * tan_flank)
         embed = 0.15 * module * scale
         sections.append(cq.Wire.makePolygon([
             cq.Vector(root - embed, -root_half, s),
