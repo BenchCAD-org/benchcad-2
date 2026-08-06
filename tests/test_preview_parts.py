@@ -94,7 +94,8 @@ ASSEMBLY_META = _meta(
 
 # compose_grid geometry: W = label_w + 4*(cell+pad) + pad, H = rows*(cell+pad) + pad
 CELL, PAD, LABEL_W = 320, 10, 300
-GRID_W = LABEL_W + 4 * (CELL + PAD) + PAD
+# component rows carry 4 bench views + a cutaway panel (issue #136)
+GRID_W = LABEL_W + 5 * (CELL + PAD) + PAD
 
 
 def _grid_height(rows: int) -> int:
