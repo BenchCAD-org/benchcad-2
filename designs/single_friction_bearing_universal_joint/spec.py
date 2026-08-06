@@ -227,14 +227,34 @@ def check(p):
     ear_radius = 0.21 * p["d1"]
     ear_offset = 0.37 * p["d1"]
     ear_thickness = 0.18 * p["d1"]
-    trunnion_d = 0.16 * p["d1"]
-    trunnion_hole_d = 0.19 * p["d1"]
+    # pinned friction-bearing centre (mirrors the part.py constants)
+    pivot_pin_d = 0.26 * p["d1"]
+    cross_pin_d = 0.14 * p["d1"]
+    pin_fit = 0.015 * p["d1"]
+    block_half = 0.25 * p["d1"]          # block is 0.50*d1 square
     if hub_length >= p["l3"] - 0.21 * p["d1"]:
         bad.append("proportion: hub must leave enough axial length for a non-degenerate fork eye")
     if ear_offset + ear_thickness / 2.0 >= p["d1"] / 2.0:
         bad.append("proportion: fork ears must remain inside the d1 root envelope")
     if 2.0 * ear_radius >= 2.0**0.5 * ear_offset:
         bad.append("proportion: perpendicular input/output fork-eye envelopes must remain disjoint")
-    if trunnion_hole_d <= trunnion_d:
-        bad.append("proportion: trunnion hole must exceed cross-arm diameter for positive clearance")
+    # the shaft bore must stop before it breaks into the pivot-pin bore
+    if -p["l3"] + p["shaft_depth"] >= -(pivot_pin_d + pin_fit) / 2.0 - 0.02 * p["d1"]:
+        bad.append("shaft bore would break into the pivot-pin bore: t must stop clear of the pin hole")
+    # ear wall around its pin bore
+    if ear_radius - (pivot_pin_d + pin_fit) / 2.0 <= 0.04 * p["d1"]:
+        bad.append("input fork ear wall under 0.04*d1 around the pivot-pin bore: ear would tear out")
+    if ear_radius - (cross_pin_d + pin_fit) / 2.0 <= 0.04 * p["d1"]:
+        bad.append("output fork ear wall under 0.04*d1 around the cross-pin bore: ear would tear out")
+    # the cross pin passes THROUGH the pivot pin: the pivot pin must keep a
+    # real section either side of that transverse hole
+    if pivot_pin_d - (cross_pin_d + pin_fit) <= 0.05 * p["d1"]:
+        bad.append("cross-pin hole nearly severs the pivot pin: keep >=0.05*d1 of pin section")
+    # both pin bores cross inside the block; the block must retain material
+    if block_half - (pivot_pin_d + pin_fit) / 2.0 <= 0.05 * p["d1"]:
+        bad.append("pivot block wall under 0.05*d1 around its bores: block would split")
+    # the block sits BETWEEN the ear inner faces: its half-height (0.26*d1)
+    # must clear them, and rotation about either pin axis keeps that extent
+    if 0.26 * p["d1"] >= ear_offset - ear_thickness / 2.0:
+        bad.append("pivot block taller than the gap between the fork ears: block would jam")
     return bad

@@ -33,8 +33,11 @@ def _bore_tool(bore_code, d2, square_s, keyway_width, keyway_depth, depth, x):
 
 
 def _build_input_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
-                      keyway_width, keyway_depth):
-    """Build the left yoke; its trunnion bore axis is global Z."""
+                      keyway_width, keyway_depth, pin_hole_d):
+    """Build the left yoke; its pin bore axis is global Z. `pin_hole_d` is
+    the clearance bore for this yoke's own pin (the two pins differ: the
+    thick pivot pin carries the block, the thin cross pin locks through
+    it), so each yoke's ears are bored for its own pin."""
     hub_length = shaft_depth
     ear_radius = 0.21 * d1
     ear_offset = 0.37 * d1
@@ -59,10 +62,9 @@ def _build_input_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
         )
         yoke = yoke.union(arm.val()).union(eye.val())
 
-    trunnion_hole_d = 0.19 * d1
     for z in (-ear_offset, ear_offset):
         hole = _centered_cylinder(
-            trunnion_hole_d, ear_thickness + 0.08 * d1, "Z"
+            pin_hole_d, ear_thickness + 0.08 * d1, "Z"
         ).translate((0.0, 0.0, z))
         yoke = yoke.cut(hole.val())
 
@@ -79,7 +81,7 @@ def _build_input_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
 
 
 def _build_output_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
-                       keyway_width, keyway_depth, joint_angle):
+                       keyway_width, keyway_depth, joint_angle, pin_hole_d):
     """Build the right yoke as a rigidly transformed instance of the same part."""
     yoke = _build_input_yoke(
         d1,
@@ -90,6 +92,7 @@ def _build_output_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
         bore_code,
         keyway_width,
         keyway_depth,
+        pin_hole_d,
     )
     # Turn the left instance toward +X, then phase the fork by 90 degrees so
     # its trunnion axis is global Y. Bore/keyway orientation follows the same
@@ -110,16 +113,91 @@ def _build_output_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
     )
 
 
-def _build_cross(d1):
-    """Build one orthogonal cross with proportion-based trunnion geometry."""
-    ear_offset = 0.37 * d1
-    ear_thickness = 0.18 * d1
-    end_clearance = 0.02 * d1
-    arm_length = 2.0 * (ear_offset + ear_thickness / 2.0 - end_clearance)
-    arm_d = 0.16 * d1
-    cross_y = _centered_cylinder(arm_d, arm_length, "Y")
-    cross_z = _centered_cylinder(arm_d, arm_length, "Z")
-    return cross_y.union(cross_z.val())
+# ── the real DIN 808 EG friction-bearing centre (teardown reference on the
+# PR): a rounded pivot BLOCK with two orthogonal bores, a thick PIVOT PIN
+# (axis Z, cross-drilled at its middle), a thin CROSS PIN (axis Y) passing
+# through the block AND through the pivot pin's cross hole, and a split
+# retaining RING on the pivot pin's lower end. All proportions of d1.
+PIVOT_PIN_D = 0.26      # thick pin diameter / d1
+CROSS_PIN_D = 0.14      # thin pin diameter / d1
+PIN_FIT = 0.015         # radial running clearance / d1 (both pins, all bores)
+
+
+def _build_pivot_block(d1):
+    """Rounded centre block: 0.50*d1 square, 0.52*d1 tall, bored Z for the
+    pivot pin and Y for the cross pin."""
+    blk = (
+        cq.Workplane("XY")
+        .box(0.50 * d1, 0.50 * d1, 0.52 * d1)
+        .edges().fillet(0.10 * d1)
+    )
+    blk = blk.cut(_centered_cylinder((PIVOT_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Z").val())
+    blk = blk.cut(_centered_cylinder((CROSS_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Y").val())
+    return blk
+
+
+def _build_pivot_pin(d1):
+    """Thick pin on the input yoke's Z axis, spanning both ears, with the
+    transverse cross-pin hole at its middle and the retaining-ring groove
+    below the lower ear."""
+    # ears span z in +/-[0.28, 0.46]*d1, so the pin runs -0.50 to +0.47*d1:
+    # through both ears, proud enough below for the ring, and still inside
+    # the catalog d1 envelope
+    z_bot, z_top = -0.50 * d1, 0.47 * d1
+    pin = (
+        cq.Workplane("XY")
+        .workplane(offset=z_bot)
+        .circle(PIVOT_PIN_D * d1 / 2.0)
+        .extrude(z_top - z_bot)
+        .edges().chamfer(0.015 * d1)
+    )
+    pin = pin.cut(_centered_cylinder((CROSS_PIN_D + PIN_FIT) * d1, PIVOT_PIN_D * d1 + 0.2, "Y").val())
+    groove = (
+        cq.Workplane("XY")
+        .workplane(offset=-0.491 * d1)
+        .circle(PIVOT_PIN_D * d1 / 2.0 + 0.1)
+        .circle(PIVOT_PIN_D * d1 / 2.0 - 0.020 * d1)
+        .extrude(0.030 * d1)                 # groove sits below the lower ear
+    )
+    return pin.cut(groove.val())
+
+
+def _build_cross_pin(d1):
+    """Thin pin on the output yoke's Y axis, through the block and through
+    the pivot pin's transverse hole — this is what closes the joint."""
+    length = 0.92 * d1                       # flush with the ear outer faces
+    # sketched directly on its final plane (XZ at y=+length/2, swept to
+    # y=-length/2): no post-build transform, which this OCC drops silently
+    return (
+        cq.Workplane("XZ")
+        .workplane(offset=length / 2.0)
+        .circle(CROSS_PIN_D * d1 / 2.0)
+        .extrude(-length)
+        .edges().chamfer(0.012 * d1)
+    )
+
+
+def _build_retaining_ring(d1):
+    """Split ring seated in the pivot pin's groove (open 50 deg, like the
+    teardown's circlip)."""
+    groove_r = PIVOT_PIN_D * d1 / 2.0 - 0.020 * d1
+    ring = (
+        cq.Workplane("XY")
+        .circle(groove_r + 0.055 * d1)
+        .circle(groove_r + 0.004 * d1)
+        .extrude(0.024 * d1)
+        .translate((0.0, 0.0, -0.488 * d1))  # seated in the pin groove
+    )
+    gap = (
+        cq.Workplane("XY")
+        .moveTo(0.0, 0.0)
+        .lineTo(0.30 * d1, -0.14 * d1)
+        .lineTo(0.30 * d1, 0.14 * d1)
+        .close()
+        .extrude(0.20 * d1)
+        .translate((0.0, 0.0, -0.56 * d1))
+    )
+    return ring.cut(gap.val())
 
 
 def build(
@@ -135,10 +213,13 @@ def build(
     keyway_width,
     keyway_depth,
 ):
-    """Build the DIN 808 single-jointed EG static three-component envelope."""
+    """Build the DIN 808 EG joint as its real six-part construction: two
+    yokes, the friction pivot block, the cross-drilled pivot pin, the cross
+    pin through it, and the split retaining ring."""
     del catalog_row, l1
     input_yoke = _build_input_yoke(
-        d1, d2, square_s, l3, shaft_depth, bore_code, keyway_width, keyway_depth
+        d1, d2, square_s, l3, shaft_depth, bore_code, keyway_width,
+        keyway_depth, (PIVOT_PIN_D + PIN_FIT) * d1,
     )
     output_yoke = _build_output_yoke(
         d1,
@@ -150,11 +231,14 @@ def build(
         keyway_width,
         keyway_depth,
         joint_angle,
+        (CROSS_PIN_D + PIN_FIT) * d1,
     )
-    cross = _build_cross(d1)
 
     result = cq.Assembly(name="single_friction_bearing_universal_joint")
     result.add(input_yoke, name="input_yoke")
     result.add(output_yoke, name="output_yoke")
-    result.add(cross, name="cross")
+    result.add(_build_pivot_block(d1), name="pivot_block")
+    result.add(_build_pivot_pin(d1), name="pivot_pin")
+    result.add(_build_cross_pin(d1), name="cross_pin")
+    result.add(_build_retaining_ring(d1), name="retaining_ring")
     return result
