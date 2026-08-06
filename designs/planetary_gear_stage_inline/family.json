@@ -1,0 +1,14 @@
+{
+  "family": "planetary_gear_stage_inline",
+  "standard": "ISO 53 / DIN 867 basic rack; ISO 54 / DIN 780 modules; DIN 3960 definitions",
+  "base_plane": "XY",
+  "description": "Single-stage inline planetary gear set: a sun cut on its input shaft, N planets turning on pins, an internal ring gear machined into the housing bore, and a carrier whose two discs, planet pins and output shaft are one rigid body. Tooth flanks are true involutes generated from the DIN 867 basic rack, so the geometry follows the standard rather than a table; the catalogue single-stage ratio fixes the tooth counts through coaxiality, and the assembly and neighbouring conditions decide which planet counts are admissible. Carrier rotation is an operating state and the planets stay meshed as it turns.",
+  "source": "ISO 53 / DIN 867, ISO 54 / DIN 780, DIN 3960 for the tooth form and module series; Neugart PLE catalogue for the single-stage ratio ladder and the output shaft dimensions (https://www.neugart.com/fileadmin/user_upload/Downloads/Catalog_Chapters/Neugart_PLE_EN.pdf). Envelope cross-checked against an independently authored MIT-licensed planetary CAD set (punkfab/robot-actuators); unpublished proportions documented in NOTES.md",
+  "contributor": "BenchCAD",
+  "components": [
+    {"name": "housing_ring_gear", "quantity": 1},
+    {"name": "sun_shaft", "quantity": 1},
+    {"name": "carrier_output", "quantity": 1},
+    {"name": "planet_gear", "quantity": "n_planets"}
+  ]
+}
