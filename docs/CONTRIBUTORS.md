@@ -3,7 +3,7 @@
 **Auto-generated** by `.github/workflows/credits.yml` from the issues and PRs
 themselves (SOP 📒 records) — do not edit by hand. Merged family ⇒ the row
 below, named credit in the dataset card of the release that ships it, and
-co-authorship on the BenchCAD 2.0 paper (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+co-authorship on the BenchCAD 2.0 paper (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
 
 | Family | Design author | Proposed | Implemented | Verified | Primary source |
 |---|---|---|---|---|---|

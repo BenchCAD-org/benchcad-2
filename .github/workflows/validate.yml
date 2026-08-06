@@ -123,19 +123,19 @@ jobs:
           name: validate-report
           path: /tmp/validate-report/
 
+  # POLICY: bots never push to main (the ruleset requires a PR for every change
+  # and github-actions[bot] deliberately has no bypass) — this job only warns
+  # when STATUS.md has drifted; a maintainer regenerates and pushes it.
   status-board:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: regenerate STATUS.md
         run: |
           python3 -c "import sys; sys.path.insert(0,'framework'); from pathlib import Path; from bench2.status import main; main(Path('.'))"
-      - name: commit if changed
+      - name: warn if the committed board is stale
         run: |
-          git config user.name "benchcad-bot"
-          git config user.email "actions@github.com"
-          git add STATUS.md
-          git diff --cached --quiet || (git commit -m "status: refresh board [skip ci]" && git push)
+          git diff --quiet -- docs/STATUS.md || echo "::warning::docs/STATUS.md is stale. Maintainer: regenerate via bench2.status and push the refresh (bots do not push to main by policy)."

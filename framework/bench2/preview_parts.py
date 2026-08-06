@@ -8,7 +8,8 @@ shape-bearing node plus its absolute world transform. The meshes then render
 as separate VTK actors sharing one normalized frame, so `preview_parts.png`
 shows, deterministically for hard / seed 0:
 
-  - one four-view row per semantic component (its own frame, catalog-style),
+  - one row per semantic component: the four bench views in its own frame
+    plus a half-section cutaway (internal grooves/bores stay reviewable),
   - the complete assembly in its true pose,
   - one red-on-gray highlight row per component, in family.json order
     (repeated instances together by default; `per_instance` splits them).
@@ -228,6 +229,15 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
             m = np.array(leaf["world_transform"], dtype=np.float64)
             local_meshes.append((verts, tris))
             world_meshes.append((verts @ m[:, :3].T + m[:, 3], tris))
+        # half-section of each component's representative instance: purely
+        # internal concavities (a bearing ring's raceway recess, a nut's
+        # thread, a circlip groove) are invisible in every opaque exterior
+        # view, so each component row carries a cutaway panel (issue #136)
+        cutaway_meshes = {
+            name: render.step_cutaway_mesh(
+                Path(td) / leaves[groups[name][0]]["step"])
+            for name, _ in contract
+        }
 
     rows, labels = [], []
     # one catalog-style row per semantic component: the first instance's RAW
@@ -235,8 +245,12 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
     for name, _quantity in contract:
         verts, tris = local_meshes[groups[name][0]]
         dx, dy, dz = (verts.max(axis=0) - verts.min(axis=0)).tolist()
-        rows.append(render.render_bench_views(_normalized([verts])[0], tris))
-        labels.append(f"{name}\n{quantity_note[name]}\nbbox {dx:.1f} x {dy:.1f} x {dz:.1f} mm")
+        row = render.render_bench_views(_normalized([verts])[0], tris)
+        cw_verts, cw_tris = cutaway_meshes[name]
+        row.append(render.render_iso(cw_verts, cw_tris, front=(1.0, -1.0, 1.0)))
+        rows.append(row)
+        labels.append(f"{name} (4 views + cutaway)\n{quantity_note[name]}\n"
+                      f"bbox {dx:.1f} x {dy:.1f} x {dz:.1f} mm")
 
     # the complete assembly and the highlight rows share ONE normalized frame,
     # so every row shows the identical pose and scale

@@ -86,7 +86,6 @@ PARAM_SPEC = {
         coverage=list(DIN_ROWS),
         integer=True,
         source=f"{SOURCE_TABLE}; d1 H9 rows 4, 5, 6, 8, 10, 12, 14, and 16",
-        askable=True,
     ),
     "is_long": dict(
         desc="catalog length variant selector: 0=short l1/l2/l3 columns, 1=long columns",
@@ -103,7 +102,6 @@ PARAM_SPEC = {
         range=_dimension_range("l1"),
         source=f"{SOURCE_TABLE}; selected size and length variant",
         refine=True,
-        askable=True,
     ),
     "d2": dict(
         desc="nominal diameter d2 of the simplified right-hand internal thread",
@@ -111,7 +109,6 @@ PARAM_SPEC = {
         range=_dimension_range("d2"),
         source=f"{SOURCE_TABLE}; standard right-hand thread d2 column",
         refine=True,
-        askable=True,
     ),
     "a": dict(
         desc="overall fork-head width a in both drawing elevations",
@@ -119,7 +116,6 @@ PARAM_SPEC = {
         range=_dimension_range("a"),
         source=f"{SOURCE_TABLE}; dimension a",
         refine=True,
-        askable=True,
     ),
     "b": dict(
         desc="clear gap b between the two symmetric fork arms",
@@ -127,7 +123,6 @@ PARAM_SPEC = {
         range=_dimension_range("b"),
         source=f"{SOURCE_TABLE}; dimension b",
         refine=True,
-        askable=True,
     ),
     "d3": dict(
         desc="outside diameter d3 of the threaded cylindrical shank",
@@ -135,7 +130,6 @@ PARAM_SPEC = {
         range=_dimension_range("d3"),
         source=f"{SOURCE_TABLE}; dimension d3",
         refine=True,
-        askable=True,
     ),
     "l2": dict(
         desc="distance l2 from shank end to transverse pin-hole center",
@@ -143,7 +137,6 @@ PARAM_SPEC = {
         range=_dimension_range("l2"),
         source=f"{SOURCE_TABLE}; selected size and length variant",
         refine=True,
-        askable=True,
     ),
     "l3": dict(
         desc="overall fork-head length l3",
@@ -151,7 +144,6 @@ PARAM_SPEC = {
         range=_dimension_range("l3"),
         source=f"{SOURCE_TABLE}; selected size and length variant",
         refine=True,
-        askable=True,
     ),
     "l4": dict(
         desc="axial length l4 of the cylindrical threaded shank",
@@ -159,7 +151,6 @@ PARAM_SPEC = {
         range=_dimension_range("l4"),
         source=f"{SOURCE_TABLE}; dimension l4",
         refine=True,
-        askable=True,
     ),
 }
 

@@ -4,7 +4,7 @@
     bench2 validate <family>       run every machine gate locally (same as CI)
     bench2 preview <family>        render a difficulty x seed grid PNG
     bench2 preview-parts <family>  render assembly components + highlight rows
-    bench2 status                  regenerate STATUS.md (the progress board)
+    bench2 status                  regenerate docs/STATUS.md (the progress board)
 
 Run from the repo root (the directory containing designs/).
 """
@@ -232,7 +232,7 @@ def main() -> None:
         action="store_true",
         help="ghost the non-highlighted components (see-through) so internal parts stay visible",
     )
-    sub.add_parser("status", help="regenerate STATUS.md")
+    sub.add_parser("status", help="regenerate docs/STATUS.md")
     a = ap.parse_args()
     if a.cmd == "new":
         sys.exit(cmd_new(a.family))
