@@ -1,7 +1,7 @@
 # BenchCAD 2.0 — Agent Guide
 
 Guide for AI agents and humans contributing to BenchCAD 2.0. This repository
-targets **150 industrial part families**.
+is built from **explicit parametric part families**.
 
 A family is one `designs/<family>/` directory containing `part.py`, `spec.py`,
 and `family.json`. Read `docs/DESIGN_SPEC.md` before implementing one.
