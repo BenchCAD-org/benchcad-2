@@ -53,3 +53,12 @@ cue, not a claim that the production thread is non-helical.
 The shackle swivels about its transverse pivot over the documented 180 degrees.
 The collar, guard, pivot, and shackle rotate together through a complete turn
 around the stationary threaded-pin axis, so this motion cannot unscrew the pin.
+
+Assembly linkage is represented by deterministic transforms rather than hidden
+CAD constraints: `main_pin_body` is stationary; `rotating_collar`,
+`safety_guard`, `shackle`, and `shackle_pivot` share the axial rotation; the
+shackle additionally swivels about its transverse pivot axis. The button,
+return spring, and opposed threaded segments remain coaxial with the stationary
+body. Button travel, spring compression, and segment retraction are coupled by
+the same `lock_state` input, while the exact production cam/bearing mates remain
+unpublished proportions.

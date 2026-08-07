@@ -460,7 +460,10 @@ def _button(d3, d5, h2, l1, l3, released):
 def _spring(d3, h3, d5, released):
     """Simplified but genuinely helical return spring (proportion)."""
     outer_d = 0.48 * d3
-    wire_d = max(0.65, 0.055 * d5)
+    # Keep a visible axial clearance between adjacent turns in both endpoint
+    # states. The earlier 0.055*d5 wire filled nearly the entire pitch on the
+    # M8 row, making neighbouring coils touch and visually fuse together.
+    wire_d = max(0.65, 0.030 * d5)
     free_height = max(4.0, 0.36 * h3)
     compression = 0.09 * d5 if released else 0.0
     height = max(2.5 * wire_d, free_height - compression)
