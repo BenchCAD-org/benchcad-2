@@ -34,13 +34,13 @@ def _can(body_diameter, can_height, rim_radius):
     top_z = can_bottom_z + can_height
     top_start = top_z - top_round
 
-    # Single-section revolve.  The bottom motherline follows the exact B-Rep
-    # chain observed in the reference: R0.5 neck arcs, a trimmed R0.6 roll arc,
-    # and a short main-wall cylinder before the top shoulder.  This avoids the
-    # visible horizontal seams produced by stacked/fused disks.
+    # Single-section revolve.  The reference can body reads as one continuous
+    # rolled profile from the lower neck into the main wall and then into the
+    # top shoulder.  Use one spline profile instead of stacked disks or short
+    # platelike steps so the rendered body does not show a horizontal seam.
     br = top_round
     roll_r = br * 1.2
-    theta = 0.703  # trimmed torus arc angle from the reference section
+    theta = 0.703
     p0 = cq.Vector(radius - br, 0.0, can_bottom_z)
     p1 = cq.Vector(radius, 0.0, can_bottom_z + br)
     p2 = cq.Vector(radius, 0.0, can_bottom_z + br * 1.2)
@@ -54,23 +54,14 @@ def _can(body_diameter, can_height, rim_radius):
     p7 = cq.Vector(radius, 0.0, top_start)
     p8 = cq.Vector(radius - br, 0.0, top_z)
 
-    def arc(a, mid, b):
-        return cq.Edge.makeThreePointArc(a, mid, b)
-
-    def line(a, b):
-        return cq.Edge.makeLine(a, b)
-
     edges = [
-        arc(p0, cq.Vector(c_small_r + br / math.sqrt(2.0), 0.0, can_bottom_z + br - br / math.sqrt(2.0)), p1),
-        line(p1, p2),
-        arc(p2, cq.Vector(c_small_r + br * math.cos(theta * 0.5), 0.0, p2.z + br * math.sin(theta * 0.5)), p3),
-        arc(p3, p4, p5),
-        arc(p5, cq.Vector(c_small_r + br * math.cos(theta * 0.5), 0.0, p6.z - br * math.sin(theta * 0.5)), p6),
-        line(p6, p7),
-        arc(p7, cq.Vector(radius - br + br / math.sqrt(2.0), 0.0, top_z - br + br / math.sqrt(2.0)), p8),
-        line(p8, cq.Vector(0.0, 0.0, top_z)),
-        line(cq.Vector(0.0, 0.0, top_z), cq.Vector(0.0, 0.0, can_bottom_z)),
-        line(cq.Vector(0.0, 0.0, can_bottom_z), p0),
+        cq.Edge.makeSpline(
+            [p0, p1, p2, p3, p4, p5, p6, p7, p8],
+            tol=1e-6,
+        ),
+        cq.Edge.makeLine(p8, cq.Vector(0.0, 0.0, top_z)),
+        cq.Edge.makeLine(cq.Vector(0.0, 0.0, top_z), cq.Vector(0.0, 0.0, can_bottom_z)),
+        cq.Edge.makeLine(cq.Vector(0.0, 0.0, can_bottom_z), p0),
     ]
     body = cq.Solid.revolve(
         cq.Wire.assembleEdges(edges),
@@ -79,18 +70,6 @@ def _can(body_diameter, can_height, rim_radius):
         (0.0, 0.0, 0.0),
         (0.0, 0.0, 1.0),
     ).clean()
-    vent_length = body_diameter * 0.52
-    vent_width = min(body_diameter * 0.038, 0.2)
-    vent_depth = min(can_height * 0.006, 0.04)
-    for angle in (0, 90):
-        vent = (
-            cq.Workplane("XY")
-            .box(vent_length, vent_width, vent_depth, centered=(True, True, False))
-            .rotate((0, 0, 0), (0, 0, 1), angle)
-            .translate((0.0, 0.0, top_z - vent_depth))
-        )
-        body = _cut(body, vent)
-
     return body.clean()
 
 
