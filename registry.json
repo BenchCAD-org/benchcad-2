@@ -3,14 +3,14 @@
 "name": "act_field_tray_pipe_clamp",
 "status": "proposed",
 "ref": "#90",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
 "name": "act_twin_clamp",
 "status": "proposed",
 "ref": "#86",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
@@ -18,7 +18,7 @@
 "status": "proposed",
 "ref": "#8",
 "category": "av-rigging",
-"anchor": ""
+"anchor": "VESA FDMI MIS-D/E/F display mounting interface plate"
 },
 {
 "name": "backdraft_damper_blade",
@@ -32,7 +32,7 @@
 "status": "proposed",
 "ref": "#5",
 "category": "furniture-hardware",
-"anchor": ""
+"anchor": "Accuride 3832 / Knape & Vogt 8400 full-extension ball-bearing slide"
 },
 {
 "name": "bass_drum_claw_hook",
@@ -46,21 +46,42 @@
 "status": "proposed",
 "ref": "#46",
 "category": "music-hardware",
-"anchor": ""
+"anchor": "Telecaster / Stratocaster bridge saddle"
 },
 {
 "name": "cabinet_bar_pull_handle",
 "status": "proposed",
 "ref": "#26",
 "category": "furniture-hardware",
-"anchor": ""
+"anchor": "Amerock / Häfele bar pull — center-to-center + projection catalog"
+},
+{
+"name": "cam_edge_clamp",
+"status": "wanted",
+"ref": "#158",
+"category": "machine-clamping",
+"anchor": "Eccentric cam edge clamp with the pivot and jaw"
+},
+{
+"name": "caster_brake_pedal_kit",
+"status": "wanted",
+"ref": "#157",
+"category": "wheels-casters",
+"anchor": "Total-lock brake pedal acting on wheel and swivel"
 },
 {
 "name": "clevis_fork_head",
 "status": "merged",
 "ref": "designs/clevis_fork_head",
-"category": "",
+"category": "shaft-hardware",
 "anchor": "DIN 71752"
+},
+{
+"name": "clevis_pipe_hanger",
+"status": "wanted",
+"ref": "#156",
+"category": "pipe-support",
+"anchor": "MSS SP-58 type 1 clevis hanger, upper and lower strap"
 },
 {
 "name": "confirmat_screw",
@@ -77,17 +98,24 @@
 "anchor": "Southco E6 position-control constant-torque hinge"
 },
 {
+"name": "counterweight_lift_mechanism",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.13 — counterweighted vertical lift"
+},
+{
 "name": "din_3015_heavy_elastomer_insert_clamp",
 "status": "proposed",
 "ref": "#85",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
 "name": "din_3015_profiled_tube_clamp_body",
 "status": "proposed",
 "ref": "#84",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
@@ -98,17 +126,24 @@
 "anchor": "WAGO 249-116 / 249-197 DIN rail end stops"
 },
 {
+"name": "double_locking_tremolo_bridge",
+"status": "proposed",
+"ref": "#146",
+"category": "music-hardware",
+"anchor": ""
+},
+{
 "name": "double_wedge_clamp",
 "status": "proposed",
 "ref": "#59",
-"category": "",
+"category": "machine-clamping",
 "anchor": ""
 },
 {
 "name": "down_thrust_clamp",
 "status": "proposed",
 "ref": "#63",
-"category": "",
+"category": "machine-clamping",
 "anchor": ""
 },
 {
@@ -119,11 +154,18 @@
 "anchor": "Blum / Häfele drawer-front adjuster housing"
 },
 {
+"name": "drive_wheel_hub_assembly",
+"status": "wanted",
+"ref": "#157",
+"category": "wheels-casters",
+"anchor": "Driven wheel hub with the bolt circle and bearing seats"
+},
+{
 "name": "drum_tension_lug",
 "status": "proposed",
 "ref": "#10",
 "category": "music-hardware",
-"anchor": ""
+"anchor": "DW / Pearl / SD Sparedrum drum shell tension lug"
 },
 {
 "name": "drum_tension_rod",
@@ -144,13 +186,20 @@
 "status": "proposed",
 "ref": "#28",
 "category": "hvac-ductwork",
-"anchor": ""
+"anchor": "Straight / conical spin-in starting collar, SMACNA"
+},
+{
+"name": "flap_folding_rocker_mechanism",
+"status": "proposed",
+"ref": "#164",
+"category": "motion-mechanisms",
+"anchor": "IAI Electric Mechanism Library No.1 — rocking mechanism that folds a carton flap"
 },
 {
 "name": "flat_u_bolt_short_saddle_clamp",
 "status": "proposed",
 "ref": "#91",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
@@ -168,10 +217,38 @@
 "anchor": "Häfele dowel / connecting bolt for cam-lock system"
 },
 {
+"name": "gn1135_self_locking_threaded_lifting_pin",
+"status": "proposed",
+"ref": "#154",
+"category": "av-rigging",
+"anchor": ""
+},
+{
+"name": "gn3971_bevel_gear_box",
+"status": "proposed",
+"ref": "#132",
+"category": "shaft-hardware",
+"anchor": ""
+},
+{
+"name": "gn3975_worm_gear_reducer",
+"status": "proposed",
+"ref": "#153",
+"category": "shaft-hardware",
+"anchor": ""
+},
+{
 "name": "gn7241_multiple_joint_hinge",
 "status": "proposed",
 "ref": "#117",
-"category": "",
+"category": "enclosure-hardware",
+"anchor": ""
+},
+{
+"name": "gn866_pneumatic_power_clamp",
+"status": "proposed",
+"ref": "#150",
+"category": "machine-clamping",
 "anchor": ""
 },
 {
@@ -200,35 +277,77 @@
 "status": "proposed",
 "ref": "#9",
 "category": "music-hardware",
-"anchor": ""
+"anchor": "Grover Rotomatic / Gotoh SG381 geared tuning machine"
 },
 {
 "name": "gusseted_corner_bracket",
 "status": "proposed",
 "ref": "#129",
-"category": "",
+"category": "furniture-hardware",
 "anchor": ""
 },
 {
 "name": "heavy_duty_mecanum_wheel",
 "status": "proposed",
 "ref": "#65",
-"category": "",
+"category": "wheels-casters",
 "anchor": ""
 },
 {
 "name": "heavy_duty_omni_wheel",
 "status": "proposed",
 "ref": "#64",
-"category": "",
+"category": "wheels-casters",
 "anchor": ""
+},
+{
+"name": "hydraulic_swing_clamp",
+"status": "wanted",
+"ref": "#158",
+"category": "machine-clamping",
+"anchor": "Swing clamp with the helical swing stroke and arm"
+},
+{
+"name": "inclined_cam_lifter",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.4 — inclined cam converting horizontal travel to lift"
+},
+{
+"name": "keyless_locking_assembly",
+"status": "wanted",
+"ref": "#159",
+"category": "shaft-hardware",
+"anchor": "Keyless locking bush with the taper ring stack"
+},
+{
+"name": "l_shaped_lengthways_adjustable_stopper_block",
+"status": "proposed",
+"ref": "#170",
+"category": "machine-clamping",
+"anchor": ""
+},
+{
+"name": "leveling_caster_combi",
+"status": "wanted",
+"ref": "#157",
+"category": "wheels-casters",
+"anchor": "Combined caster and levelling foot, screw-down body"
 },
 {
 "name": "light_duty_swivel_plate_caster",
 "status": "proposed",
 "ref": "#58",
-"category": "",
+"category": "wheels-casters",
 "anchor": ""
+},
+{
+"name": "link_lift_stopper_mechanism",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.11 — linkage converting horizontal travel to a lifting stopper"
 },
 {
 "name": "magnetic_cabinet_catch",
@@ -242,7 +361,7 @@
 "status": "proposed",
 "ref": "#31",
 "category": "enclosure-hardware",
-"anchor": ""
+"anchor": "LAPP SKINTOP ST-M metric plastic cable gland"
 },
 {
 "name": "mic_stand_clutch",
@@ -256,13 +375,13 @@
 "status": "proposed",
 "ref": "#25",
 "category": "furniture-hardware",
-"anchor": ""
+"anchor": "Häfele Minifix 15 cam-lock connector housing"
 },
 {
 "name": "multi_line_pipe_clamp_body",
 "status": "proposed",
 "ref": "#87",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
@@ -280,6 +399,13 @@
 "anchor": "Rittal Blue e+ SK 3237700 / 3239700 / 3240700 / 3243700 filter fan"
 },
 {
+"name": "pick_and_place_chuck_head",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.6 — pick and place head with the gripper chuck"
+},
+{
 "name": "pipe_grid_dropper_coupler",
 "status": "wanted",
 "ref": "#3",
@@ -294,6 +420,13 @@
 "anchor": "Pittsburgh lock sheet-metal seam profile, SMACNA"
 },
 {
+"name": "pneumatic_pull_clamp",
+"status": "wanted",
+"ref": "#158",
+"category": "machine-clamping",
+"anchor": "Pull-action pneumatic clamp with the toggle linkage"
+},
+{
 "name": "projector_ceiling_mount_plate",
 "status": "wanted",
 "ref": "#3",
@@ -301,11 +434,18 @@
 "anchor": "Universal projector ceiling mount plate"
 },
 {
+"name": "pusher_slide_mechanism",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.9 — pusher that transfers work off a conveyor"
+},
+{
 "name": "quarter_turn_cam_latch",
 "status": "proposed",
 "ref": "#32",
 "category": "enclosure-hardware",
-"anchor": ""
+"anchor": "Southco E5 zinc adjustable-grip quarter-turn cam latch"
 },
 {
 "name": "register_boot_collar",
@@ -315,18 +455,32 @@
 "anchor": "Ceiling / wall register boot with round collar"
 },
 {
+"name": "riser_clamp_two_bolt",
+"status": "wanted",
+"ref": "#156",
+"category": "pipe-support",
+"anchor": "Two-bolt riser clamp carrying the pipe at a floor penetration"
+},
+{
+"name": "rotary_stocker_index_head",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.12 — rotary stocker index head"
+},
+{
 "name": "round_duct_butterfly_damper",
 "status": "proposed",
 "ref": "#6",
 "category": "hvac-ductwork",
-"anchor": ""
+"anchor": "Ruskin MDRS25 / Nailor 1890 round manual balancing damper"
 },
 {
 "name": "round_duct_worm_clamp",
 "status": "proposed",
 "ref": "#27",
 "category": "hvac-ductwork",
-"anchor": ""
+"anchor": "Ideal-Tridon / Nelson round-duct worm-drive draw band"
 },
 {
 "name": "round_pipe_crimped_end",
@@ -339,7 +493,7 @@
 "name": "round_u_bolt_pipe_saddle_clamp",
 "status": "proposed",
 "ref": "#92",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
@@ -353,14 +507,14 @@
 "name": "safety_swivel_load_ring",
 "status": "proposed",
 "ref": "#62",
-"category": "",
+"category": "av-rigging",
 "anchor": ""
 },
 {
 "name": "set_screw_shaft_collar",
 "status": "merged",
 "ref": "designs/set_screw_shaft_collar",
-"category": "",
+"category": "shaft-hardware",
 "anchor": "GN 705 / DIN 705 style"
 },
 {
@@ -374,21 +528,21 @@
 "name": "single_friction_bearing_universal_joint",
 "status": "proposed",
 "ref": "#61",
-"category": "",
+"category": "shaft-hardware",
 "anchor": ""
 },
 {
 "name": "single_row_deep_groove_ball_bearing",
 "status": "proposed",
 "ref": "#41",
-"category": "",
+"category": "shaft-hardware",
 "anchor": ""
 },
 {
 "name": "slotted_din_rail",
 "status": "merged",
 "ref": "designs/slotted_din_rail",
-"category": "",
+"category": "enclosure-hardware",
 "anchor": "EN 60715 TH35 top-hat rail, AutomationDirect DN-R35S slotted rail"
 },
 {
@@ -420,11 +574,18 @@
 "anchor": "Snare strainer / throw-off lever body"
 },
 {
+"name": "snatch_block_single_sheave",
+"status": "proposed",
+"ref": "#145",
+"category": "av-rigging",
+"anchor": ""
+},
+{
 "name": "speaker_pole_mount_socket",
 "status": "merged",
 "ref": "designs/speaker_pole_mount_socket",
-"category": "",
-"anchor": ""
+"category": "av-rigging",
+"anchor": "Speaker top-hat pole-mount socket (35 mm)"
 },
 {
 "name": "spin_in_fitting_collar",
@@ -432,6 +593,13 @@
 "ref": "#2",
 "category": "hvac-ductwork",
 "anchor": "Spin-in fitting collar with scoop/damper, SMACNA"
+},
+{
+"name": "split_band_pipe_hanger",
+"status": "wanted",
+"ref": "#156",
+"category": "pipe-support",
+"anchor": "Two-piece split-band hanger with the bolt lug pair"
 },
 {
 "name": "split_cable_entry_frame",
@@ -444,21 +612,28 @@
 "name": "spring_gate_carabiner",
 "status": "proposed",
 "ref": "#83",
-"category": "",
+"category": "av-rigging",
 "anchor": ""
+},
+{
+"name": "spring_loaded_shock_caster",
+"status": "wanted",
+"ref": "#157",
+"category": "wheels-casters",
+"anchor": "Spring-suspended caster fork with the travel stack"
 },
 {
 "name": "srf_pipe_tube_bushing",
 "status": "proposed",
 "ref": "#89",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
 "name": "stc_spc_channel_cushion_clamp",
 "status": "proposed",
 "ref": "#88",
-"category": "",
+"category": "pipe-support",
 "anchor": ""
 },
 {
@@ -469,24 +644,38 @@
 "anchor": ""
 },
 {
+"name": "stroke_doubler_mechanism",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.3 / No.8 — pulley-and-cable speed and stroke doubler"
+},
+{
+"name": "strut_pipe_strap",
+"status": "wanted",
+"ref": "#156",
+"category": "pipe-support",
+"anchor": "Strut-mounted pipe strap with the channel nut interface"
+},
+{
 "name": "swivel_ball_joint_mount",
 "status": "proposed",
 "ref": "#60",
-"category": "",
+"category": "shaft-hardware",
 "anchor": ""
 },
 {
 "name": "swivel_clamp_connector_joint",
 "status": "proposed",
 "ref": "#57",
-"category": "",
+"category": "machine-clamping",
 "anchor": ""
 },
 {
 "name": "t_handle_ball_lock_pin",
 "status": "proposed",
 "ref": "#53",
-"category": "",
+"category": "machine-clamping",
 "anchor": ""
 },
 {
@@ -498,17 +687,24 @@
 },
 {
 "name": "three_jaw_scroll_chuck",
-"status": "proposed",
-"ref": "#81",
-"category": "",
-"anchor": ""
+"status": "merged",
+"ref": "designs/three_jaw_scroll_chuck",
+"category": "shaft-hardware",
+"anchor": "RÖHM DURO-M, cylindrical centre mount DIN 6350"
 },
 {
 "name": "tilting_speaker_wall_bracket",
 "status": "proposed",
 "ref": "#7",
 "category": "av-rigging",
-"anchor": ""
+"anchor": "B-Tech BT77 / BT-series tilt+swivel speaker wall mount"
+},
+{
+"name": "trapeze_hanger_bracket",
+"status": "wanted",
+"ref": "#156",
+"category": "pipe-support",
+"anchor": "Trapeze bracket spanning two rods for multiple runs"
 },
 {
 "name": "tremolo_bridge_block",
@@ -522,7 +718,7 @@
 "status": "proposed",
 "ref": "#29",
 "category": "av-rigging",
-"anchor": ""
+"anchor": "Lighting-truss half coupler / hook clamp (48-51 mm tube)"
 },
 {
 "name": "truss_rod_adjusting_nut",
@@ -539,6 +735,13 @@
 "anchor": "Full-motion TV wall-mount articulating arm"
 },
 {
+"name": "two_axis_lifter_mechanism",
+"status": "wanted",
+"ref": "#162",
+"category": "motion-mechanisms",
+"anchor": "IAI No.2 — two-axis lifter, vertical plus transfer stroke"
+},
+{
 "name": "undermount_slide_locking_clip",
 "status": "wanted",
 "ref": "#1",
@@ -549,14 +752,21 @@
 "name": "vertical_latch_toggle_clamp",
 "status": "proposed",
 "ref": "#49",
-"category": "",
+"category": "machine-clamping",
 "anchor": ""
+},
+{
+"name": "wall_mount_pipe_bracket",
+"status": "wanted",
+"ref": "#156",
+"category": "pipe-support",
+"anchor": "Wall bracket with the standoff arm and clamp seat"
 },
 {
 "name": "window_cam_lock",
 "status": "proposed",
 "ref": "#55",
-"category": "",
+"category": "enclosure-hardware",
 "anchor": ""
 }
 ]

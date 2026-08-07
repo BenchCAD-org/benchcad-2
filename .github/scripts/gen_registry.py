@@ -42,9 +42,19 @@ def main(root: Path):
     reg = {}
 
     def add(name, status, ref, category="", anchor=""):
-        if name not in reg:  # precedence: merged > proposed > wanted
+        e = reg.get(name)
+        if e is None:  # precedence: merged > proposed > wanted
             reg[name] = dict(name=name, status=status, ref=ref,
                              category=category, anchor=anchor.strip())
+            return
+        # status/ref stay with the first (highest-precedence) source, but the
+        # category and the anchor fill in from whichever source knows them: a
+        # merged family is read off designs/, which carries neither, so without
+        # this every family lost its category the moment it merged.
+        if category and not e["category"]:
+            e["category"] = category
+        if anchor and not e["anchor"]:
+            e["anchor"] = anchor.strip()
 
     for d in sorted((root / "designs").iterdir()):
         if (d / "family.json").exists():
