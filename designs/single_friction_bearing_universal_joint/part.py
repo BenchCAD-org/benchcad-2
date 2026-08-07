@@ -139,16 +139,16 @@ def _build_pivot_block(d1):
     # Sized from wall thickness, not from the photo: the earlier 0.25*d1
     # radius left 0.82 x the pivot-bore radius as wall, which is far heavier
     # than a friction-bearing block needs and read as an oversized centre.
-    # 0.21*d1 puts the wall at 0.53 x the bore radius, and the 1.10 height /
-    # diameter ratio matches the teardown's own 119/107 px.
+    # 0.21*d1 puts the wall at 0.53 x the bore radius, and the block is
+    # square in section: height = diameter.
     r_o = 0.21 * d1
-    half_h = 0.23 * d1
+    half_h = r_o          # height : diameter = 1 : 1
     blk = (
         cq.Workplane("XY")
         .circle(r_o)
         .extrude(2.0 * half_h)
         .translate((0.0, 0.0, -half_h))
-        .edges("%CIRCLE").chamfer(0.022 * d1)
+        .edges("%CIRCLE").chamfer(0.045 * d1)   # generous break on both ends
     )
     # two milled FLATS on the cross-pin axis, the faces its bores break out
     # of (the teardown shows a drum with flats, not a plain cylinder)
@@ -163,7 +163,7 @@ def _build_pivot_block(d1):
     for sz in (1.0, -1.0):
         blk = blk.cut(
             cq.Workplane("XY")
-            .circle((PIVOT_PIN_D + PIN_FIT) * d1 / 2.0 + 0.035 * d1)
+            .circle((PIVOT_PIN_D + PIN_FIT) * d1 / 2.0 + 0.015 * d1)
             .extrude(sz * 0.035 * d1)
             .translate((0.0, 0.0, sz * half_h - (0.035 * d1 if sz < 0 else 0.0)))
         )
