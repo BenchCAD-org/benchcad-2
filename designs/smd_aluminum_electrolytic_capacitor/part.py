@@ -1,3 +1,5 @@
+import math
+
 import cadquery as cq
 
 
@@ -9,26 +11,74 @@ def _box(length, width, height, z=0.0, x=0.0, y=0.0):
     )
 
 
-def _soften_plastic(shape, amount):
-    if amount <= 0:
-        return shape
-    return shape.edges().chamfer(amount).clean()
+def _solid(shape):
+    return shape.val() if isinstance(shape, cq.Workplane) else shape
 
 
-def _can(body_diameter, can_height, base_thickness, rim_radius):
+def _fuse(a, b):
+    return _solid(a).fuse(_solid(b)).clean()
+
+
+def _cut(a, b):
+    return _solid(a).cut(_solid(b)).clean()
+
+
+def _soften_plastic(shape, _amount):
+    return _solid(shape).clean()
+
+
+def _can(body_diameter, can_height, rim_radius):
     radius = body_diameter / 2.0
-    overlap = min(0.05, base_thickness * 0.05)
     can_bottom_z = 0.5
-    edge_chamfer = min(rim_radius * 0.16, radius * 0.015, can_height * 0.008)
+    top_round = min(max(rim_radius, 0.08), radius * 0.18, can_height * 0.12)
     top_z = can_bottom_z + can_height
-    body = (
-        cq.Workplane("XY")
-        .circle(radius)
-        .extrude(can_height)
-        .edges(">Z")
-        .chamfer(edge_chamfer)
-        .translate((0.0, 0.0, can_bottom_z))
-    )
+    top_start = top_z - top_round
+
+    # Single-section revolve.  The bottom motherline follows the exact B-Rep
+    # chain observed in the reference: R0.5 neck arcs, a trimmed R0.6 roll arc,
+    # and a short main-wall cylinder before the top shoulder.  This avoids the
+    # visible horizontal seams produced by stacked/fused disks.
+    br = top_round
+    roll_r = br * 1.2
+    theta = 0.703  # trimmed torus arc angle from the reference section
+    p0 = cq.Vector(radius - br, 0.0, can_bottom_z)
+    p1 = cq.Vector(radius, 0.0, can_bottom_z + br)
+    p2 = cq.Vector(radius, 0.0, can_bottom_z + br * 1.2)
+    c_small_r = radius - br
+    p3 = cq.Vector(c_small_r + br * math.cos(theta), 0.0, p2.z + br * math.sin(theta))
+    c_roll_r = radius + roll_r * 0.565
+    c_roll_z = p3.z + math.sqrt(max(roll_r * roll_r - (p3.x - c_roll_r) ** 2, 0.0))
+    p4 = cq.Vector(c_roll_r - roll_r, 0.0, c_roll_z)
+    p5 = cq.Vector(p3.x, 0.0, c_roll_z + (c_roll_z - p3.z))
+    p6 = cq.Vector(radius, 0.0, p5.z + br * math.sin(theta))
+    p7 = cq.Vector(radius, 0.0, top_start)
+    p8 = cq.Vector(radius - br, 0.0, top_z)
+
+    def arc(a, mid, b):
+        return cq.Edge.makeThreePointArc(a, mid, b)
+
+    def line(a, b):
+        return cq.Edge.makeLine(a, b)
+
+    edges = [
+        arc(p0, cq.Vector(c_small_r + br / math.sqrt(2.0), 0.0, can_bottom_z + br - br / math.sqrt(2.0)), p1),
+        line(p1, p2),
+        arc(p2, cq.Vector(c_small_r + br * math.cos(theta * 0.5), 0.0, p2.z + br * math.sin(theta * 0.5)), p3),
+        arc(p3, p4, p5),
+        arc(p5, cq.Vector(c_small_r + br * math.cos(theta * 0.5), 0.0, p6.z - br * math.sin(theta * 0.5)), p6),
+        line(p6, p7),
+        arc(p7, cq.Vector(radius - br + br / math.sqrt(2.0), 0.0, top_z - br + br / math.sqrt(2.0)), p8),
+        line(p8, cq.Vector(0.0, 0.0, top_z)),
+        line(cq.Vector(0.0, 0.0, top_z), cq.Vector(0.0, 0.0, can_bottom_z)),
+        line(cq.Vector(0.0, 0.0, can_bottom_z), p0),
+    ]
+    body = cq.Solid.revolve(
+        cq.Wire.assembleEdges(edges),
+        [],
+        360,
+        (0.0, 0.0, 0.0),
+        (0.0, 0.0, 1.0),
+    ).clean()
     vent_length = body_diameter * 0.52
     vent_width = min(body_diameter * 0.038, 0.2)
     vent_depth = min(can_height * 0.006, 0.04)
@@ -39,25 +89,9 @@ def _can(body_diameter, can_height, base_thickness, rim_radius):
             .rotate((0, 0, 0), (0, 0, 1), angle)
             .translate((0.0, 0.0, top_z - vent_depth))
         )
-        body = body.cut(vent, clean=True)
+        body = _cut(body, vent)
 
-    # A shallow lower bead and neck give the SMD can the stepped profile visible
-    # in the STEP reference without adding manufacturer-specific markings.
-    bead_height = min(0.45, can_height * 0.08)
-    neck_height = min(0.55, can_height * 0.1)
-    bead = (
-        cq.Workplane("XY")
-        .circle(radius * 1.02)
-        .extrude(bead_height)
-        .translate((0.0, 0.0, can_bottom_z + neck_height))
-    )
-    neck = (
-        cq.Workplane("XY")
-        .circle(radius * 0.94)
-        .extrude(neck_height + overlap)
-        .translate((0.0, 0.0, can_bottom_z - overlap))
-    )
-    return body.union(bead, clean=True).union(neck, clean=True).clean()
+    return body.clean()
 
 
 def _base(
@@ -69,36 +103,114 @@ def _base(
     terminal_width,
     terminal_thickness,
 ):
-    plate_height = base_thickness * 0.42
-    raised_height = base_thickness - plate_height
-    plastic_chamfer = min(base_thickness * 0.045, terminal_width * 0.06, 0.08)
-    base = _soften_plastic(_box(base_length, base_width, plate_height), plastic_chamfer)
-
-    saddle_width = max(terminal_width * 1.05, base_width * 0.16)
-    saddle_y = base_width * 0.5 - saddle_width * 0.5
-    saddle_len = min(base_length * 0.34, body_diameter * 0.5)
-    support_height = raised_height * 0.72
-    for y in (-saddle_y, saddle_y):
-        base = base.union(
-            _soften_plastic(
-                _box(saddle_len, saddle_width, support_height, z=plate_height, y=y),
-                plastic_chamfer * 0.7,
-            ),
-            clean=True,
-        )
-
-    center_block = _box(
-        min(body_diameter * 0.42, base_length * 0.3),
-        min(body_diameter * 0.13, base_width * 0.14),
-        raised_height * 0.38,
-        z=plate_height,
+    frame_height = base_thickness * 0.46
+    upper_height = base_thickness - frame_height
+    plastic_chamfer = min(base_thickness * 0.055, terminal_width * 0.07, 0.1)
+    carrier_length = base_length
+    carrier_width = base_width
+    base = _soften_plastic(
+        _box(carrier_length, carrier_width, frame_height),
+        plastic_chamfer,
     )
-    base = base.union(_soften_plastic(center_block, plastic_chamfer * 0.6), clean=True)
+
+    front_notch_width = min(body_diameter * 0.36, base_length * 0.38)
+    front_notch_depth = min(base_width * 0.22, max(terminal_width * 0.8, 0.65))
+    front_notch = _box(
+        front_notch_width,
+        front_notch_depth + 0.02,
+        frame_height * 0.72,
+        z=frame_height * 0.28,
+        y=-base_width * 0.5 + front_notch_depth * 0.5,
+    )
+    base = _cut(base, front_notch)
+
+    rear_width = min(base_width * 0.28, terminal_width * 1.6)
+    rear_riser = _soften_plastic(
+        _box(
+            base_length * 0.74,
+            rear_width,
+            upper_height * 0.72,
+            z=frame_height,
+            y=base_width * 0.5 - rear_width * 0.5,
+        ),
+        plastic_chamfer * 0.65,
+    )
+    base = _fuse(base, rear_riser)
+
+    side_len = min(base_length * 0.22, body_diameter * 0.25)
+    side_width = min(base_width * 0.42, body_diameter * 0.45)
+    side_height = upper_height * 0.82
+    side_x = base_length * 0.5 - side_len * 0.5
+    for x in (-side_x, side_x):
+        molded_side = _soften_plastic(
+            _box(
+                side_len,
+                side_width,
+                side_height,
+                z=frame_height,
+                x=x,
+                y=-base_width * 0.03,
+            ),
+            plastic_chamfer * 0.65,
+        )
+        base = _fuse(base, molded_side)
+
+    support_height = min(base_thickness * 0.23, upper_height * 0.72)
+    support_radius = min(body_diameter * 0.48, min(base_length, base_width) * 0.44)
+    support = (
+        cq.Workplane("XY")
+        .circle(support_radius)
+        .extrude(support_height)
+        .translate((0.0, 0.0, base_thickness - support_height))
+    )
+    base = _fuse(base, support)
+
+    groove_outer = min(body_diameter * 0.50, min(base_length, base_width) * 0.455)
+    groove_width = min(0.24, max(0.14, terminal_width * 0.18))
+    groove_depth = min(base_thickness * 0.10, 0.22)
+    groove = (
+        cq.Workplane("XY")
+        .circle(groove_outer)
+        .circle(max(groove_outer - groove_width, 0.1))
+        .extrude(groove_depth)
+        .translate((0.0, 0.0, base_thickness - groove_depth))
+    )
+    base = _cut(base, groove)
+
+    mouth_width = min(body_diameter * 0.28, base_length * 0.28)
+    mouth_depth = min(base_width * 0.18, terminal_width * 0.9)
+    mouth_height = min(base_thickness * 0.24, 0.42)
+    notch = _box(
+        mouth_width,
+        mouth_depth,
+        mouth_height,
+        z=frame_height,
+        y=-base_width * 0.5 + mouth_depth * 0.5,
+    )
+    base = _cut(base, notch)
+
+    side_support_len = min(body_diameter * 0.23, base_length * 0.23)
+    side_support_width = min(terminal_width * 0.58, base_width * 0.11)
+    side_support_height = min(base_thickness * 0.18, 0.32)
+    side_x = base_length * 0.5 - side_support_len * 0.5
+    for x in (-side_x, side_x):
+        support_block = _soften_plastic(
+            _box(
+                side_support_len,
+                side_support_width,
+                side_support_height,
+                z=frame_height,
+                x=x,
+                y=base_width * 0.5 - side_support_width * 0.5,
+            ),
+            plastic_chamfer * 0.55,
+        )
+        base = _fuse(base, support_block)
 
     outer_x = terminal_span * 0.5
     inner_x = min(base_length * 0.5 - terminal_width * 0.18, outer_x - terminal_width)
-    foot_top = 0.0
-    foot_bottom = -terminal_thickness
+    foot_bottom = 0.0
+    foot_top = terminal_thickness
     bend_top = min(base_thickness * 0.78, terminal_width * 1.05)
     side_contact = min(terminal_width * 0.55, max(0.25, outer_x - inner_x))
     terminal_y = min(base_width * 0.5, max(terminal_width * 1.45, base_width * 0.2))
@@ -123,7 +235,7 @@ def _base(
             .close()
             .extrude(terminal_y, both=True)
         )
-        base = base.union(terminal, clean=True)
+        base = _fuse(base, terminal)
 
     return base.clean()
 
@@ -148,6 +260,6 @@ def build(
         terminal_width,
         terminal_thickness,
     )
-    can = _can(body_diameter, can_height, base_thickness, rim_radius)
-    result = base.union(can, clean=True).clean()
+    can = _can(body_diameter, can_height, rim_radius)
+    result = _fuse(base, can)
     return result
