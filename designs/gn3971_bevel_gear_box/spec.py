@@ -288,10 +288,21 @@ def check(p: dict) -> list[str]:
                    "cone must stay outside d1/2 by at least 0.25*m")
     # involute flanks: the VIRTUAL tooth count z/cos(45 deg) must clear the
     # 20-degree undercut limit of 17, and the tooth must keep a real top land
+    import math as _m
     z_v = L["gear_teeth"] * 2.0 ** 0.5
     if z_v < 17.0:
         bad.append("virtual tooth count under 17: a 20-degree involute flank would be "
                    "undercut at the root")
+    # transverse contact ratio of the equivalent (back-cone) spur pair: below
+    # ~1.2 the mesh drops out of contact between tooth pairs
+    _pa = _m.radians(20.0)
+    _rv = L["gear_s_outer"] / _m.cos(_m.radians(45.0))
+    _rbv, _rav = _rv * _m.cos(_pa), _rv + L["gear_module"]
+    _eps = ((2.0 * _m.sqrt(max(0.0, _rav ** 2 - _rbv ** 2)) - 2.0 * _rv * _m.sin(_pa))
+            / (_m.pi * L["gear_module"] * _m.cos(_pa)))
+    if _eps < 1.2:
+        bad.append("transverse contact ratio under 1.2: the pair would lose contact "
+                   "between successive teeth")
     heel_rim = L["gear_root_outer"] - 0.5 * p["shaft_diameter_d1"]
     if heel_rim < 1.0 * L["gear_module"]:
         bad.append("proportion: bevel-gear heel rim under 1.0*m between root cone and "

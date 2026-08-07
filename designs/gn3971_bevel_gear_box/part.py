@@ -36,7 +36,7 @@ DEDENDUM_FACTOR = 1.25          # 0.25*m tip clearance
 FACE_MODULES_TARGET = 6.0       # gen-1 picks b/m from {4..8}; 6 is its middle
 BACKLASH_DEG = 3.15             # published GN 3971 backlash (3 +/- 0.5 deg)
 TOE_WALL_MODULES = 0.30         # metal left between the toe root cone and bore
-INVOLUTE_STEPS = 3              # points sampled along each involute flank
+INVOLUTE_STEPS = 6              # points sampled along each involute flank
 # STUB tooth proportions, measured PERPENDICULAR to the pitch cone: addendum
 # 0.8*m, dedendum 1.0*m (whole depth 1.8*m). Stub teeth are the standard
 # answer when the blank cannot host a full-depth tooth — here the bore is up
