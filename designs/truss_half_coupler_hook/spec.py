@@ -2,7 +2,9 @@
 
 A stage-rigging half coupler / hook clamp for the standard Ø48-51 mm barrel
 (Doughty T-series class), modelled as a six-body assembly (shells, pins,
-closing bolt, wing nut — see part.py). PARAM_SPEC declares each build()
+closing bolt, wing nut — see part.py). The base fixing (hang_d) and the swing
+closing bolt (closing_bolt_d) are separate fasteners on this part and are
+parameterised separately. PARAM_SPEC declares each build()
 parameter; check() holds the engineering rules a reviewer audits. Nothing is
 coupled, so there is no refine(). Spec: docs/DESIGN_SPEC.md
 
@@ -50,13 +52,32 @@ PARAM_SPEC = {
         range={"easy": (18.0, 20.0), "medium": (16.0, 22.0), "hard": (14.0, 24.0)},
         source="Doughty T57000 drawing: tang 19 across under the 12.7 bore",
     ),
+    "closing_bolt_d": dict(
+        desc="swing closing-bolt nominal thread (the eyebolt the wing nut runs on)",
+        unit="mm",
+        range={"easy": (10.0, 10.0), "medium": (8.0, 10.0), "hard": (8.0, 10.0)},
+        choices={"easy": [10.0], "medium": [8.0, 10.0], "hard": [8.0, 10.0]},
+        coverage=[8.0, 10.0],
+        # M12 is deliberately absent: a DIN 315-D M12 wing nut spans 63.5 and
+        # measures 114 mm across the clamp, outside the catalog's 107 outline.
+        # check() rejects it, so declaring it would be an unreachable value.
+        source="Doughty T57000 drawing: the wing nut scales to a ~46 mm span, "
+               "which is the DIN 315-D M10 row (e 48-51); the datasheet does not "
+               "tabulate the eyebolt, so the range around it is proportion",
+    ),
     "hang_d": dict(
-        desc="fixing bore / closing-bolt hole diameter (M10-M12 clearance)",
+        desc="fixing bore in the base tang (M10-M12 clearance, with the captive-nut slot)",
         unit="mm",
         range={"easy": (12.5, 13.0), "medium": (10.3, 13.0), "hard": (10.3, 13.0)},
         choices={"easy": [12.7], "medium": [10.5, 12.7], "hard": [10.5, 12.7]},
         coverage=[10.5, 12.7],
         source="Doughty catalog: Ø12.7 (M12) or the M10 option's ~10.5 clearance",
+        # NOTE: this is the HANGING fixing at the base, not the closing bolt.
+        # The datasheet lists them separately ("integral flat boss drilled
+        # Ø12.7 with a hex slot for a captive M10/M12 nut" vs "closed by a
+        # swing-away Grade 8.8 eyebolt and wing nut"); deriving one from the
+        # other put a DIN 315-D M12 wing nut on the part, which does not fit
+        # inside the catalog's 107 mm overall width.
     ),
     "lug_h": dict(
         desc="closure-lug block height over the ring crown",
@@ -96,6 +117,23 @@ def check(p: dict) -> list[str]:
     # tang thinner than the body is a plate, not a block
     if p["tang_t"] > 0.5 * p["body_w"]:
         bad.append("tang_t > 0.5*body_w: tang should be a plate under the ring, not a block")
+
+    # Overall width against the catalog outline (T57000: 107 mm). The clamp is
+    # widest at the hinge knuckle on one side and the wing-nut ear on the other,
+    # both referred to the pivot standoff x_h — so the envelope is closed-form
+    # and worth asserting. Nothing constrained it before, which is how a wing
+    # nut ~20 mm past the silhouette went unnoticed.
+    pin_d = max(5.0, 0.5 * p["hang_d"])
+    k_r = max(4.5, 0.8 * pin_d)
+    r_eye = pin_d / 2.0 + 2.4
+    x_h = p["bore_d"] / 2.0 + p["wall_t"] + max(0.85 * k_r, r_eye + 1.5)
+    wing_span_e = {8.0: 37.5, 10.0: 49.5, 12.0: 63.5}.get(
+        p["closing_bolt_d"], 5.0 * p["closing_bolt_d"])
+    overall_w = 2.0 * x_h + k_r + wing_span_e / 2.0     # mirrors part.py's x_h
+    if not 92.0 <= overall_w <= 112.0:
+        bad.append(f"overall width {overall_w:.1f} outside the catalog clamp "
+                   "outline (Doughty T-series 107 for the 50 mm bodies): the "
+                   "hinge knuckle and the wing-nut ear set the silhouette")
 
     af = 19.0 if (p["hang_d"] - 0.7) >= 11.0 else 17.0
     if p["body_w"] < af + 8.0:

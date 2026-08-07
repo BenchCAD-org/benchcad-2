@@ -37,17 +37,74 @@ pin axes.
 Interface + examples: docs/DESIGN_SPEC.md
 """
 
+import math
+
 import cadquery as cq
 
 
-def _hardware(hang_d):
-    """Closing-bolt nominal Ø and ISO 261 coarse pitch from the fixing size:
-    hang_d is the catalog clearance bore (Ø12.7 for M12, ~Ø10.5 for M10), so
-    bolt nominal = clearance bore - 0.7 mm play."""
-    bolt_d = hang_d - 0.7
-    pitch = 1.5 if bolt_d < 11.0 else 1.75
+def _hardware(closing_bolt_d):
+    """Closing-bolt nominal Ø and its ISO 261 coarse pitch.
+
+    This is the swing eyebolt the wing nut runs on — NOT the base fixing bore
+    `hang_d`. They are separate fasteners on the real clamp and the datasheet
+    lists them separately; deriving the eyebolt from the Ø12.7 fixing hole put
+    a DIN 315-D M12 wing nut on the part, whose 63.5 mm span does not fit the
+    catalog's 107 mm overall width."""
+    bolt_d = float(closing_bolt_d)
+    pitch = {8.0: 1.25, 10.0: 1.5, 12.0: 1.75}.get(bolt_d,
+                                                   1.5 if bolt_d < 11.0 else 1.75)
     return bolt_d, pitch
 
+
+# DIN 315 form D, mid-band per row (mm). Symbols are the datasheet's:
+#   d2 boss Ø at the bearing face · d3 boss Ø at the top · m boss height
+#   e span over the wing tips · h overall height · g2/g1 wing thickness at the
+#   root/ear · r1 ear radius · r4 concave underside radius
+_DIN315D = {
+    8.0:  (14.5, 11.5, 37.5, 19.0,  8.2, 2.4, 4.0,  6.0, 3.0),
+    10.0: (18.5, 15.5, 49.5, 24.0, 10.0, 4.0, 5.0,  8.0, 5.0),
+    12.0: (21.5, 18.5, 63.5, 32.2, 12.0, 4.5, 6.0, 10.0, 6.0),
+    16.0: (27.5, 22.0, 71.5, 36.2, 15.0, 6.0, 7.0, 11.0, 7.0),
+}
+
+
+def _din315d(d1):
+    """The DIN 315-D row nearest ``d1``, scaled to the actual thread Ø so the
+    nut still screws onto a non-tabulated bolt. Returns the drawing symbols
+    (d2, d3, e, h, m, g1, g2, r1, r4)."""
+    nom = min(_DIN315D, key=lambda k: abs(k - d1))
+    k = d1 / nom
+    return tuple(v * k for v in _DIN315D[nom])
+
+
+def _wing(e, h, m, r_boss, g_root, ear_r1, under_r4):
+    """ONE lobed wing on the +X side, as the DIN 315-D front view draws it: an
+    ear of radius r1 at the tip, a concave underside r4 sweeping back to the
+    boss, and a valley up from the boss top. Built in XZ — the 107-width plane,
+    which is where the datasheet shows the wings splayed — and extruded across
+    the tube axis. The caller mirrors it for the -X side rather than
+    re-deriving the profile with sign flips, which is how the arc midpoints get
+    silently reflected onto the wrong side."""
+    cx, cz = e / 2.0 - ear_r1, h - ear_r1              # ear centre
+    tip = (e / 2.0, cz)                                # outermost point
+    top = (cx, h)                                      # ear apex
+    v0 = (r_boss * 0.55, m)                            # valley root, boss top
+    ain, aun = math.radians(118.0), math.radians(-72.0)
+    ein = (cx + ear_r1 * math.cos(ain), cz + ear_r1 * math.sin(ain))
+    eun = (cx + ear_r1 * math.cos(aun), cz + ear_r1 * math.sin(aun))
+    u1 = (r_boss * 0.95, 0.30 * m)                     # wing root on the boss
+    vm = ((v0[0] + ein[0]) / 2.0 - 0.35 * ear_r1,
+          (v0[1] + ein[1]) / 2.0 + 0.35 * ear_r1)      # concave valley
+    um = ((u1[0] + eun[0]) / 2.0, (u1[1] + eun[1]) / 2.0 + 0.45 * under_r4)
+    mid = ((tip[0] + eun[0]) / 2.0 + 0.18 * ear_r1, (tip[1] + eun[1]) / 2.0)
+    return (cq.Workplane("XZ")
+            .moveTo(*v0)
+            .threePointArc(vm, ein)          # valley, concave
+            .threePointArc(top, tip)         # ear: inner tangent -> apex -> tip
+            .threePointArc(mid, eun)         # ear: tip -> underside tangent
+            .threePointArc(um, u1)           # underside, concave r4
+            .lineTo(*v0).close()
+            .extrude(g_root / 2.0, both=True))
 
 def _y_slab(x_c, y_c, z_c, dx, dy, dz):
     """A box centred at (x_c, y_c) spanning z from z_c to z_c+dz."""
@@ -84,17 +141,24 @@ def _ring_stack(x_c, z0, z1, pitch, r_root, r_crest, phase):
     return rings
 
 
-def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
+def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
+          closing_bolt_d=10.0):
     r_in = bore_d / 2.0
     r_out = r_in + wall_t
     gap = 0.6                                    # split-plane gap each side
-    bolt_d, pitch = _hardware(hang_d)
+    bolt_d, pitch = _hardware(closing_bolt_d)
     pin_d = max(5.0, 0.5 * hang_d)               # hinge / pivot pin Ø
     k_r = max(4.5, 0.8 * pin_d)                  # knuckle boss radius
-    r_eye = 1.1 * (hang_d - 0.7)                 # bolt pivot-eye outer radius
-    # pin axes stand off the ring so boss and bolt eye clear the shell (the
-    # drawing's 107 overall width vs the ~Ø60 ring: pivots sit well outside)
-    x_h = r_out + max(2.2 * k_r, r_eye + 1.5)
+    # the eye belongs to the CLOSING bolt, not to the base fixing bore; sized
+    # off the pin it swings on, which is what the drawing's small pivot circles
+    # show (outer Ø ~11 on a Ø6.35 pin), not 1.1x a thread diameter
+    r_eye = pin_d / 2.0 + 2.4                    # bolt pivot-eye outer radius
+    # Knuckle standoff measured off the T57000 front view: the pivot centres
+    # sit ~4.3 mm outside the ring wall (+-35.8 about the bore on the anchor),
+    # i.e. the bosses nestle INTO the shell rather than standing clear of it.
+    # The old 2.2*k_r put them at +-46.2 and, once a real DIN 315-D wing nut
+    # went on the bolt, pushed the wings ~20 mm past the catalog outline.
+    x_h = r_out + max(0.85 * k_r, r_eye + 1.5)
     ear_w = 0.28 * body_w                        # each outer ear width
     knu_w = body_w - 2.0 * ear_w - 0.6           # centre width (0.3 mm gap a side)
 
@@ -135,10 +199,25 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
     for x_c in (-x_h, x_h):
         for y_c in (-y_ear, y_ear):
             lower = lower.union(knuckle(x_c, y_c, ear_w, -1))
-    tang_h = base_drop - r_in
-    tang = (_y_slab(0.0, 0.0, -base_drop, tang_t, body_w, tang_h)
-            .edges("|Z").fillet(min(2.5, 0.2 * tang_t)))
-    lower = lower.union(tang)
+    # ---- triangular plate body ----------------------------------------------
+    # The datasheet front view is NOT a ring with a tab hung off it: the body is
+    # a TRIANGULAR PLATE whose upper corners are the two pivot lugs and whose
+    # sides run straight down and inward to a flat bottom edge — the edge the
+    # "tube centre -> base 55" is measured to, and the one the Ø12.7 fixing is
+    # drilled up into. Modelling it as an annulus plus a rectangular tang gives
+    # a circular silhouette that cannot reproduce the drawing's outline at all.
+    w_base = 2.4 * tang_t                        # flat bottom edge width
+    r_fil = min(6.0, 0.30 * tang_t)
+    body = (cq.Workplane("XZ", origin=(0.0, body_w / 2.0, 0.0))
+            .moveTo(-x_h, 0.0)
+            .lineTo(x_h, 0.0)
+            .lineTo(w_base / 2.0, -base_drop)
+            .lineTo(-w_base / 2.0, -base_drop)
+            .close()
+            .extrude(body_w)
+            .edges("|Y").fillet(r_fil)
+            .cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_in)))   # keep the barrel clear
+    lower = lower.union(body)
     if stud:
         stud_len = 34.0                          # Doughty T57200: M12x50, 34 proud
         r_stud_minor = bolt_d / 2.0 - 0.61 * pitch
@@ -158,7 +237,10 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
         # base into the captive-nut window, so the M12 hangs the fixture from
         # below and threads into the nut sitting in the window
         z_win = -(base_drop - 1.2 * hang_d)          # window centre height
-        af = 19.0 if bolt_d >= 11.0 else 17.0
+        # A/F of the CAPTIVE FIXING nut, so it follows hang_d — not the closing
+        # bolt. Once the two were decoupled, keying this off bolt_d put a 17 mm
+        # window under an M12 (Ø12.7) fixing.
+        af = 19.0 if hang_d >= 12.0 else 17.0
         # captive-nut window, THROUGH the tang across the tube (front view
         # shows it as hidden lines): parallel walls at the hex A/F along the
         # tube so the nut cannot spin; drawing slot height 16 (= 0.85 * 19)
@@ -209,28 +291,31 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud):
     if ext is not None:
         bolt = bolt.union(ext)
 
-    # ---- 6. wing nut (DIN 315 proportions: hub ~1.8d, wings span ~4.5d) ------
-    r_hub = 0.9 * bolt_d
-    nut_h = 1.1 * bolt_d
-    z_n0 = z_lug_top + 0.3                       # hovers 0.3 over the lug face
-    nut = (
-        cq.Workplane("XY", origin=(0.0, 0.0, z_n0)).circle(r_hub).extrude(nut_h))
-    # DIN 315 proportion: span = 2*(0.5*hub + wing) ~ 3.3*d (~40 on M12); the
-    # wings run along the TUBE axis (Y), matching the folded pose the sheet's
-    # 107 overall width is measured in
-    wing_l, wing_t = 1.2 * bolt_d, 0.45 * bolt_d
-    for sy in (-1.0, 1.0):
-        y_wc = sy * (0.5 * r_hub + wing_l / 2.0)
-        wing = _y_slab(0.0, y_wc, z_n0 + 0.25 * nut_h,
-                       wing_t, wing_l, nut_h + 0.9 * bolt_d)
-        wing = wing.edges("|X").fillet(0.3 * bolt_d)
-        nut = nut.union(wing)
+    # ---- 6. wing nut — DIN 315 form D on the closing bolt --------------------
+    # The datasheet's front view (the one carrying the 107) shows the wings
+    # splayed IN THAT PLANE, with a hex-to-round boss under them; the side view
+    # shows only a narrow rib. So the wings lie in XZ, not along the tube axis.
+    d2, d3, e_span, h_nut, m_boss, g1, g2, r1, r4 = _din315d(bolt_d)
+    z_n0 = z_lug_top + 0.3                       # bearing face, 0.3 over the lug
     r_bore = bolt_d / 2.0 + 0.35 * pitch         # bore at the nut thread root
-    nut = nut.cut(
-        cq.Workplane("XY", origin=(0.0, 0.0, z_n0 - bolt_d))
-        .circle(r_bore)
-        .extrude(nut_h + 3.0 * bolt_d))
-    inr = _ring_stack(0.0, z_t0, z_n0 + nut_h - 0.2, pitch,
+
+    # boss: Ø d2 at the bearing face tapering to Ø d3 at the top
+    nut = (cq.Workplane("XY", origin=(0.0, 0.0, z_n0))
+           .circle(d2 / 2.0).workplane(offset=m_boss).circle(d3 / 2.0).loft())
+    wing = _wing(e_span, h_nut, m_boss, d2 / 2.0, g2, r1, r4)
+    # g2 -> g1 wedge: shave both faces from the boss wall out to the ear
+    for face in (1.0, -1.0):
+        wing = wing.cut(
+            cq.Workplane("XZ")
+            .polyline([(d2 / 2.0, g2 / 2.0), (e_span / 2.0, g1 / 2.0),
+                       (e_span / 2.0, g2), (d2 / 2.0, g2)]).close()
+            .extrude(face * 2.0 * h_nut))
+    wing = wing.translate((0.0, 0.0, z_n0))
+    nut = nut.union(wing).union(wing.mirror("YZ"))
+
+    nut = nut.cut(cq.Workplane("XY", origin=(0.0, 0.0, z_n0 - bolt_d))
+                  .circle(r_bore).extrude(h_nut + 3.0 * bolt_d))
+    inr = _ring_stack(0.0, z_t0, z_n0 + m_boss - 0.2, pitch,
                       bolt_d / 2.0 - 0.25 * pitch, r_bore + 0.01,
                       phase=0.5 * pitch)         # same grid as the bolt rings,
                                                  # half a pitch over: nested
