@@ -2,14 +2,59 @@
 
 
 MODEL_ROWS = [
+    # AutomationDirect DN-R35S precut slotted rail, every catalogue length.
+    # Slot count is length / 25 on every row, and 375 is genuinely absent from
+    # the table (it steps 350 -> 400).
     dict(model="DN-R35S-050-4", rail_length=50.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=2,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-075-4", rail_length=75.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=3,
          profile_inner_width=27.0, slot_pitch=25.0),
     dict(model="DN-R35S-100-4", rail_length=100.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=4,
          profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-125-4", rail_length=125.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=5,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-150-4", rail_length=150.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=6,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-175-4", rail_length=175.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=7,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-200-4", rail_length=200.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=8,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-225-4", rail_length=225.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=9,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-250-4", rail_length=250.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=10,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-275-4", rail_length=275.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=11,
+         profile_inner_width=27.0, slot_pitch=25.0),
     dict(model="DN-R35S-300-4", rail_length=300.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=12,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-325-4", rail_length=325.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=13,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-350-4", rail_length=350.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=14,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-400-4", rail_length=400.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=16,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-450-4", rail_length=450.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=18,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-500-4", rail_length=500.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=20,
+         profile_inner_width=27.0, slot_pitch=25.0),
+    dict(model="DN-R35S-550-4", rail_length=550.0, rail_width=35.0, rail_height=7.5,
+         rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=22,
          profile_inner_width=27.0, slot_pitch=25.0),
     dict(model="DN-R35S-600-4", rail_length=600.0, rail_width=35.0, rail_height=7.5,
          rail_thickness=1.0, slot_width=6.3, slot_length=18.0, slot_count=24,
@@ -17,9 +62,9 @@ MODEL_ROWS = [
 ]
 
 DIFFICULTY_ROWS = {
-    "easy": [0, 1],
-    "medium": [0, 1, 2],
-    "hard": [0, 1, 2, 3],
+    "easy": list(range(0, 6)),     # 50 - 175 mm
+    "medium": list(range(0, 12)),  # 50 - 325 mm
+    "hard": list(range(0, 18)),    # 50 - 600 mm, the whole table
 }
 
 
@@ -125,14 +170,6 @@ PARAM_SPEC = {
             "one slot per 25 mm segment"
         ),
         refine=True,
-    ),
-    "side_relief": dict(
-        desc="modeled downturned outer edge return lips",
-        unit="",
-        range={"easy": (0, 0), "medium": (0, 1), "hard": (1, 1)},
-        source="proportion from the DN-R35S top-hat side return detail",
-        choices={"easy": [0], "medium": [0, 1], "hard": [1]},
-        feature=True,
     ),
 }
 
