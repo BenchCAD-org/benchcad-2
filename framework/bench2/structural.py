@@ -21,9 +21,14 @@ experiment is how far a very cheap descriptor goes.
    to 2 — measured, and the reason the decomposition is kept. **Single-solid
    scope only**: out-of-scope input raises `NotSingleSolidError` rather than
    getting a silent multi-solid heuristic.
-2. **Edge-length spectrum** — canonical edge lengths, each normalized by that
-   shape's total edge length, sorted, zero-padded to the longer.
-3. **Face-area spectrum** — the same by total surface area.
+2. **Edge-length spectrum, type-aware** — canonical edge lengths, each
+   normalized by that shape's total edge length, then bucketed by OCP curve
+   type, sorted and zero-padded within each bucket. Length and area alone do
+   not encode curve or surface type, so an R1 fillet and a chamfer sized to
+   the same area were previously indistinguishable; bucketing keeps
+   `Circle` from matching `Line`.
+3. **Face-area spectrum, type-aware** — the same by total surface area, with
+   `Cylinder` kept apart from `Plane`.
 
 Each spectrum is compared with its own continuous ``L_p``, ``1 <= p <= 2``, and
 the three signals combine under weights normalized to sum 1. Five parameters,
@@ -55,6 +60,16 @@ from dataclasses import dataclass, field
 import numpy as np
 
 DEFAULT_WEIGHTS = {"topology": 0.50, "edge": 0.25, "face": 0.25}
+
+# Fixed type orders. A constant of the metric, like the 2**(1/p) divisor — not a
+# tunable parameter, and no type carries a weight. Anything OCP reports that is
+# not listed is appended in sorted order, so an unexpected type is still scored
+# rather than silently merged.
+EDGE_TYPE_ORDER = ("Line", "Circle", "Ellipse", "Hyperbola", "Parabola",
+                   "BezierCurve", "BSplineCurve", "OffsetCurve", "OtherCurve")
+FACE_TYPE_ORDER = ("Plane", "Cylinder", "Cone", "Sphere", "Torus",
+                   "BezierSurface", "BSplineSurface", "SurfaceOfRevolution",
+                   "SurfaceOfExtrusion", "OffsetSurface", "OtherSurface")
 DEFAULT_P_EDGE = 1.0
 DEFAULT_P_FACE = 1.0
 
@@ -125,6 +140,8 @@ class BRepDescriptor:
     euler: tuple[int, ...]              # corrected chi per shell, sorted
     face_spectrum: tuple[float, ...]    # areas / total area, descending
     edge_spectrum: tuple[float, ...]    # lengths / total length, descending
+    face_by_type: tuple = ()            # ((surface type, sorted shares), ...)
+    edge_by_type: tuple = ()            # ((curve type, sorted shares), ...)
 
     def as_dict(self) -> dict:
         return {
@@ -133,6 +150,8 @@ class BRepDescriptor:
             "vertices": self.vertices, "euler": list(self.euler),
             "face_spectrum": list(self.face_spectrum),
             "edge_spectrum": list(self.edge_spectrum),
+            "face_by_type": {t: list(v) for t, v in self.face_by_type},
+            "edge_by_type": {t: list(v) for t, v in self.edge_by_type},
         }
 
 
@@ -222,10 +241,12 @@ class StructuralComparison:
         pe = self.p_edge if p_edge is None else p_edge
         pf = self.p_face if p_face is None else p_face
         w = _normalize_weights(self.weights if weights is None else weights)
-        s_edge = spectrum_similarity(
-            self.canonical_a.edge_spectrum, self.canonical_b.edge_spectrum, p=pe)
-        s_face = spectrum_similarity(
-            self.canonical_a.face_spectrum, self.canonical_b.face_spectrum, p=pf)
+        s_edge = typed_spectrum_similarity(
+            self.canonical_a.edge_by_type, self.canonical_b.edge_by_type,
+            EDGE_TYPE_ORDER, p=pe)
+        s_face = typed_spectrum_similarity(
+            self.canonical_a.face_by_type, self.canonical_b.face_by_type,
+            FACE_TYPE_ORDER, p=pf)
         return StructuralComparison(
             raw_a=self.raw_a, raw_b=self.raw_b,
             canonical_a=self.canonical_a, canonical_b=self.canonical_b,
@@ -251,6 +272,28 @@ class StructuralComparison:
         }
 
 
+def _curve_type(edge) -> str:
+    from OCP.BRepAdaptor import BRepAdaptor_Curve
+    from OCP.GeomAbs import GeomAbs_CurveType
+
+    t = BRepAdaptor_Curve(edge.wrapped).GetType()
+    for name in dir(GeomAbs_CurveType):
+        if name.startswith("GeomAbs_") and getattr(GeomAbs_CurveType, name) == t:
+            return name.replace("GeomAbs_", "")
+    return "OtherCurve"
+
+
+def _surface_type(face) -> str:
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.GeomAbs import GeomAbs_SurfaceType
+
+    t = BRepAdaptor_Surface(face.wrapped).GetType()
+    for name in dir(GeomAbs_SurfaceType):
+        if name.startswith("GeomAbs_") and getattr(GeomAbs_SurfaceType, name) == t:
+            return name.replace("GeomAbs_", "")
+    return "OtherSurface"
+
+
 def _area(face) -> float:
     from OCP.BRepGProp import BRepGProp
     from OCP.GProp import GProp_GProps
@@ -267,6 +310,26 @@ def _length(edge) -> float:
     props = GProp_GProps()
     BRepGProp.LinearProperties_s(edge.wrapped, props)
     return float(props.Mass())
+
+
+def _typed_spectrum(pairs, order) -> tuple:
+    """``((type, sorted normalized values), ...)`` in the fixed type order.
+
+    Normalization is by the shape's TOTAL measure, taken **before** bucketing:
+    each entry keeps the share of the whole shape it represents, so geometry
+    changing type transfers mass between buckets instead of vanishing. Per
+    bucket normalization would hide exactly that.
+    """
+    vals = [(t, float(v)) for t, v in pairs if v > 0.0]
+    total = sum(v for _, v in vals)
+    if not vals or total <= 0.0:
+        return ()
+    buckets = {}
+    for t, v in vals:
+        buckets.setdefault(t, []).append(v / total)
+    known = [t for t in order if t in buckets]
+    extra = sorted(t for t in buckets if t not in order)
+    return tuple((t, tuple(sorted(buckets[t], reverse=True))) for t in known + extra)
 
 
 def _normalized_spectrum(values) -> tuple[float, ...]:
@@ -299,12 +362,16 @@ def _describe(shape) -> BRepDescriptor:
             + sum(2 - len(f.Wires()) for f in shell.Faces())
         ))
     faces, edges = shape.Faces(), shape.Edges()
+    face_pairs = [(_surface_type(f), _area(f)) for f in faces]
+    edge_pairs = [(_curve_type(e), _length(e)) for e in edges]
     return BRepDescriptor(
         solids=len(shape.Solids()), shells=len(shells),
         faces=len(faces), edges=len(edges), vertices=len(shape.Vertices()),
         euler=tuple(sorted(euler)),
-        face_spectrum=_normalized_spectrum(_area(f) for f in faces),
-        edge_spectrum=_normalized_spectrum(_length(e) for e in edges),
+        face_spectrum=_normalized_spectrum(v for _, v in face_pairs),
+        edge_spectrum=_normalized_spectrum(v for _, v in edge_pairs),
+        face_by_type=_typed_spectrum(face_pairs, FACE_TYPE_ORDER),
+        edge_by_type=_typed_spectrum(edge_pairs, EDGE_TYPE_ORDER),
     )
 
 
@@ -414,6 +481,38 @@ def _normalize_weights(weights) -> dict:
     return {k: float(v) / total for k, v in w.items()}
 
 
+def typed_spectrum_similarity(a: tuple, b: tuple, order, p: float = 1.0) -> float:
+    """Zero-padded ``L_p`` similarity of two **typed** spectra, in [0, 1].
+
+    Each type bucket is zero-padded against its counterpart and the buckets are
+    concatenated in the fixed order, so measurements of different geometric
+    type can never match each other — a cylindrical face and a planar face of
+    the same area no longer cancel. A type present in one shape and absent in
+    the other pads against zeros, which is how a type change registers.
+
+    Because normalization happened globally before bucketing, the concatenated
+    vector still sums to 1 and ``2 ** (1 / p)`` is still the largest distance
+    two of them can have. Adds no weight and no tunable parameter.
+    """
+    if not 1.0 <= p <= 2.0:
+        raise ValueError(f"p must be in [1, 2], got {p}")
+    da, db = dict(a), dict(b)
+    if not da and not db:
+        return 1.0
+    if not da or not db:
+        return 0.0
+    va, vb = [], []
+    known = [t for t in order if t in da or t in db]
+    extra = sorted((set(da) | set(db)) - set(order))
+    for t in known + extra:
+        xa, xb = list(da.get(t, ())), list(db.get(t, ()))
+        n = max(len(xa), len(xb))
+        va += xa + [0.0] * (n - len(xa))
+        vb += xb + [0.0] * (n - len(xb))
+    distance = float(np.sum(np.abs(np.array(va) - np.array(vb)) ** p) ** (1.0 / p))
+    return float(max(0.0, 1.0 - distance / (2.0 ** (1.0 / p))))
+
+
 def compare(
     shape_a,
     shape_b,
@@ -429,8 +528,10 @@ def compare(
 
     topo = compare_topology(can_a, can_b)
     s_top = topo.topology_similarity
-    s_edge = spectrum_similarity(can_a.edge_spectrum, can_b.edge_spectrum, p=p_edge)
-    s_face = spectrum_similarity(can_a.face_spectrum, can_b.face_spectrum, p=p_face)
+    s_edge = typed_spectrum_similarity(
+        can_a.edge_by_type, can_b.edge_by_type, EDGE_TYPE_ORDER, p=p_edge)
+    s_face = typed_spectrum_similarity(
+        can_a.face_by_type, can_b.face_by_type, FACE_TYPE_ORDER, p=p_face)
 
     return StructuralComparison(
         raw_a=raw_a, raw_b=raw_b, canonical_a=can_a, canonical_b=can_b,

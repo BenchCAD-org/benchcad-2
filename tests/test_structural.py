@@ -7,6 +7,7 @@ zero-padding, the p_edge/p_face sensitivity split, and topology staying visible
 independently of high spectral similarity.
 """
 
+import math
 import sys
 import unittest
 from pathlib import Path
@@ -16,12 +17,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "framework"))
 import cadquery as cq  # noqa: E402
 
 from bench2.structural import (  # noqa: E402
+    EDGE_TYPE_ORDER,
+    _area,
+    _length,
     NotSingleSolidError,
     _ocp_hashcode_fix,
     brep_descriptor,
+    canonicalize,
     compare,
     shell_genera,
     spectrum_similarity,
+    typed_spectrum_similarity,
     summed_chi,
     topology_similarity,
     total_genus,
@@ -341,6 +347,95 @@ class TestParameterisation(unittest.TestCase):
                     "summed_chi_reference", "s_topology",
                     "s_edge", "s_face", "p_edge", "p_face", "weights", "structural"):
             self.assertIn(key, d)
+
+
+class TestTypeAwareSpectra(unittest.TestCase):
+    """The fillet/chamfer blind spot the typed descriptor exists to close."""
+
+    SEL = "|Y and >Z and >X"
+
+    def _cube(self):
+        return cq.Workplane("XY").box(10, 10, 10)
+
+    def _fillet(self):
+        return self._cube().edges(self.SEL).fillet(1.0).val()
+
+    def _chamfer(self, d=1.0):
+        return self._cube().edges(self.SEL).chamfer(d).val()
+
+    def _matched_chamfer(self):
+        # face area 10*d*sqrt(2) equal to the fillet's 10*pi/2, so the untyped
+        # descriptor sees identical entries: same new-face area, same end-edge
+        # length. Only the type differs.
+        return self._chamfer(d=(math.pi / 2) / math.sqrt(2))
+
+    def test_the_types_are_what_distinguishes_them(self):
+        f = brep_descriptor(self._fillet())
+        c = brep_descriptor(self._chamfer())
+        self.assertIn("Circle", dict(f.edge_by_type))
+        self.assertIn("Cylinder", dict(f.face_by_type))
+        self.assertNotIn("Circle", dict(c.edge_by_type))     # chamfer is all lines
+        self.assertNotIn("Cylinder", dict(c.face_by_type))   # and all planes
+
+    def test_fillet_vs_chamfer_is_detected(self):
+        c = compare(self._fillet(), self._chamfer())
+        self.assertTrue(c.topology_match)          # topologically identical
+        self.assertLess(c.s_edge, 0.98)
+        self.assertLess(c.s_face, 0.98)
+
+    def test_matched_size_chamfer_is_still_detected(self):
+        """Untyped, these are literally identical entries; typed, they are not."""
+        fillet, chamfer = self._fillet(), self._matched_chamfer()
+        # the RAW blend measures are equal by construction - 15.7080 of area and
+        # 1.5708 of end edge on both - so the untyped descriptor has nothing to
+        # separate them by except second-order neighbour trimming. (The
+        # normalized shares differ very slightly because the two shapes end up
+        # with different totals; that is the second-order term.)
+        fc = canonicalize(fillet)
+        cc = canonicalize(chamfer)
+        self.assertAlmostEqual(min(_area(f) for f in fc.Faces()),
+                               min(_area(f) for f in cc.Faces()), places=6)
+        self.assertAlmostEqual(min(_length(e) for e in fc.Edges()),
+                               min(_length(e) for e in cc.Edges()), places=6)
+        c = compare(fillet, chamfer)
+        self.assertLess(c.s_edge, 0.98)
+        self.assertLess(c.s_face, 0.98)
+
+    def test_deficit_is_dominated_by_the_transferred_mass_at_p1(self):
+        """At p = 1 the deficit is the mass that changed type, plus a little.
+
+        Not an exact identity: the two operations also trim their neighbouring
+        faces differently (99.7854 vs 99.5), so a second-order term rides along.
+        Measured, the transferred mass accounts for well over 99% of it.
+        """
+        fd = brep_descriptor(self._fillet())
+        circle_mass = sum(dict(fd.edge_by_type)["Circle"])
+        cylinder_mass = sum(dict(fd.face_by_type)["Cylinder"])
+        c = compare(self._fillet(), self._chamfer(), p_edge=1.0, p_face=1.0)
+        for deficit, transferred in ((1.0 - c.s_edge, circle_mass),
+                                     (1.0 - c.s_face, cylinder_mass)):
+            self.assertGreaterEqual(deficit, transferred * 0.99)
+            self.assertLessEqual(deficit, transferred * 1.05)
+
+    def test_typed_similarity_keeps_the_invariances(self):
+        for a, b in ((_block(), _block()), (_block(), _block_split()),
+                     (_block(10.0), _block(250.0))):
+            c = compare(a, b)
+            self.assertAlmostEqual(c.s_edge, 1.0, places=9)
+            self.assertAlmostEqual(c.s_face, 1.0, places=9)
+
+    def test_p_range_still_enforced(self):
+        f = brep_descriptor(self._fillet())
+        for p in (0.5, 2.5):
+            with self.assertRaises(ValueError):
+                typed_spectrum_similarity(f.edge_by_type, f.edge_by_type,
+                                          EDGE_TYPE_ORDER, p=p)
+
+    def test_type_buckets_are_exported(self):
+        d = compare(self._fillet(), self._chamfer()).as_dict()
+        self.assertIn("edge_by_type", d["canonical"]["a"])
+        self.assertIn("face_by_type", d["canonical"]["a"])
+        self.assertIn("Cylinder", d["canonical"]["a"]["face_by_type"])
 
 
 class TestLocalFeatureChanges(unittest.TestCase):
