@@ -46,19 +46,46 @@ def _soften_plastic(shape, amount, edge_selector=None):
     return solid.chamfer(amount, None, edges).clean()
 
 
-def _can(body_diameter, can_height, base_thickness, rim_radius):
+def _can_transition_dims(body_diameter, can_height, rim_radius):
     radius = body_diameter / 2.0
-    overlap = min(0.05, base_thickness * 0.05)
+    top_fillet = min(max(rim_radius, 0.12), radius * 0.18, can_height * 0.08)
+    neck_radius = radius - min(max(rim_radius * 0.9, 0.22), radius * 0.12)
+    neck_height = min(max(can_height * 0.12, 0.45), 0.8)
+    bottom_fillet = min(max(rim_radius * 0.9, 0.18), radius - neck_radius, neck_height * 0.95)
+    return radius, top_fillet, neck_radius, neck_height, bottom_fillet
+
+
+def _can(body_diameter, can_height, base_thickness, rim_radius):
+    radius, top_fillet, neck_radius, neck_height, bottom_fillet = _can_transition_dims(
+        body_diameter, can_height, rim_radius
+    )
     can_bottom_z = 0.5
-    edge_chamfer = min(rim_radius * 0.16, radius * 0.015, can_height * 0.008)
     top_z = can_bottom_z + can_height
+    z0 = can_bottom_z
+    z1 = z0 + neck_height
     body = (
         cq.Workplane("XY")
         .circle(radius)
         .extrude(can_height)
         .translate((0.0, 0.0, can_bottom_z))
     )
-    body = _solid(body).chamfer(edge_chamfer, None, _top_horizontal_edges(body, top_z)).clean()
+    top_edges = _top_horizontal_edges(body, top_z)
+    if top_edges:
+        body = _solid(body).fillet(top_fillet, top_edges).clean()
+
+    neck_cut = (
+        cq.Workplane("XZ")
+        .moveTo(neck_radius, z0)
+        .lineTo(radius, z0)
+        .lineTo(radius, z1 - bottom_fillet)
+        .threePointArc(
+            (radius - bottom_fillet * 0.42, z1 - bottom_fillet * 0.1),
+            (neck_radius, z1),
+        )
+        .close()
+        .revolve(360, (0, 0, 0), (0, 0, 1))
+    )
+    body = _cut(body, neck_cut)
 
     vent_length = body_diameter * 0.52
     vent_width = min(body_diameter * 0.038, 0.2)
@@ -72,22 +99,6 @@ def _can(body_diameter, can_height, base_thickness, rim_radius):
         )
         body = body.cut(_solid(vent)).clean()
 
-    bead_height = min(0.45, can_height * 0.08)
-    neck_height = min(0.55, can_height * 0.1)
-    bead = (
-        cq.Workplane("XY")
-        .circle(radius * 1.02)
-        .extrude(bead_height)
-        .translate((0.0, 0.0, can_bottom_z + neck_height))
-    )
-    neck = (
-        cq.Workplane("XY")
-        .circle(radius * 0.94)
-        .extrude(neck_height + overlap)
-        .translate((0.0, 0.0, can_bottom_z - overlap))
-    )
-    body = _fuse(body, bead)
-    body = _fuse(body, neck)
     return body.clean()
 
 
