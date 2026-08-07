@@ -25,8 +25,8 @@ import math
 # A fixed 16 gave b/m 4.2-4.5 — the rim read as a sawblade; a fixed 24 fixed
 # that but drove the module to 0.45 on the smallest boxes, finer than a real
 # steel gearbox that size would use. The ladder keeps both honest.
-ISO54_MODULES = (0.6, 0.8, 1.0, 1.25)
-MIN_FACE_MODULES = 5.0
+ISO54_MODULES = (1.0, 1.125, 1.25, 1.375, 1.5, 1.75, 2.0)
+MIN_FACE_MODULES = 3.0
 BACKLASH_DEG = 3.15     # published GN 3971 circumferential backlash (3 +/- 0.5)
 FLANK_HALF_DEG = 20.0
 # Standard tooth proportions, measured PERPENDICULAR to the pitch cone:
@@ -38,7 +38,7 @@ FLANK_HALF_DEG = 20.0
 PITCH_ANGLE_DEG = 45.0
 _RADIAL = 1.0 / math.cos(math.radians(PITCH_ANGLE_DEG))
 ADDENDUM_RADIAL = 1.00 * _RADIAL
-DEDENDUM_RADIAL = 1.25 * _RADIAL
+DEDENDUM_RADIAL = 1.20 * _RADIAL
 # both are proportional to the module, and m = 2*r_mean/z, so the tip and root
 # cones are fixed multiples of the pitch cone regardless of size
 RIM_WALL_FACTOR = 1.2   # heel rim under the root cone, in modules
@@ -91,7 +91,12 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     s_inner = max(0.24 * b1, 0.5 * d1 + 0.035 * b1)
     # the large end is capped so the full-depth tip cone still leaves a b1 side
     # wall on every catalog size
-    s_outer = min(0.40 * b1, s_inner + 0.12 * b1)
+    # the heel is capped by the housing cavity rule itself rather than a flat
+    # fraction: tip + clearance must leave a b1 side wall, and the tip ratio is
+    # largest at the smallest tooth count the ladder can pick (z=12)
+    cav = max(0.25, 0.015 * b1)
+    tip_ratio_max = 1.0 + 2.0 * ADDENDUM_RADIAL / 12.0
+    s_outer = min((0.48 * b1 - cav) / tip_ratio_max, s_inner + 0.12 * b1)
     pitch_mean = 0.5 * (s_inner + s_outer)
     face = (s_outer - s_inner) * math.sqrt(2.0)     # face width along the cone
     teeth, module = None, None
