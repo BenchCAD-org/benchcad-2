@@ -545,6 +545,27 @@ def _bevel_gear_z(L, shaft_diameter_d1):
         .workplane(offset=s_o - s_i).polyline(pts_o).close()
         .loft(ruled=True)
     )
+    # The tooth ends are bounded by the BACK CONE at the heel and the FRONT
+    # CONE at the toe, whose elements are perpendicular to the pitch cone
+    # element -- for a 45-degree pitch angle both are 45-degree cones through
+    # r = 2*s - z. Lofting between two planes normal to the AXIS instead left
+    # the teeth cut square, standing ~0.7 mm proud of the real blank at the
+    # heel. The trims touch only the tooth zone: the back cone is an
+    # intersection (the body below the root cone is already inside it, so its
+    # flat mounting face survives), and the front cone is cut only outside the
+    # root cone, so the web and hub are untouched.
+    root_ratio = 1.0 - 2.0 * DEDENDUM_FACTOR / teeth
+    back_cone = cq.Workplane(obj=cq.Solid.makeCone(
+        2.0 * s_o, 0.0, 2.0 * s_o, cq.Vector(0, 0, 0), cq.Vector(0, 0, 1)))
+    gear = gear.intersect(back_cone)
+    front_wedge = (
+        cq.Workplane(obj=cq.Solid.makeCone(
+            2.0 * s_i, 0.0, 2.0 * s_i, cq.Vector(0, 0, 0), cq.Vector(0, 0, 1)))
+        .cut(cq.Workplane(obj=cq.Solid.makeCone(
+            0.0, root_ratio * 2.0 * s_i, 2.0 * s_i,
+            cq.Vector(0, 0, 0), cq.Vector(0, 0, 1))))
+    )
+    gear = gear.cut(front_wedge)
     hub_start = s_i - L["gear_hub_length"]
     hub_outer = max(0.5 * shaft_diameter_d1 + 0.18 * module,
                     0.65 * s_i * (1.0 - 2.0 * DEDENDUM_FACTOR / teeth))
