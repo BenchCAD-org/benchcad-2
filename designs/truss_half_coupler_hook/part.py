@@ -219,17 +219,23 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
             .cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_in)))   # keep the barrel clear
     lower = lower.union(body)
     if stud:
-        stud_len = 34.0                          # Doughty T57200: M12x50, 34 proud
-        r_stud_minor = bolt_d / 2.0 - 0.61 * pitch
+        # T57200's hanging stud is M12x50 protruding 34 — it belongs to the
+        # FIXING system (hang_d), not to the swing closing bolt. Sizing it off
+        # bolt_d was the third leftover of that conflation and put an M10 stud
+        # under an M12 (Ø12.7) fixing.
+        stud_len = 34.0
+        stud_d = hang_d - 0.7                    # M12 nominal under a Ø12.7 bore
+        stud_pitch = 1.75 if stud_d >= 11.0 else 1.5
+        r_stud_minor = stud_d / 2.0 - 0.61 * stud_pitch
         lower = lower.union(
             cq.Workplane("XY").circle(r_stud_minor).extrude(-stud_len)
             .translate((0.0, 0.0, -base_drop))
         )
         # ring-thread the stud like the closing bolt (same NOTES-documented
         # substitution for the helix): rings over the protruding length
-        srings = _ring_stack(0.0, -base_drop - stud_len + 0.3 * bolt_d,
-                             -base_drop - 0.2, pitch,
-                             r_stud_minor - 0.01, bolt_d / 2.0, 0.0)
+        srings = _ring_stack(0.0, -base_drop - stud_len + 0.3 * stud_d,
+                             -base_drop - 0.2, stud_pitch,
+                             r_stud_minor - 0.01, stud_d / 2.0, 0.0)
         if srings is not None:
             lower = lower.union(srings)
     else:
@@ -291,7 +297,7 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     if ext is not None:
         bolt = bolt.union(ext)
 
-    # ---- 6. wing nut — DIN 315 form D on the closing bolt --------------------
+    # ---- 6. wing nut — DIN 315 / ISO 5448 rounded wing, on the closing bolt --
     # The datasheet's front view (the one carrying the 107) shows the wings
     # splayed IN THAT PLANE, with a hex-to-round boss under them; the side view
     # shows only a narrow rib. So the wings lie in XZ, not along the tube axis.
