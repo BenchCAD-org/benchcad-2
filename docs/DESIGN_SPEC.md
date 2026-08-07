@@ -241,6 +241,13 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    bushing pressed into its bore, a bolt shank inside its hole — stays visible
    when highlighted.
 
+The cutaway is a **fixed** half-section: the +Y half of the shape is removed at
+that shape's own bounding-box centre, the same plane `preview_hard_zoom.png`
+uses. A concavity the plane misses — an off-centre pocket, a bore parallel to Y
+away from the mid-plane — stays hidden, so the panel can prove a feature is
+present but never that one is absent. Rotate the component into that plane in
+its local frame, or check it another way, before concluding it isn't there.
+
 `bench2 preview` runs the same render automatically when `build()` returns a
 named assembly; single-part families are unaffected. Component order and image
 bytes are deterministic in the pinned environment.
