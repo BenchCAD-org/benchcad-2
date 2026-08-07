@@ -1,0 +1,31 @@
+{
+  "family": "swivel_ball_joint_mount",
+  "standard": "JW Winco GN 784",
+  "base_plane": "XY",
+  "description": "A four-component aluminum GN 784 mounting clamp with a captured 0-90 degree swivel ball, Type A or B thread, and adjustable-lever or hex-socket clamp actuator.",
+  "source": "JW Winco GN 784 official product page and catalog PDF; documented proportion rules for unmarked construction details",
+  "contributor": "sunzhenchuan007",
+  "solids": 4,
+  "components": [
+    {
+      "name": "housing",
+      "quantity": 1,
+      "description": "Black-anodized cylindrical socket housing"
+    },
+    {
+      "name": "ball",
+      "quantity": 1,
+      "description": "Plain-aluminum captured ball with the selected Type A or B boss"
+    },
+    {
+      "name": "base",
+      "quantity": 1,
+      "description": "Plain-aluminum bottom base plate with d5 and d8 holes"
+    },
+    {
+      "name": "clamp_actuator",
+      "quantity": 1,
+      "description": "Selected identification 1 adjustable lever or identification 2 set screw"
+    }
+  ]
+}
