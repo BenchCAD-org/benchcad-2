@@ -1,0 +1,9 @@
+{
+  "family": "gn7241_multiple_joint_hinge",
+  "standard": "GN 7241",
+  "base_plane": "XY",
+  "description": "Closed-position multiple-joint hinge with two rounded mounting seats, obround mounting slots, small mounting holes, and a six-body parametric linkage pack.",
+  "source": "Ganter / JW Winco GN 7241 catalog drawing and GN 7241-AL-75-EL STEP reference; proportional ranges around the official 75 row",
+  "contributor": "JiusongZhou7",
+  "solids": 6
+}
