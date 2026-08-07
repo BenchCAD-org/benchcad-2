@@ -1,8 +1,10 @@
-"""Tests for the experimental B-Rep structural similarity (issue #196).
+"""Tests for the experimental B-Rep structural inspection tool (issue #196).
 
-The cases are the ones the issue asks for: identical geometry, a topology
-change (extra through-hole), a missing fillet, a groove-depth change, a
-harmless B-Rep split, and enumeration-order invariance.
+Covers the v1 regression cases (identical geometry, an extra through-hole, a
+missing fillet, a groove-depth change, a harmless split, enumeration-order
+invariance) plus the v2 properties: canonicalization, uniform-scale invariance,
+zero-padding, the p_edge/p_face sensitivity split, and topology staying visible
+independently of high spectral similarity.
 """
 
 import sys
@@ -16,12 +18,11 @@ import cadquery as cq  # noqa: E402
 from bench2.structural import (  # noqa: E402
     _ocp_hashcode_fix,
     brep_descriptor,
-    count_similarity,
+    compare,
     spectrum_similarity,
-    structural_similarity,
     topology_match,
+    topology_similarity,
 )
-
 
 # cadquery's own selectors dedup through Shape.hashCode(), so the shim has to
 # be in place before any fixture runs — not merely before the first descriptor.
@@ -42,26 +43,41 @@ def _block_filleted(size=20.0, r=1.5):
 
 def _block_with_groove(size=20.0, depth=1.0):
     return (
-        cq.Workplane("XY")
-        .box(size, size, size)
-        .faces(">Z")
-        .workplane()
-        .rect(size, 3.0)
-        .cutBlind(-depth)
-        .val()
+        cq.Workplane("XY").box(size, size, size)
+        .faces(">Z").workplane().rect(size, 3.0).cutBlind(-depth).val()
     )
 
 
 def _block_split(size=20.0):
-    """Same solid as _block, but with its faces split along a seam.
+    """Same solid as _block, faces split along a seam.
 
     A plain ``union`` fuses the coincident faces back into one (measured: 6
-    faces, i.e. no split at all), so the halves are glued instead: identical
-    geometry, 10 faces instead of 6.
+    faces, no split at all), so the halves are glued: identical geometry, 10
+    faces instead of 6.
     """
     a = cq.Workplane("XY").box(size / 2.0, size, size).translate((-size / 4.0, 0, 0))
     b = cq.Workplane("XY").box(size / 2.0, size, size).translate((size / 4.0, 0, 0))
     return a.val().fuse(b.val(), glue=True)
+
+
+class TestCanonicalization(unittest.TestCase):
+    def test_split_reduces_to_the_unsplit_shape(self):
+        split = brep_descriptor(_block_split(), canonical=False)
+        self.assertEqual((split.faces, split.edges), (10, 20))
+        canon = brep_descriptor(_block_split())
+        plain = brep_descriptor(_block())
+        self.assertEqual((canon.faces, canon.edges), (plain.faces, plain.edges))
+
+    def test_real_features_survive_canonicalization(self):
+        for shape, faces in ((_block_with_hole(), 7), (_block_filleted(), 10),
+                             (_block_with_groove(), 10)):
+            self.assertEqual(brep_descriptor(shape).faces, faces)
+
+    def test_canonicalize_preserves_topology(self):
+        for shape in (_block(), _block_with_hole(), _block_filleted(), _block_split()):
+            before = brep_descriptor(shape, canonical=False).euler
+            after = brep_descriptor(shape).euler
+            self.assertEqual(before, after)
 
 
 class TestDescriptor(unittest.TestCase):
@@ -69,127 +85,173 @@ class TestDescriptor(unittest.TestCase):
         d = brep_descriptor(_block())
         self.assertEqual((d.solids, d.shells), (1, 1))
         self.assertEqual((d.faces, d.edges, d.vertices), (6, 12, 8))
-        self.assertEqual(d.euler, (2,))  # closed shell of genus 0
+        self.assertEqual(d.euler, (2,))
         self.assertAlmostEqual(sum(d.face_spectrum), 1.0, places=9)
         self.assertAlmostEqual(sum(d.edge_spectrum), 1.0, places=9)
-        # a cube's six faces are equal sixths
-        for v in d.face_spectrum:
-            self.assertAlmostEqual(v, 1.0 / 6.0, places=9)
 
     def test_enumeration_order_invariance(self):
-        """Same solid reached two ways gives a byte-identical descriptor."""
         one = brep_descriptor(_block())
-        # rebuild via a different construction order; the B-Rep enumeration
-        # order differs, the descriptor must not.
-        other = brep_descriptor(
-            cq.Workplane("XZ").box(20.0, 20.0, 20.0).val()
-        )
+        other = brep_descriptor(cq.Workplane("XZ").box(20.0, 20.0, 20.0).val())
         self.assertEqual(one.face_spectrum, other.face_spectrum)
         self.assertEqual(one.edge_spectrum, other.edge_spectrum)
         self.assertEqual(one.euler, other.euler)
 
+    def test_uniform_scale_invariance(self):
+        """Normalizing by each shape's own total removes scale."""
+        small, large = brep_descriptor(_block(10.0)), brep_descriptor(_block(250.0))
+        for x, y in zip(small.face_spectrum, large.face_spectrum):
+            self.assertAlmostEqual(x, y, places=9)
+        for x, y in zip(small.edge_spectrum, large.edge_spectrum):
+            self.assertAlmostEqual(x, y, places=9)
+        c = compare(_block(10.0), _block(250.0))
+        self.assertAlmostEqual(c.s_edge, 1.0, places=9)
+        self.assertAlmostEqual(c.s_face, 1.0, places=9)
+        self.assertAlmostEqual(c.structural, 1.0, places=9)
+
     def test_euler_sees_genus_where_the_naive_form_cannot(self):
-        """V - E + F is 2 for both shapes; the wire-corrected form is not."""
         plain = _block().Shells()[0]
         holed = _block_with_hole().Shells()[0]
 
         def naive(sh):
             return len(sh.Vertices()) - len(sh.Edges()) + len(sh.Faces())
-        self.assertEqual(naive(plain), naive(holed))  # naive cannot tell them apart
+
+        self.assertEqual(naive(plain), naive(holed))
         self.assertEqual(brep_descriptor(_block()).euler, (2,))
         self.assertEqual(brep_descriptor(_block_with_hole()).euler, (0,))
-
-    def test_local_features_do_not_move_the_topology_term(self):
-        for shape in (_block_with_groove(depth=1.0), _block_filleted(), _block_split()):
-            self.assertEqual(brep_descriptor(shape).euler, (2,))
 
     def test_descriptor_is_deterministic(self):
         self.assertEqual(brep_descriptor(_block()), brep_descriptor(_block()))
 
 
-class TestIdentical(unittest.TestCase):
-    def test_identical_geometry_scores_one(self):
-        s = structural_similarity(_block(), _block(), iou=1.0)
-        self.assertTrue(s.topology_match)
-        self.assertAlmostEqual(s.s_face, 1.0, places=9)
-        self.assertAlmostEqual(s.s_edge, 1.0, places=9)
-        self.assertAlmostEqual(s.s_count, 1.0, places=9)
-        self.assertAlmostEqual(s.structural, 1.0, places=9)
+class TestIdenticalAndSplit(unittest.TestCase):
+    def test_identical_shapes_score_identically(self):
+        c = compare(_block(), _block())
+        self.assertTrue(c.topology_match)
+        for v in (c.s_topology, c.s_edge, c.s_face, c.structural):
+            self.assertAlmostEqual(v, 1.0, places=9)
+
+    def test_harmless_split_is_exactly_invariant_after_canonicalization(self):
+        c = compare(_block(), _block_split())
+        self.assertTrue(c.topology_match)
+        self.assertAlmostEqual(c.s_edge, 1.0, places=9)
+        self.assertAlmostEqual(c.s_face, 1.0, places=9)
+        self.assertAlmostEqual(c.structural, 1.0, places=9)
+        # the raw descriptors still record that it was split
+        self.assertEqual(c.raw_b.faces, 10)
+        self.assertEqual(c.canonical_b.faces, 6)
 
 
-class TestTopologyChange(unittest.TestCase):
-    def test_through_hole_changes_euler_and_is_detected(self):
-        plain, holed = _block(), _block_with_hole()
-        self.assertFalse(topology_match(brep_descriptor(plain), brep_descriptor(holed)))
-        # the added handle drops the Euler characteristic
-        self.assertNotEqual(brep_descriptor(plain).euler, brep_descriptor(holed).euler)
+class TestTopology(unittest.TestCase):
+    def test_topology_error_visible_despite_high_spectral_similarity(self):
+        c = compare(_block(), _block_with_hole())
+        # the spectra barely notice — and, more to the point, both of them
+        # rate this far more similar than the topology term does
+        self.assertGreater(c.s_edge, 0.80)
+        self.assertGreater(c.s_face, 0.80)
+        self.assertFalse(c.topology_match)     # topology does notice
+        self.assertLess(c.s_topology, 0.5)
+        self.assertGreater(c.s_edge, c.s_topology)
+        self.assertGreater(c.s_face, c.s_topology)
 
-    def test_soft_and_hard_treatments_differ(self):
-        plain, holed = _block(), _block_with_hole()
-        soft = structural_similarity(plain, holed, iou=0.97)
-        hard = structural_similarity(plain, holed, iou=0.97, hard_gate=True)
-        self.assertFalse(soft.topology_match)
-        self.assertFalse(soft.hard_gated)
-        self.assertGreater(soft.structural, 0.0)
-        self.assertTrue(hard.hard_gated)
-        self.assertEqual(hard.structural, 0.0)
-        # components stay observable under the gate, for ablation
-        self.assertEqual(soft.s_face, hard.s_face)
+    def test_topology_similarity_is_graded_not_boolean(self):
+        same = topology_similarity(brep_descriptor(_block()), brep_descriptor(_block()))
+        self.assertAlmostEqual(same, 1.0, places=9)
+        holed = topology_similarity(brep_descriptor(_block()),
+                                    brep_descriptor(_block_with_hole()))
+        self.assertGreater(holed, 0.0)
+        self.assertLess(holed, 1.0)
 
-    def test_high_iou_still_loses_points_structurally(self):
-        """The case the issue is about: IoU barely moves, structure does."""
-        s = structural_similarity(_block(), _block_with_hole(), iou=0.99)
-        self.assertLess(s.structural, 0.99)
-
-
-class TestLocalFeatureChanges(unittest.TestCase):
-    def test_missing_fillet_is_visible_in_the_components(self):
-        sharp, filleted = _block(), _block_filleted()
-        s = structural_similarity(sharp, filleted, iou=0.99)
-        self.assertLess(s.s_count, 1.0)          # fillets add faces and edges
-        self.assertLess(s.structural, 0.99)
-
-    def test_groove_depth_change_is_visible(self):
-        shallow = _block_with_groove(depth=0.5)
-        deep = _block_with_groove(depth=3.0)
-        same = structural_similarity(shallow, shallow, iou=1.0)
-        diff = structural_similarity(shallow, deep, iou=0.98)
-        self.assertAlmostEqual(same.s_face, 1.0, places=9)
-        # a depth change is a size change, not a topology change: same shell,
-        # same face and edge counts, only the spectra move.
-        self.assertTrue(diff.topology_match)
-        self.assertAlmostEqual(diff.s_count, 1.0, places=9)
-        # and it must be a *partial* loss — asserting only "< same" would also
-        # pass on a degenerate fixture that scores a flat zero.
-        self.assertLess(diff.s_face, 0.999)
-        self.assertGreater(diff.s_face, 0.5)
+    def test_local_features_do_not_move_topology(self):
+        plain = brep_descriptor(_block())
+        for shape in (_block_with_groove(), _block_filleted(), _block_split()):
+            self.assertTrue(topology_match(plain, brep_descriptor(shape)))
 
 
-class TestHarmlessSplit(unittest.TestCase):
-    def test_split_faces_are_only_lightly_penalized(self):
-        whole, split = _block(), _block_split()
-        d_whole, d_split = brep_descriptor(whole), brep_descriptor(split)
-        self.assertGreater(d_split.faces, d_whole.faces)  # really is split
-        s = structural_similarity(whole, split, iou=1.0)
-        # the spectra are compared as cumulative curves, so a split costs
-        # little; the count term is the one that notices, at weight 0.05
-        self.assertGreater(s.s_face, 0.90)
-        self.assertGreater(s.s_edge, 0.90)
-        self.assertGreater(s.structural, 0.90)
-
-
-class TestPrimitives(unittest.TestCase):
-    def test_spectrum_similarity_bounds(self):
-        self.assertEqual(spectrum_similarity((), ()), 1.0)
-        self.assertEqual(spectrum_similarity((1.0,), ()), 0.0)
-        self.assertAlmostEqual(spectrum_similarity((1.0,), (1.0,)), 1.0, places=9)
-        s = spectrum_similarity((1.0,), (0.5, 0.5))
+class TestSpectrumPrimitives(unittest.TestCase):
+    def test_zero_padding_when_lengths_differ(self):
+        # one face carrying everything vs two carrying half each
+        s = spectrum_similarity((1.0,), (0.5, 0.5), p=1.0)
+        self.assertAlmostEqual(s, 1.0 - 1.0 / 2.0, places=9)  # d_1 = 1.0, / 2**1
         self.assertGreaterEqual(s, 0.0)
         self.assertLessEqual(s, 1.0)
 
-    def test_count_similarity_bounds(self):
-        d = brep_descriptor(_block())
-        self.assertAlmostEqual(count_similarity(d, d), 1.0, places=9)
+    def test_bounds_and_degenerate_inputs(self):
+        self.assertEqual(spectrum_similarity((), ()), 1.0)
+        self.assertEqual(spectrum_similarity((1.0,), ()), 0.0)
+        self.assertAlmostEqual(spectrum_similarity((1.0,), (1.0,)), 1.0, places=9)
+        # disjoint point masses are the worst case at every p
+        for p in (1.0, 1.5, 2.0):
+            self.assertAlmostEqual(spectrum_similarity((1.0, 0.0), (0.0, 1.0), p=p),
+                                   0.0, places=9)
+
+    def test_p_out_of_range_rejected(self):
+        for p in (0.5, 2.5):
+            with self.assertRaises(ValueError):
+                spectrum_similarity((1.0,), (1.0,), p=p)
+
+    def test_p_shifts_sensitivity_between_concentrated_and_distributed(self):
+        """Raising p should favour distributed error over concentrated error."""
+        base = tuple([0.25] * 4)
+        concentrated = (0.35, 0.25, 0.25, 0.15)          # 0.10 moved once
+        distributed = (0.30, 0.30, 0.20, 0.20)           # 0.05 moved twice
+        l1_conc = sum(abs(a - b) for a, b in zip(base, concentrated))
+        l1_dist = sum(abs(a - b) for a, b in zip(base, distributed))
+        self.assertAlmostEqual(l1_conc, l1_dist, places=9)  # equal at p=1
+        self.assertAlmostEqual(spectrum_similarity(base, concentrated, p=1.0),
+                               spectrum_similarity(base, distributed, p=1.0), places=9)
+        # at p=2 the concentrated error is penalized more
+        self.assertLess(spectrum_similarity(base, concentrated, p=2.0),
+                        spectrum_similarity(base, distributed, p=2.0))
+
+
+class TestParameterisation(unittest.TestCase):
+    def test_weights_are_normalized(self):
+        c = compare(_block(), _block_with_hole(),
+                    weights={"topology": 2.0, "edge": 1.0, "face": 1.0})
+        self.assertAlmostEqual(sum(c.weights.values()), 1.0, places=9)
+        self.assertAlmostEqual(c.weights["topology"], 0.5, places=9)
+
+    def test_bad_weights_rejected(self):
+        for bad in ({"topology": 1.0}, {"topology": -1.0, "edge": 1.0, "face": 1.0},
+                    {"topology": 0.0, "edge": 0.0, "face": 0.0}):
+            with self.assertRaises(ValueError):
+                compare(_block(), _block(), weights=bad)
+
+    def test_rescore_matches_a_fresh_compare(self):
+        """A sweep must not need to recompute descriptors."""
+        a, b = _block(), _block_with_hole()
+        base = compare(a, b)
+        for pe, pf, w in ((2.0, 1.0, {"topology": 1.0, "edge": 1.0, "face": 1.0}),
+                          (1.0, 2.0, {"topology": 3.0, "edge": 1.0, "face": 1.0}),
+                          (1.5, 1.5, None)):
+            again = compare(a, b, p_edge=pe, p_face=pf, weights=w)
+            cheap = base.rescore(p_edge=pe, p_face=pf, weights=w)
+            self.assertAlmostEqual(cheap.s_edge, again.s_edge, places=12)
+            self.assertAlmostEqual(cheap.s_face, again.s_face, places=12)
+            self.assertAlmostEqual(cheap.structural, again.structural, places=12)
+
+    def test_export_round_trips_as_json(self):
+        import json
+
+        d = compare(_block(), _block_with_hole()).as_dict()
+        json.dumps(d)  # must not raise
+        for key in ("raw", "canonical", "s_topology", "topology_match",
+                    "s_edge", "s_face", "p_edge", "p_face", "weights", "structural"):
+            self.assertIn(key, d)
+
+
+class TestLocalFeatureChanges(unittest.TestCase):
+    def test_missing_fillet_is_visible(self):
+        c = compare(_block_filleted(), _block())
+        self.assertTrue(c.topology_match)      # fillets are not a topology change
+        self.assertLess(c.s_face, 1.0)
+        self.assertLess(c.structural, 1.0)
+
+    def test_groove_depth_change_is_a_partial_loss(self):
+        c = compare(_block_with_groove(depth=0.5), _block_with_groove(depth=3.0))
+        self.assertTrue(c.topology_match)
+        self.assertLess(c.s_face, 0.999)
+        self.assertGreater(c.s_face, 0.5)
 
 
 if __name__ == "__main__":

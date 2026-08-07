@@ -1,29 +1,44 @@
-"""Experimental B-Rep structural similarity (issue #196).
+"""Experimental B-Rep structural inspection tool (issue #196).
 
-Voxel IoU measures how much two shapes overlap. It is insensitive to local
-B-Rep structure: a missing fillet, a shallow groove or an extra through-hole
-can move IoU very little while changing the CAD substantially. This module
-adds a lightweight descriptor of the B-Rep itself — topology, the distribution
-of face areas, the distribution of edge lengths, and raw face/edge counts —
-and a similarity built from them.
+**Research-phase tooling, used on the data.** Per `CONTRIBUTING.md` this
+repository is the data pipeline, not an evaluation or scoring pipeline: this
+module grades no model and produces no leaderboard number. It exists to compare
+two B-Reps — a generated instance against its reference, a step-wise case under
+inspection, a family that looks wrong — and say *where* they differ
+structurally. It is opt-in and wired into no default: importing it changes
+nothing.
 
-It is **experimental and opt-in**. Nothing here is wired into `bench2
-validate`, `bench2 preview`, STATUS.md or any leaderboard path; importing this
-module has no effect on existing behaviour.
+Three complementary signals, all permutation-invariant and all cheap. No face
+correspondence, centroid matching, adjacency or assignment: the point of the
+experiment is how far a very cheap descriptor goes.
 
-One assumption in #196 does not hold in this repository, and the design here
-adapts rather than forces it: **there is no IoU or scoring pipeline in
-`framework/bench2/`.** The CLI exposes `new`, `preview`, `status` and
-`validate` only, and the sole `iou` reference on main is `status.py` reading a
-`frontier_iou` field out of pre-existing data it does not compute. So there is
-no default to leave unchanged and nothing to voxelize against. `iou` is
-therefore an *input* to :func:`structural_similarity` — supplied by whichever
-pipeline owns scoring — instead of something this module invents. Every
-component score is returned alongside the combination so the weighting can be
-ablated later, and the components are usable on their own without any IoU.
+1. **Topology** — both shapes are canonicalized with
+   `ShapeUpgrade_UnifySameDomain`, which merges same-domain faces and edge
+   chains, then compared on solid/shell counts and the corrected Euler
+   signature.
+2. **Edge-length spectrum** — canonical edge lengths, each normalized by that
+   shape's total edge length, sorted, zero-padded to the longer.
+3. **Face-area spectrum** — the same by total surface area.
 
-Deterministic: descriptors are sorted, so the result never depends on B-Rep
-enumeration order. No dependencies beyond numpy and the pinned cadquery/OCP.
+Each spectrum is compared with its own continuous ``L_p``, ``1 <= p <= 2``, and
+the three signals combine under weights normalized to sum 1. Five parameters,
+four degrees of freedom: ``p_edge``, ``p_face``, ``w_topology``, ``w_edge``,
+``w_face``.
+
+**Sweeping is free.** :meth:`StructuralComparison.rescore` recombines an
+existing comparison under new parameters without touching OCP, so a parameter
+sweep costs one descriptor extraction per pair, not one per grid point.
+
+Two conventions the issue left open, chosen here and documented so a sweep is
+readable:
+
+* ``L_p`` is normalized by ``2 ** (1 / p)``, the largest distance possible
+  between two vectors that each sum to 1 (two disjoint point masses). Without a
+  p-dependent normalizer the similarity scale would shift with p and the sweep
+  would compare unlike numbers.
+* Topology similarity is graded rather than boolean, so the combined score
+  degrades instead of falling off a cliff. The exact boolean match is kept
+  alongside it.
 """
 
 from __future__ import annotations
@@ -32,11 +47,13 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-# Weights from the #196 proposal. Kept as a module constant so an ablation can
-# override them without editing the function.
-WEIGHTS = {"iou": 0.60, "face": 0.20, "edge": 0.15, "count": 0.05}
+DEFAULT_WEIGHTS = {"topology": 0.50, "edge": 0.25, "face": 0.25}
+DEFAULT_P_EDGE = 1.0
+DEFAULT_P_FACE = 1.0
 
-_SPECTRUM_SAMPLES = 256
+# chi of a topologically trivial closed shell, used to pad a shorter Euler
+# signature so a missing shell is measured against a trivial one.
+_TRIVIAL_CHI = 2
 
 
 def _ocp_hashcode_fix():
@@ -44,10 +61,7 @@ def _ocp_hashcode_fix():
 
     Delegates to OCP's own ``__hash__``, which is keyed on the underlying
     shape. The ``id(self)``-based variant used elsewhere in the framework is
-    not equivalent: two wrappers around the same face get different ids, so
-    the same face enumerated twice hashes differently and any dedup keyed on
-    HashCode silently fails. Reported separately; this module does not depend
-    on that one being fixed.
+    not equivalent — see #198.
     """
     from OCP.TopoDS import (
         TopoDS_Compound,
@@ -68,6 +82,24 @@ def _ocp_hashcode_fix():
             _cls.HashCode = lambda self, ub=2147483647: hash(self) % ub
 
 
+def canonicalize(shape):
+    """Merge same-domain faces and edge chains.
+
+    One OCC call covers coplanar faces, co-cylindrical and co-conical faces,
+    and collinear or co-circular edge chains. Measured on the fixtures: a
+    glued split block reduces to exactly the unsplit block (10 faces/20 edges
+    to 6/12) while a through hole, a fillet and a groove are untouched; on four
+    merged families the Euler signature is preserved exactly.
+    """
+    import cadquery as cq
+    from OCP.ShapeUpgrade import ShapeUpgrade_UnifySameDomain
+
+    _ocp_hashcode_fix()
+    unifier = ShapeUpgrade_UnifySameDomain(shape.wrapped, True, True, False)
+    unifier.Build()
+    return cq.Shape(unifier.Shape())
+
+
 @dataclass(frozen=True)
 class BRepDescriptor:
     """Order-independent structural fingerprint of one shape."""
@@ -77,43 +109,67 @@ class BRepDescriptor:
     faces: int
     edges: int
     vertices: int
-    euler: tuple[int, ...]              # V - E + F per shell, sorted
-    face_spectrum: tuple[float, ...]    # face areas / total area, descending
-    edge_spectrum: tuple[float, ...]    # edge lengths / total length, descending
+    euler: tuple[int, ...]              # corrected chi per shell, sorted
+    face_spectrum: tuple[float, ...]    # areas / total area, descending
+    edge_spectrum: tuple[float, ...]    # lengths / total length, descending
 
     def as_dict(self) -> dict:
         return {
-            "solids": self.solids,
-            "shells": self.shells,
-            "faces": self.faces,
-            "edges": self.edges,
-            "vertices": self.vertices,
-            "euler": list(self.euler),
+            "solids": self.solids, "shells": self.shells,
+            "faces": self.faces, "edges": self.edges,
+            "vertices": self.vertices, "euler": list(self.euler),
+            "face_spectrum": list(self.face_spectrum),
+            "edge_spectrum": list(self.edge_spectrum),
         }
 
 
 @dataclass
-class StructuralScore:
-    """Combined score plus every component, so ablations need no re-run."""
+class StructuralComparison:
+    """Everything one comparison produced, so a sweep never recomputes it."""
 
-    iou: float
-    s_face: float
-    s_edge: float
-    s_count: float
+    raw_a: BRepDescriptor
+    raw_b: BRepDescriptor
+    canonical_a: BRepDescriptor
+    canonical_b: BRepDescriptor
+    s_topology: float
     topology_match: bool
-    structural: float
-    hard_gated: bool = False
-    descriptors: dict = field(default_factory=dict)
+    s_edge: float
+    s_face: float
+    p_edge: float
+    p_face: float
+    weights: dict = field(default_factory=dict)
+    structural: float = 0.0
+
+    def rescore(self, *, p_edge=None, p_face=None, weights=None) -> "StructuralComparison":
+        """Recombine under new parameters. No OCP, no descriptor extraction."""
+        pe = self.p_edge if p_edge is None else p_edge
+        pf = self.p_face if p_face is None else p_face
+        w = _normalize_weights(self.weights if weights is None else weights)
+        s_edge = spectrum_similarity(
+            self.canonical_a.edge_spectrum, self.canonical_b.edge_spectrum, p=pe)
+        s_face = spectrum_similarity(
+            self.canonical_a.face_spectrum, self.canonical_b.face_spectrum, p=pf)
+        return StructuralComparison(
+            raw_a=self.raw_a, raw_b=self.raw_b,
+            canonical_a=self.canonical_a, canonical_b=self.canonical_b,
+            s_topology=self.s_topology, topology_match=self.topology_match,
+            s_edge=s_edge, s_face=s_face, p_edge=pe, p_face=pf, weights=w,
+            structural=(w["topology"] * self.s_topology
+                        + w["edge"] * s_edge + w["face"] * s_face),
+        )
 
     def as_dict(self) -> dict:
+        """Flat, JSON-safe export for caching a sweep."""
         return {
-            "structural": self.structural,
-            "iou": self.iou,
-            "s_face": self.s_face,
-            "s_edge": self.s_edge,
-            "s_count": self.s_count,
+            "raw": {"a": self.raw_a.as_dict(), "b": self.raw_b.as_dict()},
+            "canonical": {"a": self.canonical_a.as_dict(),
+                          "b": self.canonical_b.as_dict()},
+            "s_topology": self.s_topology,
             "topology_match": self.topology_match,
-            "hard_gated": self.hard_gated,
+            "s_edge": self.s_edge, "s_face": self.s_face,
+            "p_edge": self.p_edge, "p_face": self.p_face,
+            "weights": dict(self.weights),
+            "structural": self.structural,
         }
 
 
@@ -136,7 +192,12 @@ def _length(edge) -> float:
 
 
 def _normalized_spectrum(values) -> tuple[float, ...]:
-    """Sorted-descending values normalized to sum 1. Order-independent."""
+    """Sorted-descending values normalized to sum 1.
+
+    Dividing by the shape's own total makes the spectrum invariant to uniform
+    scaling: lengths scale linearly and areas quadratically, and each is
+    divided by its own total.
+    """
     vals = np.asarray([v for v in values if v > 0.0], dtype=float)
     total = float(vals.sum())
     if vals.size == 0 or total <= 0.0:
@@ -144,118 +205,119 @@ def _normalized_spectrum(values) -> tuple[float, ...]:
     return tuple(np.sort(vals / total)[::-1].tolist())
 
 
-def brep_descriptor(shape) -> BRepDescriptor:
-    """Extract the structural descriptor of a cadquery Shape."""
+def _describe(shape) -> BRepDescriptor:
     _ocp_hashcode_fix()
-
     shells = shape.Shells()
     euler = []
     for shell in shells:
-        # chi = V - E + sum_f (2 - wires_f), NOT the naive V - E + F. A B-Rep
-        # face carrying w boundary wires is a disk with w-1 holes and has its
-        # own characteristic 2 - w, and periodic faces add seam edges. Measured
-        # on the pinned OCP, naive V - E + F is 2 for a plain block AND for a
-        # block with a through hole — it cannot see genus at all; the corrected
-        # form gives 2 and 0. It is also invariant to the changes that should
-        # not count as topology: a blind pocket, a fillet and a glued face
-        # split all stay at 2.
-        chi = (
-            len(shell.Vertices())
-            - len(shell.Edges())
+        # chi = V - E + sum_f (2 - wires_f), NOT the naive V - E + F. A face
+        # with w boundary wires is a disk with w-1 holes (chi 2 - w), and
+        # periodic faces add seam edges. Measured on the pinned OCP the naive
+        # form is 2 for a plain block AND for a block with a through hole — it
+        # cannot see genus; the corrected form gives 2 and 0, and stays at 2
+        # for a pocket, a fillet and a glued split.
+        euler.append(int(
+            len(shell.Vertices()) - len(shell.Edges())
             + sum(2 - len(f.Wires()) for f in shell.Faces())
-        )
-        euler.append(int(chi))
-
+        ))
     faces, edges = shape.Faces(), shape.Edges()
     return BRepDescriptor(
-        solids=len(shape.Solids()),
-        shells=len(shells),
-        faces=len(faces),
-        edges=len(edges),
-        vertices=len(shape.Vertices()),
+        solids=len(shape.Solids()), shells=len(shells),
+        faces=len(faces), edges=len(edges), vertices=len(shape.Vertices()),
         euler=tuple(sorted(euler)),
         face_spectrum=_normalized_spectrum(_area(f) for f in faces),
         edge_spectrum=_normalized_spectrum(_length(e) for e in edges),
     )
 
 
-def spectrum_similarity(a: tuple, b: tuple, samples: int = _SPECTRUM_SAMPLES) -> float:
-    """Similarity of two normalized spectra, in [0, 1].
+def brep_descriptor(shape, *, canonical: bool = True) -> BRepDescriptor:
+    """Descriptor of ``shape``, canonicalized first unless told otherwise."""
+    return _describe(canonicalize(shape) if canonical else shape)
 
-    Both spectra are turned into cumulative curves over their own normalized
-    rank axis and resampled onto a shared grid, so spectra of different length
-    are directly comparable and splitting one face into two moves the curve
-    only by the width of that face's step rather than by its whole area. The
-    score is ``1 - mean |C_a - C_b|``.
+
+def spectrum_similarity(a: tuple, b: tuple, p: float = 1.0) -> float:
+    """Zero-padded ``L_p`` similarity of two normalized spectra, in [0, 1].
+
+    The shorter spectrum is zero-padded to the longer, so a fine model compared
+    against a coarse one carries the padded tail as residual — inherent to a
+    permutation-invariant sorted descriptor, and a systematic penalty on
+    differing counts worth remembering when reading a sweep.
+
+    Normalized by ``2 ** (1 / p)``: both spectra sum to 1, so that is the
+    largest distance two of them can have (disjoint point masses). Every p
+    therefore lands on the same scale.
     """
+    if not 1.0 <= p <= 2.0:
+        raise ValueError(f"p must be in [1, 2], got {p}")
     if not a and not b:
         return 1.0
     if not a or not b:
         return 0.0
-
-    def curve(spec):
-        cum = np.concatenate(([0.0], np.cumsum(np.asarray(spec, dtype=float))))
-        x = np.linspace(0.0, 1.0, cum.size)
-        return np.interp(np.linspace(0.0, 1.0, samples), x, cum)
-
-    return float(1.0 - np.mean(np.abs(curve(a) - curve(b))))
-
-
-def count_similarity(a: BRepDescriptor, b: BRepDescriptor) -> float:
-    """Low-weight face/edge count agreement, in [0, 1]."""
-    parts = []
-    for x, y in ((a.faces, b.faces), (a.edges, b.edges)):
-        hi = max(x, y)
-        parts.append(1.0 if hi == 0 else 1.0 - abs(x - y) / hi)
-    return float(np.mean(parts))
+    n = max(len(a), len(b))
+    va = np.zeros(n)
+    vb = np.zeros(n)
+    va[: len(a)] = a
+    vb[: len(b)] = b
+    distance = float(np.sum(np.abs(va - vb) ** p) ** (1.0 / p))
+    return float(max(0.0, 1.0 - distance / (2.0 ** (1.0 / p))))
 
 
 def topology_match(a: BRepDescriptor, b: BRepDescriptor) -> bool:
-    """Same solid/shell structure and the same Euler characteristics."""
+    """Exact agreement on solid/shell structure and Euler signature."""
     return (a.solids, a.shells, a.euler) == (b.solids, b.shells, b.euler)
 
 
-def structural_similarity(
+def topology_similarity(a: BRepDescriptor, b: BRepDescriptor) -> float:
+    """Graded topology agreement in (0, 1], 1.0 exactly when they match.
+
+    A boolean would put a cliff exactly where resolution is wanted. This is the
+    product of two terms: agreement of solid and shell counts, and a soft
+    penalty on the mean Euler difference over the aligned signatures.
+    """
+    denom = a.solids + b.solids + a.shells + b.shells
+    counts = 1.0 if denom == 0 else 1.0 - (
+        abs(a.solids - b.solids) + abs(a.shells - b.shells)) / denom
+
+    n = max(len(a.euler), len(b.euler), 1)
+    ea = list(a.euler) + [_TRIVIAL_CHI] * (n - len(a.euler))
+    eb = list(b.euler) + [_TRIVIAL_CHI] * (n - len(b.euler))
+    mean_delta = float(np.mean(np.abs(np.array(ea) - np.array(eb))))
+    return float(counts * (1.0 / (1.0 + mean_delta)))
+
+
+def _normalize_weights(weights) -> dict:
+    w = dict(DEFAULT_WEIGHTS if weights is None else weights)
+    missing = set(DEFAULT_WEIGHTS) - set(w)
+    if missing:
+        raise ValueError(f"weights must define {sorted(DEFAULT_WEIGHTS)}, missing {sorted(missing)}")
+    if any(v < 0 for v in w.values()):
+        raise ValueError(f"weights must be non-negative, got {w}")
+    total = float(sum(w.values()))
+    if total <= 0.0:
+        raise ValueError("weights must not sum to zero")
+    return {k: float(v) / total for k, v in w.items()}
+
+
+def compare(
     shape_a,
     shape_b,
-    iou: float,
     *,
-    hard_gate: bool = False,
+    p_edge: float = DEFAULT_P_EDGE,
+    p_face: float = DEFAULT_P_FACE,
     weights: dict | None = None,
-) -> StructuralScore:
-    """Combine IoU with the B-Rep components of #196.
+) -> StructuralComparison:
+    """Compare two B-Reps. Descriptors are extracted once; see ``rescore``."""
+    w = _normalize_weights(weights)
+    raw_a, raw_b = _describe(shape_a), _describe(shape_b)
+    can_a, can_b = brep_descriptor(shape_a), brep_descriptor(shape_b)
 
-    ``iou`` is supplied by the caller — see the module docstring: this
-    repository has no IoU implementation to call. ``hard_gate=True`` forces the
-    combined score to 0 on a topology mismatch; the default reports the
-    mismatch as a diagnostic and leaves the components untouched, so both
-    treatments can be compared on the same run.
-    """
-    w = dict(WEIGHTS if weights is None else weights)
-    da, db = brep_descriptor(shape_a), brep_descriptor(shape_b)
+    s_top = topology_similarity(can_a, can_b)
+    s_edge = spectrum_similarity(can_a.edge_spectrum, can_b.edge_spectrum, p=p_edge)
+    s_face = spectrum_similarity(can_a.face_spectrum, can_b.face_spectrum, p=p_face)
 
-    s_face = spectrum_similarity(da.face_spectrum, db.face_spectrum)
-    s_edge = spectrum_similarity(da.edge_spectrum, db.edge_spectrum)
-    s_count = count_similarity(da, db)
-    matched = topology_match(da, db)
-
-    combined = (
-        w["iou"] * float(iou)
-        + w["face"] * s_face
-        + w["edge"] * s_edge
-        + w["count"] * s_count
-    )
-    gated = bool(hard_gate and not matched)
-    if gated:
-        combined = 0.0
-
-    return StructuralScore(
-        iou=float(iou),
-        s_face=s_face,
-        s_edge=s_edge,
-        s_count=s_count,
-        topology_match=matched,
-        structural=combined,
-        hard_gated=gated,
-        descriptors={"a": da.as_dict(), "b": db.as_dict()},
+    return StructuralComparison(
+        raw_a=raw_a, raw_b=raw_b, canonical_a=can_a, canonical_b=can_b,
+        s_topology=s_top, topology_match=topology_match(can_a, can_b),
+        s_edge=s_edge, s_face=s_face, p_edge=p_edge, p_face=p_face, weights=w,
+        structural=(w["topology"] * s_top + w["edge"] * s_edge + w["face"] * s_face),
     )
