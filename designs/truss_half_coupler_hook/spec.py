@@ -80,10 +80,11 @@ PARAM_SPEC = {
         # inside the catalog's 107 mm overall width.
     ),
     "lug_h": dict(
-        desc="closure-lug block height over the ring crown",
+        desc="thickness of the flat closure tab the eyebolt swings in",
         unit="mm",
-        range={"easy": (14.0, 18.0), "medium": (12.0, 22.0), "hard": (10.0, 24.0)},
-        source="proportion (closing-bolt boss)",
+        range={"easy": (12.0, 15.0), "medium": (11.0, 16.0), "hard": (11.0, 17.0)},
+        source="Doughty T57000 drawing: the closure tab measures ~13 thick "
+               "between its top face and its underside (proportion around it)",
     ),
     "stud": dict(
         desc="hook-clamp hanging stud protruding from the base (1) vs plain eye (0)",
@@ -106,9 +107,11 @@ def check(p: dict) -> list[str]:
     if not p["stud"] and tang_h < 2.2 * p["hang_d"]:
         bad.append("base_drop - bore/2 < 2.2*hang_d: no room for the fixing eye plus edge material in the tang (eye variant)")
 
-    # the slotted crown lug must be deep enough for the closing bolt to bear on
-    if p["lug_h"] < p["hang_d"] + 3.0:
-        bad.append("lug_h < hang_d+3: slot fork too shallow for the closing bolt to bear (lug is the clamping face)")
+    # the slotted closure tab is the clamping face the wing nut bears on
+    if p["lug_h"] < p["closing_bolt_d"] + 1.0:
+        bad.append("lug_h < closing_bolt_d+1: closure tab too thin for the wing "
+                   "nut to bear on (the tab is the clamping face, and its slot "
+                   "walls are what the eyebolt loads)")
 
     # cast body, not sheet: ring wall carries the rated load (WLL up to 750 kg)
     if p["wall_t"] < p["bore_d"] / 11.0:
@@ -118,25 +121,37 @@ def check(p: dict) -> list[str]:
     if p["tang_t"] > 0.5 * p["body_w"]:
         bad.append("tang_t > 0.5*body_w: tang should be a plate under the ring, not a block")
 
-    # Overall width against the catalog outline (T57000: 107 mm). The clamp is
-    # widest at the hinge knuckle on one side and the wing-nut ear on the other,
-    # both referred to the pivot standoff x_h — so the envelope is closed-form
-    # and worth asserting. Nothing constrained it before, which is how a wing
-    # nut ~20 mm past the silhouette went unnoticed.
+    # Overall width against the catalog outline (T57000: 107 mm at Ø51). The
+    # clamp is widest at the hinge LOBE on one side and, on the other, at
+    # whichever reaches further — the closure tab tip or the wing-nut ear. All
+    # three are closed-form in part.py, so the envelope is worth asserting;
+    # nothing constrained it before, which is how a wing nut ~20 mm past the
+    # silhouette went unnoticed.
+    r_i = p["bore_d"] / 2.0
     pin_d = max(5.0, 0.5 * p["hang_d"])
-    k_r = max(4.5, 0.8 * pin_d)
-    r_eye = pin_d / 2.0 + 2.4
-    x_h = p["bore_d"] / 2.0 + p["wall_t"] + max(0.85 * k_r, r_eye + 1.5)
+    x_pin = max(1.337 * r_i, r_i + 0.5 * pin_d + 2.0)   # mirrors part.py
+    r_lobe = max(0.490 * r_i, 0.55 * pin_d + 3.0)
+    x_tab = 2.36 * r_i
     wing_span_e = {8.0: 37.5, 10.0: 49.5, 12.0: 63.5}.get(
         p["closing_bolt_d"], 5.0 * p["closing_bolt_d"])
-    overall_w = 2.0 * x_h + k_r + wing_span_e / 2.0     # mirrors part.py's x_h
-    if not 92.0 <= overall_w <= 112.0:
+    overall_w = (x_pin + r_lobe) + max(x_tab, x_pin + wing_span_e / 2.0)
+    if not 96.0 <= overall_w <= 110.0:
         bad.append(f"overall width {overall_w:.1f} outside the catalog clamp "
-                   "outline (Doughty T-series 107 for the 50 mm bodies): the "
-                   "hinge knuckle and the wing-nut ear set the silhouette")
+                   "outline (Doughty T-series 107 at Ø51): the hinge lobe and "
+                   "the closure tab / wing-nut ear set the silhouette")
 
+    # The captive-nut window is `tang_t` wide ACROSS the clamp and open along
+    # the tube, so tang_t IS the A/F holding the hex nut against rotation.
     af = 19.0 if (p["hang_d"] - 0.7) >= 11.0 else 17.0
-    if p["body_w"] < af + 8.0:
-        bad.append("tang too narrow for the captive-nut slot: body_w must exceed "
-                   "slot A/F + 8 (parallel walls hold the hex nut - wider and it spins)")
+    if not af - 4.0 <= p["tang_t"] <= af + 4.0:
+        bad.append("captive-nut window width (tang_t) more than 4 mm off the "
+                   "M10/M12 nut A/F it traps: wider and the nut spins in the "
+                   "window, narrower and it does not go in")
+    # ... and the window has to fit between the fixing bore and the jaw
+    if not p["stud"]:
+        room = p["base_drop"] - r_i - 1.26 * p["hang_d"] - 1.5
+        if room < 0.55 * p["tang_t"]:
+            bad.append("no room between the Ø12.7 fixing bore and the jaw for "
+                       "the captive-nut window: the window would break into the "
+                       "barrel bore")
     return bad
