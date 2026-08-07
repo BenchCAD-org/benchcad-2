@@ -1,0 +1,16 @@
+{
+  "family": "gn3975_worm_gear_reducer",
+  "standard": "Ganter GN 3975",
+  "base_plane": "XY",
+  "description": "GN 3975 aluminium worm-gear reducer with two housing sizes, Type A single-sided drive, Type B through drive, output hub, bearings, and catalog mounting interfaces.",
+  "source": "Ganter GN 3975 product page and 3975.pdf dimensional table; DIN 6885-1 key proportions; issue #153",
+  "contributor": "TimPetrillo",
+  "solids": 7,
+  "components": [
+    {"name": "housing", "quantity": 1},
+    {"name": "drive_shaft", "quantity": 1},
+    {"name": "worm_wheel", "quantity": 1},
+    {"name": "drive_bearing", "quantity": 2},
+    {"name": "output_bearing", "quantity": 2}
+  ]
+}
