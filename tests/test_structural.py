@@ -16,11 +16,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "framework"))
 import cadquery as cq  # noqa: E402
 
 from bench2.structural import (  # noqa: E402
+    NotSingleSolidError,
     _ocp_hashcode_fix,
     brep_descriptor,
     compare,
+    corrected_euler,
     spectrum_similarity,
-    topology_match,
     topology_similarity,
 )
 
@@ -153,18 +154,52 @@ class TestTopology(unittest.TestCase):
         self.assertGreater(c.s_edge, c.s_topology)
         self.assertGreater(c.s_face, c.s_topology)
 
-    def test_topology_similarity_is_graded_not_boolean(self):
-        same = topology_similarity(brep_descriptor(_block()), brep_descriptor(_block()))
-        self.assertAlmostEqual(same, 1.0, places=9)
-        holed = topology_similarity(brep_descriptor(_block()),
-                                    brep_descriptor(_block_with_hole()))
-        self.assertGreater(holed, 0.0)
-        self.assertLess(holed, 1.0)
-
     def test_local_features_do_not_move_topology(self):
-        plain = brep_descriptor(_block())
         for shape in (_block_with_groove(), _block_filleted(), _block_split()):
-            self.assertTrue(topology_match(plain, brep_descriptor(shape)))
+            c = compare(_block(), shape)
+            self.assertTrue(c.topology_match)
+            self.assertEqual(c.abs_chi_difference, 0)
+
+    def test_chi_is_exposed_for_both_shapes(self):
+        c = compare(_block(), _block_with_hole())
+        self.assertEqual(c.chi_reference, 2)
+        self.assertEqual(c.chi_candidate, 0)
+        self.assertEqual(c.abs_chi_difference, 2)
+        self.assertAlmostEqual(c.s_topology, 1.0 / 3.0, places=9)
+
+    def test_topology_similarity_is_total_and_symmetric(self):
+        # the relative-difference alternative is undefined here; this is not
+        self.assertAlmostEqual(topology_similarity(0, 0), 1.0, places=9)
+        self.assertAlmostEqual(topology_similarity(2, 0), topology_similarity(0, 2), places=12)
+        # depends only on |delta chi|
+        self.assertAlmostEqual(topology_similarity(2, 0), topology_similarity(2, 4), places=12)
+        self.assertAlmostEqual(topology_similarity(2, 0), 1.0 / 3.0, places=9)
+
+
+class TestSingleSolidScope(unittest.TestCase):
+    def _two_solids(self):
+        a = cq.Workplane("XY").box(10, 10, 10).translate((-30, 0, 0)).val()
+        b = cq.Workplane("XY").box(10, 10, 10).translate((30, 0, 0)).val()
+        return cq.Compound.makeCompound([a, b])
+
+    def test_multi_solid_input_is_reported_not_guessed(self):
+        two = self._two_solids()
+        self.assertEqual(brep_descriptor(two).solids, 2)
+        with self.assertRaises(NotSingleSolidError) as ctx:
+            corrected_euler(brep_descriptor(two))
+        self.assertIn("2 solids", str(ctx.exception))
+        with self.assertRaises(NotSingleSolidError):
+            compare(_block(), two)
+
+    def test_spectra_remain_available_out_of_scope(self):
+        d = brep_descriptor(self._two_solids())
+        self.assertAlmostEqual(sum(d.face_spectrum), 1.0, places=9)
+        self.assertAlmostEqual(sum(d.edge_spectrum), 1.0, places=9)
+
+    def test_solid_with_a_void_is_still_one_scalar(self):
+        chi = corrected_euler(brep_descriptor(_block()))
+        self.assertIsInstance(chi, int)
+        self.assertEqual(chi, 2)
 
 
 class TestSpectrumPrimitives(unittest.TestCase):
@@ -235,7 +270,8 @@ class TestParameterisation(unittest.TestCase):
 
         d = compare(_block(), _block_with_hole()).as_dict()
         json.dumps(d)  # must not raise
-        for key in ("raw", "canonical", "s_topology", "topology_match",
+        for key in ("raw", "canonical", "chi_reference", "chi_candidate",
+                    "abs_chi_difference", "s_topology", "topology_exact_match",
                     "s_edge", "s_face", "p_edge", "p_face", "weights", "structural"):
             self.assertIn(key, d)
 

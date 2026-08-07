@@ -14,8 +14,9 @@ experiment is how far a very cheap descriptor goes.
 
 1. **Topology** — both shapes are canonicalized with
    `ShapeUpgrade_UnifySameDomain`, which merges same-domain faces and edge
-   chains, then compared on solid/shell counts and the corrected Euler
-   signature.
+   chains, then reduced to one corrected Euler characteristic. **Defined for a
+   single-solid instance only**: out-of-scope input raises
+   `NotSingleSolidError` rather than getting a silent multi-solid heuristic.
 2. **Edge-length spectrum** — canonical edge lengths, each normalized by that
    shape's total edge length, sorted, zero-padded to the longer.
 3. **Face-area spectrum** — the same by total surface area.
@@ -36,9 +37,11 @@ readable:
   between two vectors that each sum to 1 (two disjoint point masses). Without a
   p-dependent normalizer the similarity scale would shift with p and the sweep
   would compare unlike numbers.
-* Topology similarity is graded rather than boolean, so the combined score
-  degrades instead of falling off a cliff. The exact boolean match is kept
-  alongside it.
+* Topology similarity is ``1 / (1 + |delta chi|)`` — parameter-free,
+  symmetric, and total. The relative-difference alternative is undefined at
+  ``chi_a = chi_b = 0`` and saturates at a single through hole; see
+  :func:`topology_similarity`. The exact match and the raw difference are kept
+  alongside the score.
 """
 
 from __future__ import annotations
@@ -51,9 +54,15 @@ DEFAULT_WEIGHTS = {"topology": 0.50, "edge": 0.25, "face": 0.25}
 DEFAULT_P_EDGE = 1.0
 DEFAULT_P_FACE = 1.0
 
-# chi of a topologically trivial closed shell, used to pad a shorter Euler
-# signature so a missing shell is measured against a trivial one.
-_TRIVIAL_CHI = 2
+
+class NotSingleSolidError(ValueError):
+    """Raised when a shape is outside this experiment's single-solid scope.
+
+    The topology signal is deliberately defined for one solid only. Rather than
+    silently applying a multi-solid heuristic, out-of-scope input is reported.
+    The spectra are unaffected and remain available through
+    :func:`brep_descriptor` if you want them for a multi-solid shape.
+    """
 
 
 def _ocp_hashcode_fix():
@@ -131,6 +140,9 @@ class StructuralComparison:
     raw_b: BRepDescriptor
     canonical_a: BRepDescriptor
     canonical_b: BRepDescriptor
+    chi_reference: int
+    chi_candidate: int
+    abs_chi_difference: int
     s_topology: float
     topology_match: bool
     s_edge: float
@@ -152,6 +164,8 @@ class StructuralComparison:
         return StructuralComparison(
             raw_a=self.raw_a, raw_b=self.raw_b,
             canonical_a=self.canonical_a, canonical_b=self.canonical_b,
+            chi_reference=self.chi_reference, chi_candidate=self.chi_candidate,
+            abs_chi_difference=self.abs_chi_difference,
             s_topology=self.s_topology, topology_match=self.topology_match,
             s_edge=s_edge, s_face=s_face, p_edge=pe, p_face=pf, weights=w,
             structural=(w["topology"] * self.s_topology
@@ -164,8 +178,11 @@ class StructuralComparison:
             "raw": {"a": self.raw_a.as_dict(), "b": self.raw_b.as_dict()},
             "canonical": {"a": self.canonical_a.as_dict(),
                           "b": self.canonical_b.as_dict()},
+            "chi_reference": self.chi_reference,
+            "chi_candidate": self.chi_candidate,
+            "abs_chi_difference": self.abs_chi_difference,
             "s_topology": self.s_topology,
-            "topology_match": self.topology_match,
+            "topology_exact_match": self.topology_match,
             "s_edge": self.s_edge, "s_face": self.s_face,
             "p_edge": self.p_edge, "p_face": self.p_face,
             "weights": dict(self.weights),
@@ -262,27 +279,35 @@ def spectrum_similarity(a: tuple, b: tuple, p: float = 1.0) -> float:
     return float(max(0.0, 1.0 - distance / (2.0 ** (1.0 / p))))
 
 
-def topology_match(a: BRepDescriptor, b: BRepDescriptor) -> bool:
-    """Exact agreement on solid/shell structure and Euler signature."""
-    return (a.solids, a.shells, a.euler) == (b.solids, b.shells, b.euler)
+def corrected_euler(descriptor: BRepDescriptor) -> int:
+    """The single scalar chi for a one-solid instance.
 
-
-def topology_similarity(a: BRepDescriptor, b: BRepDescriptor) -> float:
-    """Graded topology agreement in (0, 1], 1.0 exactly when they match.
-
-    A boolean would put a cliff exactly where resolution is wanted. This is the
-    product of two terms: agreement of solid and shell counts, and a soft
-    penalty on the mean Euler difference over the aligned signatures.
+    Summed over the solid's shells, so a solid carrying an internal void is
+    still one number. Raises :class:`NotSingleSolidError` outside scope.
     """
-    denom = a.solids + b.solids + a.shells + b.shells
-    counts = 1.0 if denom == 0 else 1.0 - (
-        abs(a.solids - b.solids) + abs(a.shells - b.shells)) / denom
+    if descriptor.solids != 1:
+        raise NotSingleSolidError(
+            f"topology is defined for a single solid in this experiment; "
+            f"this shape has {descriptor.solids} solids "
+            f"({descriptor.shells} shells). The spectra are still available "
+            f"via brep_descriptor()."
+        )
+    return int(sum(descriptor.euler))
 
-    n = max(len(a.euler), len(b.euler), 1)
-    ea = list(a.euler) + [_TRIVIAL_CHI] * (n - len(a.euler))
-    eb = list(b.euler) + [_TRIVIAL_CHI] * (n - len(b.euler))
-    mean_delta = float(np.mean(np.abs(np.array(ea) - np.array(eb))))
-    return float(counts * (1.0 / (1.0 + mean_delta)))
+
+def topology_similarity(chi_a: int, chi_b: int) -> float:
+    """Parameter-free symmetric map from |delta chi| to [0, 1].
+
+    ``1 / (1 + |chi_a - chi_b|)``. The relative-difference form
+    ``1 - |d| / (|chi_a| + |chi_b|)`` was considered and rejected: it is
+    **undefined at chi_a = chi_b = 0** (two genus-1 parts, 0/0), it saturates
+    to 0.0 for a single through hole (chi 2 vs 0) so one hole already reads as
+    maximally different, and it is inconsistent in |d| — chi 2 vs 0 gives 0.0
+    while 2 vs 4 gives 0.667 for the same difference of 2. This form is total,
+    symmetric, monotone in |delta chi|, depends on nothing else, and has no
+    tunable parameter: 1, 1/2, 1/3, ...
+    """
+    return float(1.0 / (1.0 + abs(int(chi_a) - int(chi_b))))
 
 
 def _normalize_weights(weights) -> dict:
@@ -311,13 +336,16 @@ def compare(
     raw_a, raw_b = _describe(shape_a), _describe(shape_b)
     can_a, can_b = brep_descriptor(shape_a), brep_descriptor(shape_b)
 
-    s_top = topology_similarity(can_a, can_b)
+    chi_a, chi_b = corrected_euler(can_a), corrected_euler(can_b)
+    d_chi = abs(chi_a - chi_b)
+    s_top = topology_similarity(chi_a, chi_b)
     s_edge = spectrum_similarity(can_a.edge_spectrum, can_b.edge_spectrum, p=p_edge)
     s_face = spectrum_similarity(can_a.face_spectrum, can_b.face_spectrum, p=p_face)
 
     return StructuralComparison(
         raw_a=raw_a, raw_b=raw_b, canonical_a=can_a, canonical_b=can_b,
-        s_topology=s_top, topology_match=topology_match(can_a, can_b),
+        chi_reference=chi_a, chi_candidate=chi_b, abs_chi_difference=d_chi,
+        s_topology=s_top, topology_match=(d_chi == 0),
         s_edge=s_edge, s_face=s_face, p_edge=p_edge, p_face=p_face, weights=w,
         structural=(w["topology"] * s_top + w["edge"] * s_edge + w["face"] * s_face),
     )
