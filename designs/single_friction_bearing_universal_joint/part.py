@@ -23,10 +23,18 @@ def _bore_tool(bore_code, d2, square_s, keyway_width, keyway_depth, depth, x):
 
     tool = _centered_cylinder(d2, depth, "X").translate((x, 0.0, 0.0))
     if int(bore_code) == 1:
+        # The slot has to reach the bore WALL, not just the bore's topmost
+        # point. A box that dips only 0.01 below z=d2/2 misses the wall by
+        # sqrt(r^2-(b/2)^2) at the keyway's own edges, which left a 0.12-0.79
+        # mm ridge on both sides and made the keyway look detached from the
+        # bore. Running the box down to the bore axis removes nothing extra:
+        # it is narrower than the bore, so everything below the wall is
+        # already taken out by the cylinder.
+        slot_h = d2 / 2.0 + keyway_depth
         slot = (
             cq.Workplane("XY")
-            .box(depth, keyway_width, keyway_depth + 0.02)
-            .translate((x, 0.0, d2 / 2.0 + keyway_depth / 2.0))
+            .box(depth, keyway_width, slot_h)
+            .translate((x, 0.0, slot_h / 2.0))
         )
         tool = tool.union(slot.val())
     return tool
