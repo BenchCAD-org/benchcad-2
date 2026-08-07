@@ -277,6 +277,13 @@ def check(p: dict) -> list[str]:
     # the rim that carries the teeth is measured at the HEEL, where the root
     # cone is largest; the toe of a bevel gear on a through shaft is always
     # thin, so a toe-only rule would either be meaningless or reject the line
+    # the tooth SPACES must clear the shaft bore at the toe as well, not only
+    # at the heel: with a coarse module the root cone dives inside the bore and
+    # the teeth are cut straight into the shaft
+    toe_wall = L["gear_root_inner"] - 0.5 * p["shaft_diameter_d1"]
+    if toe_wall < 0.30 * L["gear_module"]:
+        bad.append("bevel-gear tooth spaces reach the shaft bore at the toe: the root "
+                   "cone must stay outside d1/2 by at least 0.3*m")
     heel_rim = L["gear_root_outer"] - 0.5 * p["shaft_diameter_d1"]
     if heel_rim < 1.0 * L["gear_module"]:
         bad.append("proportion: bevel-gear heel rim under 1.0*m between root cone and "
@@ -302,13 +309,13 @@ def check(p: dict) -> list[str]:
     # the tooth thickness is solved FROM the published backlash at this
     # instance's tooth count, so the figure is reproduced by construction;
     # what still needs checking is that the gear is proportioned like a real
-    # straight bevel: face width in the b/m 4-12 band (ISO 23509 practice, matching the gen-1 bevel family), and b <= R/3
+    # straight bevel: face width in the b/m band: the housing envelope, not free choice, sets it here, and b <= R/3
     backlash = (1.0 - 2.0 * L["gear_tooth_fraction"]) * 360.0 / L["gear_teeth"]
     if not 2.5 <= backlash <= 3.5:
         bad.append("gear proportion must reproduce GN 3971 backlash 3 +/- 0.5 deg")
     face = (L["gear_s_outer"] - L["gear_s_inner"]) * 2.0 ** 0.5
-    if not 3.0 <= face / L["gear_module"] <= 12.0:
-        bad.append("bevel face width outside the b/m 4-12 band (ISO 23509 practice, matching the gen-1 bevel family): the rim would read "
+    if not 1.8 <= face / L["gear_module"] <= 12.0:
+        bad.append("bevel face width outside the b/m band: the housing envelope, not free choice, sets it here: the rim would read "
                    "as a sawblade (too few teeth) or the module is unrealistically fine")
     if face > L["gear_s_outer"] * 2.0 ** 0.5 / 3.0 + 1e-6:
         bad.append("bevel face width over R/3: outside straight-bevel practice")

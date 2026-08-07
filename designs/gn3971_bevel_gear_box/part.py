@@ -25,20 +25,23 @@ import math
 # A fixed 16 gave b/m 4.2-4.5 — the rim read as a sawblade; a fixed 24 fixed
 # that but drove the module to 0.45 on the smallest boxes, finer than a real
 # steel gearbox that size would use. The ladder keeps both honest.
-ISO54_MODULES = (1.0, 1.125, 1.25, 1.375, 1.5, 1.75, 2.0)
-MIN_FACE_MODULES = 3.0
+ISO54_MODULES = (0.8, 0.9, 1.0, 1.125, 1.25, 1.375, 1.5, 1.75, 2.0)
+TOE_WALL_MODULES = 0.35  # metal left between the toe root cone and the bore
+MIN_FACE_MODULES = 2.0
 BACKLASH_DEG = 3.15     # published GN 3971 circumferential backlash (3 +/- 0.5)
 FLANK_HALF_DEG = 20.0
-# Standard tooth proportions, measured PERPENDICULAR to the pitch cone:
-# addendum 1.0*m, dedendum 1.25*m (whole depth 2.25*m).  The tooth sections
+# STUB tooth proportions, measured PERPENDICULAR to the pitch cone: addendum
+# 0.8*m, dedendum 1.0*m (whole depth 1.8*m). Stub teeth are the standard
+# answer when the blank cannot host a full-depth tooth — here the bore is up
+# to 46% of the box, and a full-depth root cone dives straight into the shaft.  The tooth sections
 # below are sketched at constant z, and the tip/root cones are parallel to the
 # 45-degree pitch cone, so a perpendicular offset a becomes a RADIAL offset
 # a/cos(45 deg) at constant z.  Skipping that conversion is what made the
 # earlier 0.50*m / 0.60*m radial figures only 0.78*m of real tooth depth.
 PITCH_ANGLE_DEG = 45.0
 _RADIAL = 1.0 / math.cos(math.radians(PITCH_ANGLE_DEG))
-ADDENDUM_RADIAL = 1.00 * _RADIAL
-DEDENDUM_RADIAL = 1.20 * _RADIAL
+ADDENDUM_RADIAL = 0.80 * _RADIAL
+DEDENDUM_RADIAL = 1.00 * _RADIAL
 # both are proportional to the module, and m = 2*r_mean/z, so the tip and root
 # cones are fixed multiples of the pitch cone regardless of size
 RIM_WALL_FACTOR = 1.2   # heel rim under the root cone, in modules
@@ -89,29 +92,39 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     # without that guard is what left the teeth standing on a 0.3 mm shell, so
     # the gear read as a crown of loose fins rather than a bevel gear.
     s_inner = max(0.24 * b1, 0.5 * d1 + 0.035 * b1)
-    # the large end is capped so the full-depth tip cone still leaves a b1 side
-    # wall on every catalog size
-    # the heel is capped by the housing cavity rule itself rather than a flat
-    # fraction: tip + clearance must leave a b1 side wall, and the tip ratio is
-    # largest at the smallest tooth count the ladder can pick (z=12)
     cav = max(0.25, 0.015 * b1)
     tip_ratio_max = 1.0 + 2.0 * ADDENDUM_RADIAL / 12.0
-    s_outer = min((0.48 * b1 - cav) / tip_ratio_max, s_inner + 0.12 * b1)
-    pitch_mean = 0.5 * (s_inner + s_outer)
-    face = (s_outer - s_inner) * math.sqrt(2.0)     # face width along the cone
-    teeth, module = None, None
-    for m_pref in ISO54_MODULES:
-        # EVEN tooth counts only: the half-pitch mesh phase between two
-        # identical 45-degree gears only lands tooth-in-gap when z is even
-        z_try = max(12, 2 * int(round(pitch_mean / m_pref)))
-        m_act = 2.0 * pitch_mean / z_try
-        if face / m_act >= MIN_FACE_MODULES:
-            teeth, module = z_try, m_act
-    if teeth is None:                                # smallest module still wins
-        teeth = max(12, 2 * int(round(pitch_mean / ISO54_MODULES[0])))
-        module = 2.0 * pitch_mean / teeth
-    # tooth thickness follows from the PUBLISHED backlash at this tooth count,
-    # so the catalog figure is reproduced exactly at every size
+    teeth = module = None
+    for _ in range(6):
+        # the heel is capped by the housing cavity rule itself rather than a
+        # flat fraction: tip + clearance must leave a b1 side wall
+        s_outer = min((0.48 * b1 - cav - 0.10) / tip_ratio_max, s_inner + 0.12 * b1)
+        pitch_mean = 0.5 * (s_inner + s_outer)
+        face = (s_outer - s_inner) * math.sqrt(2.0)
+        teeth = module = None
+        for m_pref in ISO54_MODULES:
+            # EVEN tooth counts only: the half-pitch mesh phase between two
+            # identical 45-degree gears only lands tooth-in-gap when z is even
+            z_try = max(12, 2 * int(round(pitch_mean / m_pref)))
+            m_act = 2.0 * pitch_mean / z_try
+            if face / m_act >= MIN_FACE_MODULES:
+                teeth, module = z_try, m_act
+        if teeth is None:
+            teeth = max(12, 2 * int(round(pitch_mean / ISO54_MODULES[0])))
+            module = 2.0 * pitch_mean / teeth
+        # the tooth SPACES must not be cut into the shaft: the root cone at the
+        # TOE, where it is smallest, has to stay outside the bore with real
+        # metal left. If it does not, the toe moves outboard and everything is
+        # re-derived — the tooth gets smaller, which is the only honest way out.
+        root_ratio = 1.0 - 2.0 * DEDENDUM_RADIAL / teeth
+        need = (0.5 * d1 + TOE_WALL_MODULES * module) / root_ratio
+        if s_inner >= need - 1e-9:
+            break
+        s_inner = need
+    root_ratio = 1.0 - 2.0 * DEDENDUM_RADIAL / teeth
+    tip_ratio = 1.0 + 2.0 * ADDENDUM_RADIAL / teeth
+    tip_outer = s_outer * tip_ratio
+    root_inner = s_inner * root_ratio
     tooth_fraction = 0.5 - BACKLASH_DEG * teeth / 720.0
     hub_length = 0.02 * b1
     root_ratio = 1.0 - 2.0 * DEDENDUM_RADIAL / teeth
