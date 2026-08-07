@@ -77,6 +77,27 @@ def _din315d(d1):
     return tuple(v * k for v in _DIN315D[nom])
 
 
+def _lune(wp, rho, r3, y0):
+    """The r3 root-fillet lune at boss radius ``rho``: the curvilinear triangle
+    bounded by the wing face (y = y0), the boss circle and the fillet circle of
+    radius r3 tangent to both — the drawing's r3 as seen from below. Lofted
+    along the boss cone it becomes the flare from the plate into the boss, which
+    OCC cannot produce as a fillet on a plate-on-cone seam at any radius."""
+    cx = math.sqrt(max((rho + r3) ** 2 - (y0 + r3) ** 2, 1e-9))
+    cy = y0 + r3
+    tx, ty = cx * rho / (rho + r3), cy * rho / (rho + r3)   # tangency on the boss
+    bx = math.sqrt(max(rho ** 2 - y0 ** 2, 1e-9))           # boss circle at y = y0
+    ab, at = math.atan2(y0, bx), math.atan2(ty, tx)
+    am = 0.5 * (ab + at)
+    bm = (rho * math.cos(am), rho * math.sin(am))           # midpoint on the boss
+    ux, uy = (tx - cx) / r3, (ty - cy) / r3
+    n = math.hypot(ux, uy - 1.0) or 1.0
+    fm = (cx + r3 * ux / n, cy + r3 * (uy - 1.0) / n)       # midpoint on the fillet
+    return (wp.moveTo(bx, y0).lineTo(cx, y0)
+            .threePointArc(fm, (tx, ty))
+            .threePointArc(bm, (bx, y0)).close())
+
+
 def _wing(e, h, m, r_boss, g_root, ear_r1, under_r4):
     """ONE lobed wing on the +X side, as the DIN 315-D front view draws it: an
     ear of radius r1 at the tip, a concave underside r4 sweeping back to the
@@ -218,6 +239,12 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
             .edges("|Y").fillet(r_fil)
             .cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_in)))   # keep the barrel clear
     lower = lower.union(body)
+    # The plate spans the full body width, so it fills the central pockets the
+    # upper shell's hinge knuckle and the bolt eye swing into. Clear them, and
+    # re-cut the barrel for the same reason as the crown lug above.
+    lower = lower.cut(_y_cyl(-x_h, 0.0, knu_w + 0.6, k_r + 0.15))
+    lower = lower.cut(_y_cyl(x_h, 0.0, 0.3 * body_w + 0.6, r_eye + 0.15))
+    lower = lower.cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_in))
     if stud:
         # T57200's hanging stud is M12x50 protruding 34 — it belongs to the
         # FIXING system (hang_d), not to the swing closing bolt. Sizing it off
@@ -271,7 +298,11 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     slot_x0 = x_h - (bolt_d / 2.0 + 0.6)
     slot = _y_slab((slot_x0 + lug_x1 + 2.0) / 2.0, 0.0, z_l0 - 1.0,
                    lug_x1 + 2.0 - slot_x0, bolt_d + 1.2, lug_h + 2.0)
-    upper = upper.union(lug).cut(slot)
+    # The barrel envelope must be re-cut AFTER the lug is unioned: the annulus
+    # is bored first, so anything added later has never seen the bore. The lug
+    # was intruding ~6.2e3 mm3 into the Ø51 barrel on every sampled row.
+    upper = (upper.union(lug).cut(slot)
+             .cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_in)))
 
     # hinge + pivot bores through everything that wraps a pin
     for x_c in (-x_h, x_h):
@@ -317,6 +348,24 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
                        (e_span / 2.0, g2), (d2 / 2.0, g2)]).close()
             .extrude(face * 2.0 * h_nut))
     wing = wing.translate((0.0, 0.0, z_n0))
+
+    # r3 flare: loft the lune along the boss cone (the tangency radius grows
+    # from d3/2 at the boss top to d2/2 at the bearing face) and clip it to the
+    # wing's own silhouette, so the plate meets the boss on a radius instead of
+    # a hard seam.
+    r3 = max(0.06 * d2, 0.6)
+    prism = _wing(e_span, h_nut, m_boss, d2 / 2.0, 2.0 * (g2 / 2.0 + r3 + 1.0),
+                  r1, r4).translate((0.0, 0.0, z_n0))
+    for mir in (False, True):
+        wp = cq.Workplane("XY", origin=(0.0, 0.0, z_n0))
+        wp = _lune(wp, d2 / 2.0, r3, g2 / 2.0)
+        wp = _lune(wp.workplane(offset=m_boss), d3 / 2.0, r3, g2 / 2.0)
+        try:
+            flare = wp.loft().intersect(prism)
+        except Exception:
+            break                                  # degenerate row: skip the flare
+        flare = flare.mirror("XZ") if mir else flare
+        wing = wing.union(flare)
     nut = nut.union(wing).union(wing.mirror("YZ"))
 
     nut = nut.cut(cq.Workplane("XY", origin=(0.0, 0.0, z_n0 - bolt_d))
