@@ -88,10 +88,25 @@ def _can(body_diameter, can_height, base_thickness, rim_radius):
         .translate((0.0, 0.0, can_bottom_z - overlap))
     )
     can = _fuse(_fuse(body, bead), neck)
-    bead_bottom_z = can_bottom_z + neck_height
-    bottom_edges = _circular_edges_at(can, bead_bottom_z, bead_radius)
-    bottom_fillet = min(rim_radius, (bead_radius - radius) * 0.95, bead_height * 0.25)
-    return can.fillet(bottom_fillet, bottom_edges).clean()
+    groove_start_z = can_bottom_z + neck_height
+    groove_width = min(bead_height * 0.75, max(0.30, rim_radius * 1.5))
+    neck_radius = radius * 0.94
+    groove_depth = radius - neck_radius + 0.10
+    groove_radius = radius - groove_depth
+    groove_cut = (
+        cq.Workplane("XY")
+        .circle(bead_radius + 0.10)
+        .circle(groove_radius)
+        .extrude(groove_width)
+        .translate((0.0, 0.0, groove_start_z))
+    )
+    can = _cut(can, groove_cut)
+    groove_fillet = min(0.10, groove_depth * 0.4, groove_width * 0.3)
+    groove_edges = _circular_edges_at(can, groove_start_z, groove_radius)
+    groove_edges += _circular_edges_at(
+        can, groove_start_z + groove_width, groove_radius
+    )
+    return can.fillet(groove_fillet, groove_edges).clean()
 
 
 def _base(
