@@ -87,6 +87,18 @@ def validate_family(fam_dir: Path, seeds: int = 4, geometry: bool = True):
                 ok(f"family.json components: {len(components_contract)} component "
                    f"type(s), quantities sum to solids={meta['solids']}")
 
+    # -- 1b. part.py must be clean source, not an editor scratch file --------
+    # `bench2 edit` appends a PARAMS + show_object() block and removes it when
+    # the editor closes; if the editor was killed the block survives. It is
+    # harmless at import (show_object is stubbed) but it is not the family's
+    # source of truth, so fail loudly rather than let it be committed.
+    from .edit import has_scratch_block
+
+    part_src = (fam_dir / "part.py").read_text() if (fam_dir / "part.py").exists() else ""
+    if has_scratch_block(part_src):
+        bad(f"part.py: still has a `bench2 edit` scratch block — "
+            f"run `bench2 edit {fam_dir.name} --strip` (or delete the block) before committing")
+
     # -- 2. the pieces: part.build + spec.PARAM_SPEC/check -------------------
     try:
         part, spec = load_family(fam_dir)
