@@ -13,10 +13,14 @@ correspondence, centroid matching, adjacency or assignment: the point of the
 experiment is how far a very cheap descriptor goes.
 
 1. **Topology** — both shapes are canonicalized with
-   `ShapeUpgrade_UnifySameDomain`, which merges same-domain faces and edge
-   chains, then reduced to one corrected Euler characteristic. **Defined for a
-   single-solid instance only**: out-of-scope input raises
-   `NotSingleSolidError` rather than getting a silent multi-solid heuristic.
+   `ShapeUpgrade_UnifySameDomain`, then reduced to two counts: ``G``, the
+   handles summed over the solid's shells, and ``V``, the enclosed voids.
+   ``D = |dG| + |dV|`` and ``S = 1 / (1 + D)``. Summing the corrected Euler
+   characteristic instead would cancel: a handle contributes -2 and a void +2,
+   so a plain block and a block with one through hole *and* one void both sum
+   to 2 — measured, and the reason the decomposition is kept. **Single-solid
+   scope only**: out-of-scope input raises `NotSingleSolidError` rather than
+   getting a silent multi-solid heuristic.
 2. **Edge-length spectrum** — canonical edge lengths, each normalized by that
    shape's total edge length, sorted, zero-padded to the longer.
 3. **Face-area spectrum** — the same by total surface area.
@@ -132,6 +136,69 @@ class BRepDescriptor:
         }
 
 
+@dataclass(frozen=True)
+class TopologyComparison:
+    """Every topology quantity for one pair, cached for a later sweep."""
+
+    shell_count_reference: int
+    shell_count_candidate: int
+    void_count_reference: int
+    void_count_candidate: int
+    per_shell_chi_reference: tuple
+    per_shell_chi_candidate: tuple
+    per_shell_genus_reference: tuple
+    per_shell_genus_candidate: tuple
+    total_genus_reference: int
+    total_genus_candidate: int
+    abs_genus_difference: int
+    abs_void_difference: int
+    topology_difference: int
+    topology_exact_match: bool
+    topology_similarity: float
+    summed_chi_reference: int      # diagnostic only, see summed_chi()
+    summed_chi_candidate: int      # diagnostic only
+
+    def as_dict(self) -> dict:
+        return {
+            "shell_count_reference": self.shell_count_reference,
+            "shell_count_candidate": self.shell_count_candidate,
+            "void_count_reference": self.void_count_reference,
+            "void_count_candidate": self.void_count_candidate,
+            "per_shell_chi_reference": list(self.per_shell_chi_reference),
+            "per_shell_chi_candidate": list(self.per_shell_chi_candidate),
+            "per_shell_genus_reference": list(self.per_shell_genus_reference),
+            "per_shell_genus_candidate": list(self.per_shell_genus_candidate),
+            "total_genus_reference": self.total_genus_reference,
+            "total_genus_candidate": self.total_genus_candidate,
+            "abs_genus_difference": self.abs_genus_difference,
+            "abs_void_difference": self.abs_void_difference,
+            "topology_difference": self.topology_difference,
+            "topology_exact_match": self.topology_exact_match,
+            "topology_similarity": self.topology_similarity,
+            "summed_chi_reference": self.summed_chi_reference,
+            "summed_chi_candidate": self.summed_chi_candidate,
+        }
+
+
+def compare_topology(a: BRepDescriptor, b: BRepDescriptor) -> TopologyComparison:
+    """Full topology comparison of two canonical single-solid descriptors."""
+    ga, gb = shell_genera(a), shell_genera(b)
+    Ga, Gb = int(sum(ga)), int(sum(gb))
+    Va, Vb = void_count(a), void_count(b)
+    d = abs(Ga - Gb) + abs(Va - Vb)
+    return TopologyComparison(
+        shell_count_reference=a.shells, shell_count_candidate=b.shells,
+        void_count_reference=Va, void_count_candidate=Vb,
+        per_shell_chi_reference=a.euler, per_shell_chi_candidate=b.euler,
+        per_shell_genus_reference=ga, per_shell_genus_candidate=gb,
+        total_genus_reference=Ga, total_genus_candidate=Gb,
+        abs_genus_difference=abs(Ga - Gb), abs_void_difference=abs(Va - Vb),
+        topology_difference=d, topology_exact_match=(d == 0),
+        topology_similarity=topology_similarity(d),
+        summed_chi_reference=summed_chi(a), summed_chi_candidate=summed_chi(b),
+    )
+
+
 @dataclass
 class StructuralComparison:
     """Everything one comparison produced, so a sweep never recomputes it."""
@@ -140,9 +207,7 @@ class StructuralComparison:
     raw_b: BRepDescriptor
     canonical_a: BRepDescriptor
     canonical_b: BRepDescriptor
-    chi_reference: int
-    chi_candidate: int
-    abs_chi_difference: int
+    topology: TopologyComparison
     s_topology: float
     topology_match: bool
     s_edge: float
@@ -164,8 +229,7 @@ class StructuralComparison:
         return StructuralComparison(
             raw_a=self.raw_a, raw_b=self.raw_b,
             canonical_a=self.canonical_a, canonical_b=self.canonical_b,
-            chi_reference=self.chi_reference, chi_candidate=self.chi_candidate,
-            abs_chi_difference=self.abs_chi_difference,
+            topology=self.topology,
             s_topology=self.s_topology, topology_match=self.topology_match,
             s_edge=s_edge, s_face=s_face, p_edge=pe, p_face=pf, weights=w,
             structural=(w["topology"] * self.s_topology
@@ -178,11 +242,8 @@ class StructuralComparison:
             "raw": {"a": self.raw_a.as_dict(), "b": self.raw_b.as_dict()},
             "canonical": {"a": self.canonical_a.as_dict(),
                           "b": self.canonical_b.as_dict()},
-            "chi_reference": self.chi_reference,
-            "chi_candidate": self.chi_candidate,
-            "abs_chi_difference": self.abs_chi_difference,
+            **self.topology.as_dict(),
             "s_topology": self.s_topology,
-            "topology_exact_match": self.topology_match,
             "s_edge": self.s_edge, "s_face": self.s_face,
             "p_edge": self.p_edge, "p_face": self.p_face,
             "weights": dict(self.weights),
@@ -279,12 +340,7 @@ def spectrum_similarity(a: tuple, b: tuple, p: float = 1.0) -> float:
     return float(max(0.0, 1.0 - distance / (2.0 ** (1.0 / p))))
 
 
-def corrected_euler(descriptor: BRepDescriptor) -> int:
-    """The single scalar chi for a one-solid instance.
-
-    Summed over the solid's shells, so a solid carrying an internal void is
-    still one number. Raises :class:`NotSingleSolidError` outside scope.
-    """
+def _require_single_solid(descriptor: BRepDescriptor) -> None:
     if descriptor.solids != 1:
         raise NotSingleSolidError(
             f"topology is defined for a single solid in this experiment; "
@@ -292,22 +348,57 @@ def corrected_euler(descriptor: BRepDescriptor) -> int:
             f"({descriptor.shells} shells). The spectra are still available "
             f"via brep_descriptor()."
         )
+
+
+def shell_genera(descriptor: BRepDescriptor) -> tuple[int, ...]:
+    """Genus of each closed shell, ``g = (2 - chi) / 2``, sorted."""
+    _require_single_solid(descriptor)
+    return tuple(sorted((2 - int(c)) // 2 for c in descriptor.euler))
+
+
+def total_genus(descriptor: BRepDescriptor) -> int:
+    """``G`` — independent handles summed over the solid's shells."""
+    return int(sum(shell_genera(descriptor)))
+
+
+def void_count(descriptor: BRepDescriptor) -> int:
+    """``V`` — enclosed internal voids, i.e. every shell past the outer one."""
+    _require_single_solid(descriptor)
+    return int(descriptor.shells - 1)
+
+
+def summed_chi(descriptor: BRepDescriptor) -> int:
+    """Diagnostic only. **Do not compare on this.**
+
+    A handle contributes -2 and a void +2, so they cancel exactly: measured, a
+    plain block and a block carrying one through hole *and* one internal void
+    both sum to 2. That cancellation is why the topology signal is built from
+    ``(G, V)`` instead.
+    """
+    _require_single_solid(descriptor)
     return int(sum(descriptor.euler))
 
 
-def topology_similarity(chi_a: int, chi_b: int) -> float:
-    """Parameter-free symmetric map from |delta chi| to [0, 1].
+def topology_difference(a: BRepDescriptor, b: BRepDescriptor) -> int:
+    """``D = |G_a - G_b| + |V_a - V_b|`` — how many independent topological
+    structures differ.
 
-    ``1 / (1 + |chi_a - chi_b|)``. The relative-difference form
-    ``1 - |d| / (|chi_a| + |chi_b|)`` was considered and rejected: it is
-    **undefined at chi_a = chi_b = 0** (two genus-1 parts, 0/0), it saturates
-    to 0.0 for a single through hole (chi 2 vs 0) so one hole already reads as
-    maximally different, and it is inconsistent in |d| — chi 2 vs 0 gives 0.0
-    while 2 vs 4 gives 0.667 for the same difference of 2. This form is total,
-    symmetric, monotone in |delta chi|, depends on nothing else, and has no
-    tunable parameter: 1, 1/2, 1/3, ...
+    One handle mismatch and one void mismatch each count as one unit. That is
+    deliberate: no separate handle/void weights and no tunable parameter until
+    benchmark evidence says the distinction needs one.
     """
-    return float(1.0 / (1.0 + abs(int(chi_a) - int(chi_b))))
+    return (abs(total_genus(a) - total_genus(b))
+            + abs(void_count(a) - void_count(b)))
+
+
+def topology_similarity(difference: int) -> float:
+    """``1 / (1 + D)`` — total, symmetric, monotone, parameter-free.
+
+    The relative-difference form ``1 - |d| / (|x_a| + |x_b|)`` was considered
+    and rejected: undefined when both are 0, saturating at 0.0 for a single
+    missing handle, and inconsistent in ``|d|``.
+    """
+    return float(1.0 / (1.0 + abs(int(difference))))
 
 
 def _normalize_weights(weights) -> dict:
@@ -336,16 +427,15 @@ def compare(
     raw_a, raw_b = _describe(shape_a), _describe(shape_b)
     can_a, can_b = brep_descriptor(shape_a), brep_descriptor(shape_b)
 
-    chi_a, chi_b = corrected_euler(can_a), corrected_euler(can_b)
-    d_chi = abs(chi_a - chi_b)
-    s_top = topology_similarity(chi_a, chi_b)
+    topo = compare_topology(can_a, can_b)
+    s_top = topo.topology_similarity
     s_edge = spectrum_similarity(can_a.edge_spectrum, can_b.edge_spectrum, p=p_edge)
     s_face = spectrum_similarity(can_a.face_spectrum, can_b.face_spectrum, p=p_face)
 
     return StructuralComparison(
         raw_a=raw_a, raw_b=raw_b, canonical_a=can_a, canonical_b=can_b,
-        chi_reference=chi_a, chi_candidate=chi_b, abs_chi_difference=d_chi,
-        s_topology=s_top, topology_match=(d_chi == 0),
+        topology=topo, s_topology=s_top,
+        topology_match=topo.topology_exact_match,
         s_edge=s_edge, s_face=s_face, p_edge=p_edge, p_face=p_face, weights=w,
         structural=(w["topology"] * s_top + w["edge"] * s_edge + w["face"] * s_face),
     )

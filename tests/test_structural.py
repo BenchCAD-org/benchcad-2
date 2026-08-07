@@ -20,10 +20,14 @@ from bench2.structural import (  # noqa: E402
     _ocp_hashcode_fix,
     brep_descriptor,
     compare,
-    corrected_euler,
+    shell_genera,
     spectrum_similarity,
+    summed_chi,
     topology_similarity,
+    total_genus,
+    void_count,
 )
+from _topo_fixtures import hole_and_void, plain, with_holes, with_voids  # noqa: E402
 
 # cadquery's own selectors dedup through Shape.hashCode(), so the shim has to
 # be in place before any fixture runs — not merely before the first descriptor.
@@ -150,7 +154,8 @@ class TestTopology(unittest.TestCase):
         self.assertGreater(c.s_edge, 0.80)
         self.assertGreater(c.s_face, 0.80)
         self.assertFalse(c.topology_match)     # topology does notice
-        self.assertLess(c.s_topology, 0.5)
+        # D = 1 (one handle), so S_topology = 1/2 — far below either spectrum
+        self.assertAlmostEqual(c.s_topology, 0.5, places=9)
         self.assertGreater(c.s_edge, c.s_topology)
         self.assertGreater(c.s_face, c.s_topology)
 
@@ -158,22 +163,79 @@ class TestTopology(unittest.TestCase):
         for shape in (_block_with_groove(), _block_filleted(), _block_split()):
             c = compare(_block(), shape)
             self.assertTrue(c.topology_match)
-            self.assertEqual(c.abs_chi_difference, 0)
+            self.assertEqual(c.topology.topology_difference, 0)
 
-    def test_chi_is_exposed_for_both_shapes(self):
+    def test_topology_quantities_are_exposed(self):
         c = compare(_block(), _block_with_hole())
-        self.assertEqual(c.chi_reference, 2)
-        self.assertEqual(c.chi_candidate, 0)
-        self.assertEqual(c.abs_chi_difference, 2)
-        self.assertAlmostEqual(c.s_topology, 1.0 / 3.0, places=9)
+        t = c.topology
+        self.assertEqual((t.total_genus_reference, t.total_genus_candidate), (0, 1))
+        self.assertEqual((t.void_count_reference, t.void_count_candidate), (0, 0))
+        self.assertEqual(t.abs_genus_difference, 1)
+        self.assertEqual(t.abs_void_difference, 0)
+        self.assertEqual(t.topology_difference, 1)
+        self.assertFalse(t.topology_exact_match)
+        self.assertAlmostEqual(c.s_topology, 0.5, places=9)
 
     def test_topology_similarity_is_total_and_symmetric(self):
-        # the relative-difference alternative is undefined here; this is not
-        self.assertAlmostEqual(topology_similarity(0, 0), 1.0, places=9)
-        self.assertAlmostEqual(topology_similarity(2, 0), topology_similarity(0, 2), places=12)
-        # depends only on |delta chi|
-        self.assertAlmostEqual(topology_similarity(2, 0), topology_similarity(2, 4), places=12)
-        self.assertAlmostEqual(topology_similarity(2, 0), 1.0 / 3.0, places=9)
+        self.assertAlmostEqual(topology_similarity(0), 1.0, places=9)
+        self.assertAlmostEqual(topology_similarity(1), 0.5, places=9)
+        self.assertAlmostEqual(topology_similarity(2), 1.0 / 3.0, places=9)
+
+
+class TestTopologyDecomposition(unittest.TestCase):
+    def test_plain_vs_plain(self):
+        c = compare(plain(), plain())
+        self.assertEqual(c.topology.topology_difference, 0)
+        self.assertAlmostEqual(c.s_topology, 1.0, places=9)
+
+    def test_one_through_hole(self):
+        d = brep_descriptor(with_holes(1))
+        self.assertEqual((total_genus(d), void_count(d)), (1, 0))
+        self.assertEqual(compare(plain(), with_holes(1)).topology.topology_difference, 1)
+
+    def test_multiple_through_holes(self):
+        for n in (2, 3, 5):
+            d = brep_descriptor(with_holes(n))
+            self.assertEqual(total_genus(d), n)
+            self.assertEqual(void_count(d), 0)
+        self.assertEqual(compare(with_holes(5), with_holes(4)).topology.topology_difference, 1)
+
+    def test_one_internal_void(self):
+        d = brep_descriptor(with_voids(1))
+        self.assertEqual((total_genus(d), void_count(d)), (0, 1))
+        self.assertEqual(d.shells, 2)
+        self.assertEqual(compare(plain(), with_voids(1)).topology.topology_difference, 1)
+
+    def test_multiple_internal_voids(self):
+        d = brep_descriptor(with_voids(2))
+        self.assertEqual((total_genus(d), void_count(d)), (0, 2))
+        self.assertEqual(compare(plain(), with_voids(2)).topology.topology_difference, 2)
+
+    def test_hole_plus_void_is_no_longer_cancelled(self):
+        """The regression this change exists for."""
+        d = brep_descriptor(hole_and_void())
+        # summed chi still cancels — that is why it is diagnostic only
+        self.assertEqual(summed_chi(d), summed_chi(brep_descriptor(plain())))
+        # the decomposition does not
+        self.assertEqual((total_genus(d), void_count(d)), (1, 1))
+        c = compare(plain(), hole_and_void())
+        self.assertEqual(c.topology.topology_difference, 2)
+        self.assertFalse(c.topology_match)
+        self.assertAlmostEqual(c.s_topology, 1.0 / 3.0, places=9)
+
+    def test_handle_and_void_mismatch_weigh_the_same(self):
+        """Deliberate: no separate handle/void weights."""
+        handle = compare(plain(), with_holes(1))
+        void = compare(plain(), with_voids(1))
+        self.assertEqual(handle.topology.topology_difference,
+                         void.topology.topology_difference)
+        self.assertAlmostEqual(handle.s_topology, void.s_topology, places=12)
+
+    def test_shell_genera_are_per_shell(self):
+        self.assertEqual(shell_genera(brep_descriptor(plain())), (0,))
+        self.assertEqual(shell_genera(brep_descriptor(with_holes(3))), (3,))
+        self.assertEqual(shell_genera(brep_descriptor(with_voids(1))), (0, 0))
+        self.assertEqual(shell_genera(brep_descriptor(hole_and_void())), (0, 1))
 
 
 class TestSingleSolidScope(unittest.TestCase):
@@ -186,7 +248,7 @@ class TestSingleSolidScope(unittest.TestCase):
         two = self._two_solids()
         self.assertEqual(brep_descriptor(two).solids, 2)
         with self.assertRaises(NotSingleSolidError) as ctx:
-            corrected_euler(brep_descriptor(two))
+            total_genus(brep_descriptor(two))
         self.assertIn("2 solids", str(ctx.exception))
         with self.assertRaises(NotSingleSolidError):
             compare(_block(), two)
@@ -196,10 +258,10 @@ class TestSingleSolidScope(unittest.TestCase):
         self.assertAlmostEqual(sum(d.face_spectrum), 1.0, places=9)
         self.assertAlmostEqual(sum(d.edge_spectrum), 1.0, places=9)
 
-    def test_solid_with_a_void_is_still_one_scalar(self):
-        chi = corrected_euler(brep_descriptor(_block()))
-        self.assertIsInstance(chi, int)
-        self.assertEqual(chi, 2)
+    def test_void_carrying_solid_is_still_in_scope(self):
+        d = brep_descriptor(with_voids(1))
+        self.assertEqual(d.solids, 1)
+        self.assertEqual(void_count(d), 1)      # in scope, not rejected
 
 
 class TestSpectrumPrimitives(unittest.TestCase):
@@ -270,8 +332,13 @@ class TestParameterisation(unittest.TestCase):
 
         d = compare(_block(), _block_with_hole()).as_dict()
         json.dumps(d)  # must not raise
-        for key in ("raw", "canonical", "chi_reference", "chi_candidate",
-                    "abs_chi_difference", "s_topology", "topology_exact_match",
+        for key in ("raw", "canonical", "shell_count_reference",
+                    "void_count_reference", "per_shell_chi_reference",
+                    "per_shell_genus_reference", "total_genus_reference",
+                    "total_genus_candidate", "abs_genus_difference",
+                    "abs_void_difference", "topology_difference",
+                    "topology_exact_match", "topology_similarity",
+                    "summed_chi_reference", "s_topology",
                     "s_edge", "s_face", "p_edge", "p_face", "weights", "structural"):
             self.assertIn(key, d)
 
