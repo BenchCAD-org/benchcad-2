@@ -131,7 +131,9 @@ def _safety_guard(d3, d5, h2, h3):
         .translate((0.0, 0.0, middle_start))
     )
     middle = cylinder.intersect(hex_prism)
-    lower = _cone_z(1.135 * d5, d5, transition, start_z)
+    # d5 is the catalog guard diameter/envelope; both end transitions taper
+    # inward from that maximum rather than flaring beyond the specified size.
+    lower = _cone_z(0.91 * d5, d5, transition, start_z)
     upper = _cone_z(d5, 0.91 * d5, transition, h2 - transition)
     guard = lower.union(middle).union(upper)
 
