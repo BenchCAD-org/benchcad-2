@@ -160,8 +160,7 @@ def _build_pivot_block(d1):
 
 def _build_pivot_pin(d1):
     """Thick pin on the input yoke's Z axis, spanning both ears, with the
-    transverse cross-pin hole at its middle and the retaining-ring groove
-    below the lower ear."""
+    transverse cross-pin hole at its middle."""
     # ears span z in +/-[0.28, 0.46]*d1, so the pin runs -0.50 to +0.47*d1:
     # through both ears, proud enough below for the ring, and still inside
     # the catalog d1 envelope
@@ -174,14 +173,7 @@ def _build_pivot_pin(d1):
         .edges().chamfer(0.015 * d1)
     )
     pin = pin.cut(_centered_cylinder((CROSS_PIN_D + PIN_FIT) * d1, PIVOT_PIN_D * d1 + 0.2, "Y").val())
-    groove = (
-        cq.Workplane("XY")
-        .workplane(offset=-0.491 * d1)
-        .circle(PIVOT_PIN_D * d1 / 2.0 + 0.1)
-        .circle(PIVOT_PIN_D * d1 / 2.0 - 0.020 * d1)
-        .extrude(0.030 * d1)                 # groove sits below the lower ear
-    )
-    return pin.cut(groove.val())
+    return pin
 
 
 def _build_cross_pin(d1):
@@ -196,20 +188,6 @@ def _build_cross_pin(d1):
         .circle(CROSS_PIN_D * d1 / 2.0)
         .extrude(-length)
         .edges().chamfer(0.012 * d1)
-    )
-
-
-def _build_retaining_ring(d1):
-    """Plain thin retaining washer seated in the pivot pin's groove. The
-    teardown photo shows a CONTINUOUS ring, not a split circlip, so it is
-    slid on from the pin end before the cross pin closes the joint."""
-    groove_r = PIVOT_PIN_D * d1 / 2.0 - 0.020 * d1
-    return (
-        cq.Workplane("XY")
-        .circle(groove_r + 0.055 * d1)
-        .circle(groove_r + 0.004 * d1)
-        .extrude(0.024 * d1)
-        .translate((0.0, 0.0, -0.488 * d1))  # seated in the pin groove
     )
 
 
@@ -253,5 +231,4 @@ def build(
     result.add(_build_pivot_block(d1), name="pivot_block")
     result.add(_build_pivot_pin(d1), name="pivot_pin")
     result.add(_build_cross_pin(d1), name="cross_pin")
-    result.add(_build_retaining_ring(d1), name="retaining_ring")
     return result

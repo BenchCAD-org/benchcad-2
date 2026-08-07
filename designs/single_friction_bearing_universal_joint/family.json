@@ -2,10 +2,10 @@
  "family": "single_friction_bearing_universal_joint",
  "standard": "DIN 808, type EG, steel universal joint with friction bearing",
  "base_plane": "XY",
- "description": "DIN 808 EG single universal joint modelled as its real friction-bearing construction: two bored yokes, the rounded pivot block, the cross-drilled pivot pin through the input yoke's ears, the cross pin through block and pivot pin, and the split retaining ring.",
+ "description": "DIN 808 EG single universal joint modelled as its real friction-bearing construction: two bored yokes, the rounded pivot block, the cross-drilled pivot pin through the input yoke's ears, the cross pin through block and pivot pin.",
  "source": "JW Winco DIN 808 official product page and 808g metric table; JW Winco DIN 6885-1 keyway table; uncited fork, clearance, blend, and cross details are documented proportions",
  "contributor": "sunzhenchuan007",
- "solids": 6,
+ "solids": 5,
  "components": [
   {
    "name": "input_yoke",
@@ -25,10 +25,6 @@
   },
   {
    "name": "cross_pin",
-   "quantity": 1
-  },
-  {
-   "name": "retaining_ring",
    "quantity": 1
   }
  ]
