@@ -51,6 +51,12 @@ The spec uses discrete catalog rows so generated dimensions remain table-based.
   the minor Ø, root flat P/8 at the major Ø, depth 0.5413*P. `screw_d` runs M3
   through M12 over the catalog rows (P = 0.5 to 1.75 mm), so the thread is the
   family's functional feature, not a cosmetic one.
+- BOTH mouths are countersunk at 45 degrees out to the major Ø plus a tenth of a
+  pitch. A tapped hole needs the lead-in to start the screw, and without it the
+  first turn of thread is left as a knife edge on the face it breaks — here the
+  OD, where the screw enters, and the bore, where the hole breaks into the shaft
+  seat. Full threads run between the two countersinks: 3 turns on the M3 row up
+  to 8 on the M10 rows.
 - Those are revolved RINGS, not a swept helix, and they differ from a real thread
   only in lead: each turn closes on itself instead of advancing by P. A helix was
   tried first and its boolean cut silently no-ops below M10 — on the ten rows from

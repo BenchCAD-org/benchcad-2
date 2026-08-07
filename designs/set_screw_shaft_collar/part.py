@@ -56,9 +56,13 @@ def build(
     if second_screw:
         screw_angles.append(135)
 
-    hole_len = wall + 1.0
+    # the cutter overshoots each face by `over`, so the two countersinks have to
+    # be told where the real surfaces are: the bore at z = over, the OD at
+    # z = over + wall
+    over = 0.5
+    hole_len = wall + 2.0 * over
     for angle in screw_angles:
-        for cutter in _tapped_hole(screw_d, hole_len):
+        for cutter in _tapped_hole(screw_d, hole_len, over, over + wall):
             collar = collar.cut(
                 cutter
                 .rotate((0, 0, 0), (0, 1, 0), 90)      # bore along +Z -> along +X
@@ -70,12 +74,19 @@ def build(
     return result
 
 
-def _tapped_hole(thread_d, length):
-    """The VOID of a metric tapped hole, along +Z from z = 0 to z = length.
+def _tapped_hole(thread_d, length, z_in, z_out):
+    """The VOID of a metric tapped hole, along +Z from z = 0 to z = length, with
+    the material faces it breaks at z_in and z_out.
 
     Drilled to the ISO internal-thread minor diameter and threaded out to the
-    major diameter with 60-degree V-rings of the coarse pitch: crest flat P/4 at
-    the minor Ø, root flat P/8 at the major Ø, depth 0.5413*P.
+    major diameter with 60-degree V-rings of the ISO 261 coarse pitch: crest flat
+    P/4 at the minor Ø, root flat P/8 at the major Ø, depth 0.5413*P.
+
+    Both mouths are countersunk at 45 degrees out to the major Ø plus a tenth of
+    a pitch. A tapped hole needs the lead-in to start the screw, and without it
+    the first turn of thread is left as a knife edge on the face it breaks —
+    here that is the OD, where the screw enters, and the bore, where the hole
+    breaks through into the shaft seat.
 
     Revolved RINGS, not a swept helix. A helix is the truer form and was tried
     first, but the boolean that cuts it silently no-ops below M10 -- on the ten
@@ -88,18 +99,23 @@ def _tapped_hole(thread_d, length):
     pitch = _PITCH[int(round(thread_d))]
     r_maj = thread_d / 2.0
     r_min = r_maj - 0.5413 * pitch             # ISO internal minor: d - 1.0825*P
-    n = max(1, int(round(length / pitch)))
+    r_cs = r_maj + 0.1 * pitch                 # countersink to just past the crest
+    d_cs = r_cs - r_min                        # 45 degrees
 
-    pts = [(0.0, 0.0), (r_min, 0.0)]
+    z0 = z_in + d_cs                           # first full thread
+    z1 = z_out - d_cs                          # last full thread
+    n = max(1, int((z1 - z0) / pitch))
+
+    pts = [(0.0, 0.0), (r_cs, 0.0), (r_cs, z_in), (r_min, z0)]
     for k in range(n):
-        z0 = k * pitch
+        zk = z0 + k * pitch
         pts += [
-            (r_min, z0 + pitch / 8.0),                    # end of the crest flat
-            (r_maj, z0 + pitch / 2.0 - pitch / 16.0),     # flank out to the root
-            (r_maj, z0 + pitch / 2.0 + pitch / 16.0),     # root flat
-            (r_min, z0 + pitch - pitch / 8.0),            # flank back to the crest
+            (r_min, zk + pitch / 8.0),                    # end of the crest flat
+            (r_maj, zk + pitch / 2.0 - pitch / 16.0),     # flank out to the root
+            (r_maj, zk + pitch / 2.0 + pitch / 16.0),     # root flat
+            (r_min, zk + pitch - pitch / 8.0),            # flank back to the crest
         ]
-    pts += [(r_min, length), (0.0, length)]
+    pts += [(r_min, z1), (r_cs, z_out), (r_cs, length), (0.0, length)]
 
     return (
         cq.Workplane("XZ")
