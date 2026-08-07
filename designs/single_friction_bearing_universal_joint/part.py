@@ -133,10 +133,16 @@ PIN_FIT = 0.015         # radial running clearance / d1 (both pins, all bores)
 
 def _build_pivot_block(d1):
     """Centre block: a turned DRUM (the teardown photo shows a cylinder, not
-    a cube), 0.50*d1 across and 0.52*d1 tall, bored Z for the pivot pin and
-    Y for the cross pin, with the ends broken like the reference."""
-    r_o = 0.25 * d1
-    half_h = 0.26 * d1
+    a cube) with two milled flats where the cross-pin bores break out, bored
+    Z for the pivot pin and Y for the cross pin, and counterbored at both
+    ends around the pivot bore."""
+    # Sized from wall thickness, not from the photo: the earlier 0.25*d1
+    # radius left 0.82 x the pivot-bore radius as wall, which is far heavier
+    # than a friction-bearing block needs and read as an oversized centre.
+    # 0.21*d1 puts the wall at 0.53 x the bore radius, and the 1.10 height /
+    # diameter ratio matches the teardown's own 119/107 px.
+    r_o = 0.21 * d1
+    half_h = 0.23 * d1
     blk = (
         cq.Workplane("XY")
         .circle(r_o)
@@ -146,7 +152,7 @@ def _build_pivot_block(d1):
     )
     # two milled FLATS on the cross-pin axis, the faces its bores break out
     # of (the teardown shows a drum with flats, not a plain cylinder)
-    flat_at = 0.205 * d1
+    flat_at = 0.168 * d1
     for sy in (1.0, -1.0):
         blk = blk.cut(
             cq.Workplane("XY")
