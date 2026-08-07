@@ -7,7 +7,7 @@ PARAM_SPEC = {
         "askable": True,
     },
     "can_height": {
-        "desc": "Height of the cylindrical can above the plastic SMD base",
+        "desc": "Overall height of the metal can from its lowest metal point to the top face",
         "unit": "mm",
         "range": {"easy": (7.2, 8.0), "medium": (6.9, 8.4), "hard": (6.4, 9.0)},
         "source": "STEP measurement; proportion",
@@ -28,7 +28,7 @@ PARAM_SPEC = {
         "askable": True,
     },
     "base_thickness": {
-        "desc": "Thickness of the plastic base below the capacitor can",
+        "desc": "Overall molded plastic base thickness envelope",
         "unit": "mm",
         "range": {"easy": (1.4, 2.0), "medium": (1.25, 2.0), "hard": (1.1, 2.25)},
         "source": "STEP measurement; proportion",
@@ -49,7 +49,7 @@ PARAM_SPEC = {
         "askable": True,
     },
     "terminal_thickness": {
-        "desc": "Thickness of the metal SMD terminal pads below the base",
+        "desc": "Thickness of the metal SMD terminal profile",
         "unit": "mm",
         "range": {"easy": (0.18, 0.28), "medium": (0.14, 0.34), "hard": (0.1, 0.4)},
         "source": "proportion",

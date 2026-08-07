@@ -1,5 +1,3 @@
-import math
-
 import cadquery as cq
 
 
@@ -23,53 +21,73 @@ def _cut(a, b):
     return _solid(a).cut(_solid(b)).clean()
 
 
-def _soften_plastic(shape, _amount):
-    return _solid(shape).clean()
+def _horizontal_edges(shape):
+    solid = _solid(shape)
+    return [e for e in solid.Edges() if abs(e.BoundingBox().zmax - e.BoundingBox().zmin) < 1e-4]
 
 
-def _can(body_diameter, can_height, rim_radius):
-    radius = body_diameter / 2.0
-    can_bottom_z = 0.5
-    top_round = min(max(rim_radius, 0.08), radius * 0.18, can_height * 0.12)
-    top_z = can_bottom_z + can_height
-    top_start = top_z - top_round
-
-    # Single-section revolve.  The reference can body reads as one continuous
-    # rolled profile from the lower neck into the main wall and then into the
-    # top shoulder.  Use one spline profile instead of stacked disks or short
-    # platelike steps so the rendered body does not show a horizontal seam.
-    br = top_round
-    roll_r = br * 1.2
-    theta = 0.703
-    p0 = cq.Vector(radius - br, 0.0, can_bottom_z)
-    p1 = cq.Vector(radius, 0.0, can_bottom_z + br)
-    p2 = cq.Vector(radius, 0.0, can_bottom_z + br * 1.2)
-    c_small_r = radius - br
-    p3 = cq.Vector(c_small_r + br * math.cos(theta), 0.0, p2.z + br * math.sin(theta))
-    c_roll_r = radius + roll_r * 0.565
-    c_roll_z = p3.z + math.sqrt(max(roll_r * roll_r - (p3.x - c_roll_r) ** 2, 0.0))
-    p4 = cq.Vector(c_roll_r - roll_r, 0.0, c_roll_z)
-    p5 = cq.Vector(p3.x, 0.0, c_roll_z + (c_roll_z - p3.z))
-    p6 = cq.Vector(radius, 0.0, p5.z + br * math.sin(theta))
-    p7 = cq.Vector(radius, 0.0, top_start)
-    p8 = cq.Vector(radius - br, 0.0, top_z)
-
-    edges = [
-        cq.Edge.makeSpline(
-            [p0, p1, p2, p3, p4, p5, p6, p7, p8],
-            tol=1e-6,
-        ),
-        cq.Edge.makeLine(p8, cq.Vector(0.0, 0.0, top_z)),
-        cq.Edge.makeLine(cq.Vector(0.0, 0.0, top_z), cq.Vector(0.0, 0.0, can_bottom_z)),
-        cq.Edge.makeLine(cq.Vector(0.0, 0.0, can_bottom_z), p0),
+def _top_horizontal_edges(shape, z_level):
+    return [
+        edge
+        for edge in _horizontal_edges(shape)
+        if abs(edge.BoundingBox().zmax - z_level) < 1e-4
     ]
-    body = cq.Solid.revolve(
-        cq.Wire.assembleEdges(edges),
-        [],
-        360,
-        (0.0, 0.0, 0.0),
-        (0.0, 0.0, 1.0),
-    ).clean()
+
+
+def _soften_plastic(shape, amount, edge_selector=None):
+    if amount <= 0:
+        return _solid(shape)
+    solid = _solid(shape)
+    edges = _horizontal_edges(solid)
+    if edge_selector is not None:
+        edges = [edge for edge in edges if edge_selector(edge)]
+    if not edges:
+        return solid.clean()
+    return solid.chamfer(amount, None, edges).clean()
+
+
+def _can(body_diameter, can_height, base_thickness, rim_radius):
+    radius = body_diameter / 2.0
+    overlap = min(0.05, base_thickness * 0.05)
+    can_bottom_z = 0.5
+    edge_chamfer = min(rim_radius * 0.16, radius * 0.015, can_height * 0.008)
+    top_z = can_bottom_z + can_height
+    body = (
+        cq.Workplane("XY")
+        .circle(radius)
+        .extrude(can_height)
+        .translate((0.0, 0.0, can_bottom_z))
+    )
+    body = _solid(body).chamfer(edge_chamfer, None, _top_horizontal_edges(body, top_z)).clean()
+
+    vent_length = body_diameter * 0.52
+    vent_width = min(body_diameter * 0.038, 0.2)
+    vent_depth = min(can_height * 0.006, 0.04)
+    for angle in (0, 90):
+        vent = (
+            cq.Workplane("XY")
+            .box(vent_length, vent_width, vent_depth, centered=(True, True, False))
+            .rotate((0, 0, 0), (0, 0, 1), angle)
+            .translate((0.0, 0.0, top_z - vent_depth))
+        )
+        body = body.cut(_solid(vent)).clean()
+
+    bead_height = min(0.45, can_height * 0.08)
+    neck_height = min(0.55, can_height * 0.1)
+    bead = (
+        cq.Workplane("XY")
+        .circle(radius * 1.02)
+        .extrude(bead_height)
+        .translate((0.0, 0.0, can_bottom_z + neck_height))
+    )
+    neck = (
+        cq.Workplane("XY")
+        .circle(radius * 0.94)
+        .extrude(neck_height + overlap)
+        .translate((0.0, 0.0, can_bottom_z - overlap))
+    )
+    body = _fuse(body, bead)
+    body = _fuse(body, neck)
     return body.clean()
 
 
@@ -82,117 +100,57 @@ def _base(
     terminal_width,
     terminal_thickness,
 ):
-    frame_height = base_thickness * 0.46
-    upper_height = base_thickness - frame_height
-    plastic_chamfer = min(base_thickness * 0.055, terminal_width * 0.07, 0.1)
-    carrier_length = base_length
-    carrier_width = base_width
-    base = _soften_plastic(
-        _box(carrier_length, carrier_width, frame_height),
-        plastic_chamfer,
-    )
+    plate_height = base_thickness * 0.42
+    raised_height = base_thickness - plate_height
+    plastic_chamfer = min(base_thickness * 0.045, terminal_width * 0.06, 0.08)
+    base = _soften_plastic(_box(base_length, base_width, plate_height), plastic_chamfer)
 
-    front_notch_width = min(body_diameter * 0.36, base_length * 0.38)
-    front_notch_depth = min(base_width * 0.22, max(terminal_width * 0.8, 0.65))
-    front_notch = _box(
-        front_notch_width,
-        front_notch_depth + 0.02,
-        frame_height * 0.72,
-        z=frame_height * 0.28,
-        y=-base_width * 0.5 + front_notch_depth * 0.5,
-    )
-    base = _cut(base, front_notch)
+    saddle_width = max(terminal_width * 1.05, base_width * 0.16)
+    saddle_y = base_width * 0.5 - saddle_width * 0.5
+    saddle_len = min(base_length * 0.34, body_diameter * 0.5)
+    support_height = raised_height * 0.72
 
-    rear_width = min(base_width * 0.28, terminal_width * 1.6)
-    rear_riser = _soften_plastic(
-        _box(
-            base_length * 0.74,
-            rear_width,
-            upper_height * 0.72,
-            z=frame_height,
-            y=base_width * 0.5 - rear_width * 0.5,
-        ),
-        plastic_chamfer * 0.65,
-    )
-    base = _fuse(base, rear_riser)
-
-    side_len = min(base_length * 0.22, body_diameter * 0.25)
-    side_width = min(base_width * 0.42, body_diameter * 0.45)
-    side_height = upper_height * 0.82
-    side_x = base_length * 0.5 - side_len * 0.5
-    for x in (-side_x, side_x):
-        molded_side = _soften_plastic(
-            _box(
-                side_len,
-                side_width,
-                side_height,
-                z=frame_height,
-                x=x,
-                y=-base_width * 0.03,
-            ),
-            plastic_chamfer * 0.65,
+    def first_saddle_selector(edge):
+        bb = edge.BoundingBox()
+        cx = (bb.xmin + bb.xmax) * 0.5
+        cy = (bb.ymin + bb.ymax) * 0.5
+        cz = (bb.zmin + bb.zmax) * 0.5
+        dy = bb.ymax - bb.ymin
+        return (
+            abs(abs(cx) - saddle_len * 0.5) < 1e-4
+            and abs(cy + saddle_y) < 1e-4
+            and abs(dy - saddle_width) < 1e-4
+            and (
+                abs(cz - plate_height) < 1e-4
+                or abs(cz - (plate_height + support_height)) < 1e-4
+            )
         )
-        base = _fuse(base, molded_side)
 
-    support_height = min(base_thickness * 0.23, upper_height * 0.72)
-    support_radius = min(body_diameter * 0.48, min(base_length, base_width) * 0.44)
-    support = (
-        cq.Workplane("XY")
-        .circle(support_radius)
-        .extrude(support_height)
-        .translate((0.0, 0.0, base_thickness - support_height))
+    for i, y in enumerate((-saddle_y, saddle_y)):
+        saddle = _box(saddle_len, saddle_width, support_height, z=plate_height, y=y)
+        if i == 0:
+            shaped = _soften_plastic(saddle, plastic_chamfer * 0.7, first_saddle_selector)
+        else:
+            shaped = _soften_plastic(saddle, plastic_chamfer * 0.7)
+        base = _fuse(base, shaped)
+
+    center_block = _box(
+        min(body_diameter * 0.42, base_length * 0.3),
+        min(body_diameter * 0.13, base_width * 0.14),
+        raised_height * 0.38,
+        z=plate_height,
     )
-    base = _fuse(base, support)
-
-    groove_outer = min(body_diameter * 0.50, min(base_length, base_width) * 0.455)
-    groove_width = min(0.24, max(0.14, terminal_width * 0.18))
-    groove_depth = min(base_thickness * 0.10, 0.22)
-    groove = (
-        cq.Workplane("XY")
-        .circle(groove_outer)
-        .circle(max(groove_outer - groove_width, 0.1))
-        .extrude(groove_depth)
-        .translate((0.0, 0.0, base_thickness - groove_depth))
-    )
-    base = _cut(base, groove)
-
-    mouth_width = min(body_diameter * 0.28, base_length * 0.28)
-    mouth_depth = min(base_width * 0.18, terminal_width * 0.9)
-    mouth_height = min(base_thickness * 0.24, 0.42)
-    notch = _box(
-        mouth_width,
-        mouth_depth,
-        mouth_height,
-        z=frame_height,
-        y=-base_width * 0.5 + mouth_depth * 0.5,
-    )
-    base = _cut(base, notch)
-
-    side_support_len = min(body_diameter * 0.23, base_length * 0.23)
-    side_support_width = min(terminal_width * 0.58, base_width * 0.11)
-    side_support_height = min(base_thickness * 0.18, 0.32)
-    side_x = base_length * 0.5 - side_support_len * 0.5
-    for x in (-side_x, side_x):
-        support_block = _soften_plastic(
-            _box(
-                side_support_len,
-                side_support_width,
-                side_support_height,
-                z=frame_height,
-                x=x,
-                y=base_width * 0.5 - side_support_width * 0.5,
-            ),
-            plastic_chamfer * 0.55,
-        )
-        base = _fuse(base, support_block)
+    base = _fuse(base, center_block)
 
     outer_x = terminal_span * 0.5
     inner_x = min(base_length * 0.5 - terminal_width * 0.18, outer_x - terminal_width)
-    foot_bottom = 0.0
-    foot_top = terminal_thickness
-    bend_top = min(base_thickness * 0.78, terminal_width * 1.05)
+    z_offset = terminal_thickness
+    foot_top = 0.0 + z_offset
+    foot_bottom = -terminal_thickness + z_offset
+    bend_top = min(base_thickness * 0.78, terminal_width * 1.05) + z_offset
     side_contact = min(terminal_width * 0.55, max(0.25, outer_x - inner_x))
     terminal_y = min(base_width * 0.5, max(terminal_width * 1.45, base_width * 0.2))
+
     for side in (-1.0, 1.0):
         sx_outer = side * outer_x
         sx_inner = side * inner_x
@@ -216,7 +174,7 @@ def _base(
         )
         base = _fuse(base, terminal)
 
-    return base.clean()
+    return _solid(base).clean()
 
 
 def build(
@@ -239,6 +197,24 @@ def build(
         terminal_width,
         terminal_thickness,
     )
-    can = _can(body_diameter, can_height, rim_radius)
+    can = _can(body_diameter, can_height, base_thickness, rim_radius)
     result = _fuse(base, can)
     return result
+
+
+EXAMPLE_PARAMS = {
+    "body_diameter": 6.3,
+    "can_height": 7.2,
+    "base_length": 6.6,
+    "base_width": 6.6,
+    "base_thickness": 2.0,
+    "terminal_span": 7.3,
+    "terminal_width": 1.0,
+    "terminal_thickness": 0.2,
+    "rim_radius": 0.2,
+}
+
+
+if "show_object" in globals():
+    result = build(**EXAMPLE_PARAMS)
+    show_object(result, name="smd_aluminum_electrolytic_capacitor")

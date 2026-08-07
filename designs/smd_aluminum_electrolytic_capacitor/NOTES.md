@@ -30,6 +30,11 @@ STEP reference and proportion-based sampling ranges.
 
 - The formal CAD is self-contained and does not load the source STEP file.
 - The reference STEP is used only as measurement evidence during development.
+- The current stable version matches the recovered 79-face topology and bbox
+  target (`7.3000003 x 6.6000003 x 7.7000003 mm`) with a valid single solid.
+- Its remaining known limitation is volume: `251.6673226199046 mm^3`, which is
+  `1.1181984258233229 mm^3` below the historical target. Existing recovered
+  evidence does not uniquely identify the missing positive-volume feature.
 - Ranges marked as `proportion` are benchmark sampling ranges, not catalog
   limits or capacitance-to-size rules.
 - Manufacturer branding, printed polarity marks, material color, and fine
