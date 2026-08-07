@@ -45,7 +45,34 @@ The spec uses discrete catalog rows so generated dimensions remain table-based.
 
 ## Deliberate Deviations
 
-- Threads are represented as clean cylindrical holes; helical thread geometry is omitted.
-- Small edge chamfers and shallow screw-side recesses are computed internally from catalog dimensions because the table does not publish separate values for these minor manufacturing details.
-- The catalog note for d1 > 70 mm is represented by a second radial screw hole/recess at 135 degrees using the same d3 dimensions as the main screw.
+- The set screw hole carries a MODELLED internal metric thread: drilled to the ISO
+  internal-thread minor diameter (d - 1.0825*P) and threaded out to the major
+  diameter with 60-degree V-rings of the ISO 261 coarse pitch — crest flat P/4 at
+  the minor Ø, root flat P/8 at the major Ø, depth 0.5413*P. `screw_d` runs M3
+  through M12 over the catalog rows (P = 0.5 to 1.75 mm), so the thread is the
+  family's functional feature, not a cosmetic one.
+- BOTH mouths are countersunk at 45 degrees out to the major Ø plus a tenth of a
+  pitch. A tapped hole needs the lead-in to start the screw, and without it the
+  first turn of thread is left as a knife edge on the face it breaks — here the
+  OD, where the screw enters, and the bore, where the hole breaks into the shaft
+  seat. Full threads run between the two countersinks: 3 turns on the M3 row up
+  to 8 on the M10 rows.
+- Those are revolved RINGS, not a swept helix, and they differ from a real thread
+  only in lead: each turn closes on itself instead of advancing by P. A helix was
+  tried first and its boolean cut silently no-ops below M10 — on the ten rows from
+  M3 to M8 the groove solid comes out correct (right radius, right length, sane
+  volume) and the cut removes 0.0 mm³, leaving a smooth hole that still passes
+  every gate. `knurled_thumb_screw_din464` records the same failure on its M6 and
+  M8 rows and takes the same way out.
+- Small edge chamfers are computed internally from catalog dimensions because the
+  table does not publish separate values for them.
+- There is NO spotface on the outside diameter. GN 705 dimensions exactly four
+  things — d1, d2, d3 and b — and d3 is the set screw itself (e.g. "M8 x 12").
+  Both catalog types take a HEADLESS screw (Type A slotted cone-point ISO 7434,
+  Type E hex socket cone-point DIN 914) which seats entirely inside the tapped
+  hole, so there is nothing for a recess in the OD to clear. An earlier revision
+  sank one anyway, `screw_d * 1.45` across and
+  `min(1.2, max(0.35, screw_len * 0.12))` deep — both invented.
+- The catalog note for d1 > 70 mm is represented by a second radial tapped hole at
+  135 degrees using the same d3 dimensions as the main screw.
 - Material and finish variants are metadata-only; they do not alter geometry.
