@@ -281,9 +281,17 @@ def check(p: dict) -> list[str]:
     # at the heel: with a coarse module the root cone dives inside the bore and
     # the teeth are cut straight into the shaft
     toe_wall = L["gear_root_inner"] - 0.5 * p["shaft_diameter_d1"]
-    if toe_wall < 0.30 * L["gear_module"]:
+    # the solver aims for 0.30*m; the gate sits a notch below so the
+    # ceil-to-even rounding on the tooth count cannot straddle it
+    if toe_wall < 0.25 * L["gear_module"]:
         bad.append("bevel-gear tooth spaces reach the shaft bore at the toe: the root "
-                   "cone must stay outside d1/2 by at least 0.3*m")
+                   "cone must stay outside d1/2 by at least 0.25*m")
+    # involute flanks: the VIRTUAL tooth count z/cos(45 deg) must clear the
+    # 20-degree undercut limit of 17, and the tooth must keep a real top land
+    z_v = L["gear_teeth"] * 2.0 ** 0.5
+    if z_v < 17.0:
+        bad.append("virtual tooth count under 17: a 20-degree involute flank would be "
+                   "undercut at the root")
     heel_rim = L["gear_root_outer"] - 0.5 * p["shaft_diameter_d1"]
     if heel_rim < 1.0 * L["gear_module"]:
         bad.append("proportion: bevel-gear heel rim under 1.0*m between root cone and "

@@ -25,11 +25,18 @@ import math
 # A fixed 16 gave b/m 4.2-4.5 — the rim read as a sawblade; a fixed 24 fixed
 # that but drove the module to 0.45 on the smallest boxes, finer than a real
 # steel gearbox that size would use. The ladder keeps both honest.
-ISO54_MODULES = (0.8, 0.9, 1.0, 1.125, 1.25, 1.375, 1.5, 1.75, 2.0)
-TOE_WALL_MODULES = 0.35  # metal left between the toe root cone and the bore
-MIN_FACE_MODULES = 2.0
-BACKLASH_DEG = 3.15     # published GN 3971 circumferential backlash (3 +/- 0.5)
-FLANK_HALF_DEG = 20.0
+# ISO 23509 straight-bevel tooth proportions, applied to the TRANSVERSE
+# section at each cone distance (Tredgold's substitute: the section is treated
+# as a spur gear of z teeth and the local module m_t = 2*s/z, and because
+# m_t scales with s the two end sections are similar, so the tip and root
+# cones both run through the pitch apex — the classic standard taper).
+PRESSURE_ANGLE_DEG = 20.0
+ADDENDUM_FACTOR = 1.00
+DEDENDUM_FACTOR = 1.25          # 0.25*m tip clearance
+FACE_MODULES_TARGET = 6.0       # gen-1 picks b/m from {4..8}; 6 is its middle
+BACKLASH_DEG = 3.15             # published GN 3971 backlash (3 +/- 0.5 deg)
+TOE_WALL_MODULES = 0.30         # metal left between the toe root cone and bore
+INVOLUTE_STEPS = 3              # points sampled along each involute flank
 # STUB tooth proportions, measured PERPENDICULAR to the pitch cone: addendum
 # 0.8*m, dedendum 1.0*m (whole depth 1.8*m). Stub teeth are the standard
 # answer when the blank cannot host a full-depth tooth — here the bore is up
@@ -93,36 +100,32 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     # the gear read as a crown of loose fins rather than a bevel gear.
     s_inner = max(0.24 * b1, 0.5 * d1 + 0.035 * b1)
     cav = max(0.25, 0.015 * b1)
-    tip_ratio_max = 1.0 + 2.0 * ADDENDUM_RADIAL / 12.0
-    teeth = module = None
+    tip_ratio_max = 1.0 + 2.0 * ADDENDUM_FACTOR / 12.0
+    s_outer = min((0.48 * b1 - cav - 0.10) / tip_ratio_max, s_inner + 0.12 * b1)
+    pitch_mean = 0.5 * (s_inner + s_outer)
+    face = (s_outer - s_inner) * math.sqrt(2.0)     # face width along the cone
+    # TOOTH COUNT FROM TWO CLOSED FORMS, not a picked number.
+    #  (a) the root cone must clear the shaft bore at the toe, where it is
+    #      smallest.  root(s_i) = s_i*(1 - 2*hf/z) >= d1/2 + wall
+    #      =>  z >= 2*hf / (1 - (d1/2 + wall)/s_i)
+    #      More teeth pull the root cone back toward the pitch cone, which is
+    #      what moves the teeth away from the shaft — and shrinks each tooth,
+    #      since m = 2*s_o/z.
+    #  (b) face width in modules: b/m = 6 (the middle of the gen-1 family's
+    #      {4,5,6,7,8}) => z = 6 * 2*s_o / b.
+    #  Floor: no undercut needs the VIRTUAL count z_v = z/cos(45 deg) >= 17,
+    #  i.e. z >= 12 for a 20 deg pressure angle.
+    z_clear = 12
     for _ in range(6):
-        # the heel is capped by the housing cavity rule itself rather than a
-        # flat fraction: tip + clearance must leave a b1 side wall
-        s_outer = min((0.48 * b1 - cav - 0.10) / tip_ratio_max, s_inner + 0.12 * b1)
-        pitch_mean = 0.5 * (s_inner + s_outer)
-        face = (s_outer - s_inner) * math.sqrt(2.0)
-        teeth = module = None
-        for m_pref in ISO54_MODULES:
-            # EVEN tooth counts only: the half-pitch mesh phase between two
-            # identical 45-degree gears only lands tooth-in-gap when z is even
-            z_try = max(12, 2 * int(round(pitch_mean / m_pref)))
-            m_act = 2.0 * pitch_mean / z_try
-            if face / m_act >= MIN_FACE_MODULES:
-                teeth, module = z_try, m_act
-        if teeth is None:
-            teeth = max(12, 2 * int(round(pitch_mean / ISO54_MODULES[0])))
-            module = 2.0 * pitch_mean / teeth
-        # the tooth SPACES must not be cut into the shaft: the root cone at the
-        # TOE, where it is smallest, has to stay outside the bore with real
-        # metal left. If it does not, the toe moves outboard and everything is
-        # re-derived — the tooth gets smaller, which is the only honest way out.
-        root_ratio = 1.0 - 2.0 * DEDENDUM_RADIAL / teeth
-        need = (0.5 * d1 + TOE_WALL_MODULES * module) / root_ratio
-        if s_inner >= need - 1e-9:
-            break
-        s_inner = need
-    root_ratio = 1.0 - 2.0 * DEDENDUM_RADIAL / teeth
-    tip_ratio = 1.0 + 2.0 * ADDENDUM_RADIAL / teeth
+        wall = TOE_WALL_MODULES * (2.0 * s_outer / max(z_clear, 12))
+        denom = 1.0 - (0.5 * d1 + wall) / s_inner
+        z_clear = 12 if denom <= 0.0 else max(12, math.ceil(2.0 * DEDENDUM_FACTOR / denom))
+    z_face = FACE_MODULES_TARGET * 2.0 * s_outer / face
+    teeth = max(12, int(math.ceil(max(z_clear, z_face))))
+    teeth += teeth % 2              # even: the half-pitch mesh phase needs it
+    module = 2.0 * s_outer / teeth  # OUTER transverse module m_et
+    root_ratio = 1.0 - 2.0 * DEDENDUM_FACTOR / teeth
+    tip_ratio = 1.0 + 2.0 * ADDENDUM_FACTOR / teeth
     tip_outer = s_outer * tip_ratio
     root_inner = s_inner * root_ratio
     tooth_fraction = 0.5 - BACKLASH_DEG * teeth / 720.0
@@ -140,6 +143,7 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
         "gear_tip_outer": tip_outer,
         "gear_root_inner": root_inner,
         "gear_root_outer": s_outer * root_ratio,
+        "gear_face_width": face,
         "gear_teeth": teeth,
         "gear_tooth_fraction": tooth_fraction,
         "shaft_start": max(s_inner - hub_length,
@@ -480,77 +484,79 @@ def _bearing_z(shaft_diameter_d1, bearing_boss_diameter_d2, width):
         cq.Vector(0.0, 0.0, 0.0), cq.Vector(0.0, 0.0, 1.0))
 
 
+def _involute_section(pitch_r, module, teeth, tooth_fraction):
+    """One transverse section of the gear as a true INVOLUTE profile.
+
+    Tredgold's substitute: the section is the spur gear of `teeth` teeth at
+    this pitch radius and local module. Flanks are involutes of the base
+    circle r_b = r_p*cos(alpha); below the base circle the flank continues as
+    a radial line down to the root circle, which is where a real tooth
+    carries its fillet. `tooth_fraction` is the share of the circular pitch
+    the tooth occupies at the pitch line, so the published backlash is cut
+    into the tooth thickness rather than added afterwards."""
+    pa = math.radians(PRESSURE_ANGLE_DEG)
+    r_p = pitch_r
+    r_b = r_p * math.cos(pa)
+    r_a = r_p + ADDENDUM_FACTOR * module
+    r_d = r_p - DEDENDUM_FACTOR * module
+    inv_pa = math.tan(pa) - pa
+    t_tip = math.sqrt(max(1e-9, (r_a / r_b) ** 2 - 1.0))
+    psi = tooth_fraction * math.pi / teeth      # half tooth angle at the pitch
+
+    def inv_xy(t, phi0, mirror):
+        x = r_b * (math.cos(t) + t * math.sin(t))
+        y = r_b * (math.sin(t) - t * math.cos(t))
+        if mirror:
+            y = -y
+        c, s = math.cos(phi0), math.sin(phi0)
+        return x * c - y * s, x * s + y * c
+
+    pts = []
+    for i in range(teeth):
+        tc = 2.0 * math.pi * i / teeth
+        phi_r = tc - psi - inv_pa
+        phi_l = tc + psi + inv_pa
+        gap = tc - math.pi / teeth
+        pts.append((r_d * math.cos(gap), r_d * math.sin(gap)))
+        pts.append((r_d * math.cos(phi_r), r_d * math.sin(phi_r)))
+        for j in range(INVOLUTE_STEPS + 1):
+            pts.append(inv_xy(t_tip * j / INVOLUTE_STEPS, phi_r, False))
+        pts.append((r_a * math.cos(tc), r_a * math.sin(tc)))
+        for j in range(INVOLUTE_STEPS, -1, -1):
+            pts.append(inv_xy(t_tip * j / INVOLUTE_STEPS, phi_l, True))
+        pts.append((r_d * math.cos(phi_l), r_d * math.sin(phi_l)))
+    return [(round(x, 4), round(y, 4)) for x, y in pts]
+
+
 def _bevel_gear_z(L, shaft_diameter_d1):
-    """Straight planar-flank 45-degree bevel gear about +Z."""
+    """45-degree straight bevel gear about +Z, lofted between the involute
+    section at the toe and the one at the heel. Both sections carry the same
+    tooth count and a module proportional to the cone distance, so the flanks,
+    tip cone and root cone all run through the pitch apex."""
     s_i = L["gear_s_inner"]
     s_o = L["gear_s_outer"]
-    s_m = L["gear_pitch_mean"]
-    module = L["gear_module"]
     teeth = L["gear_teeth"]
-    tooth_fraction = L["gear_tooth_fraction"]
-    tan_flank = math.tan(math.radians(FLANK_HALF_DEG))
-
-    def root_radius(s):
-        return s - DEDENDUM_RADIAL * module * (s / s_m)
-
-    def tip_radius(s):
-        return s + ADDENDUM_RADIAL * module * (s / s_m)
-
-    core = cq.Solid.makeCone(
-        root_radius(s_i), root_radius(s_o), s_o - s_i,
-        cq.Vector(0.0, 0.0, s_i), cq.Vector(0.0, 0.0, 1.0))
-    sections = []
-    for s in (s_i, s_o):
-        scale = s / s_m
-        root = root_radius(s)
-        tip = tip_radius(s)
-        height = tip - root
-        half_pitch_thickness = 0.5 * tooth_fraction * math.pi * module * scale
-        # thickness tapers with the distance from the PITCH cone, measured
-        # perpendicular to it — and the pitch line is not at mid-height
-        # (addendum 1.0*m above, dedendum 1.25*m below).  Using half the total
-        # height instead, as before, sharpened every tooth to a spike.
-        addendum = 1.00 * module * scale
-        # the flank tapers over the WORKING depth only (one addendum either
-        # side of the pitch line).  The extra 0.25*m of dedendum is root
-        # clearance, kept at constant thickness: continuing the 20 deg taper
-        # into it thickens the root past an involute and takes up the
-        # published backlash before the flanks reach their contact point.
-        root_half = half_pitch_thickness + addendum * tan_flank
-        tip_half = max(0.18 * module * scale,
-                       half_pitch_thickness - addendum * tan_flank)
-        embed = 0.15 * module * scale
-        sections.append(cq.Wire.makePolygon([
-            cq.Vector(root - embed, -root_half, s),
-            cq.Vector(root - embed, root_half, s),
-            cq.Vector(tip, tip_half, s),
-            cq.Vector(tip, -tip_half, s),
-            cq.Vector(root - embed, -root_half, s),
-        ]))
-    tooth = cq.Solid.makeLoft(sections, True)
-    teeth = [
-        tooth.rotate(cq.Vector(0.0, 0.0, 0.0), cq.Vector(0.0, 0.0, 1.0),
-                     k * 360.0 / teeth)
-        for k in range(teeth)
-    ]
-    gear = core.fuse(*teeth)
-
-    hub_start = s_i - L["gear_hub_length"]
-    hub_outer = max(
-        0.5 * shaft_diameter_d1 + 0.18 * module,
-        0.65 * root_radius(s_i),
+    module = L["gear_module"]          # OUTER transverse module
+    frac = L["gear_tooth_fraction"]
+    pts_i = _involute_section(s_i, module * s_i / s_o, teeth, frac)
+    pts_o = _involute_section(s_o, module, teeth, frac)
+    gear = (
+        cq.Workplane("XY").workplane(offset=s_i).polyline(pts_i).close()
+        .workplane(offset=s_o - s_i).polyline(pts_o).close()
+        .loft(ruled=True)
     )
+    hub_start = s_i - L["gear_hub_length"]
+    hub_outer = max(0.5 * shaft_diameter_d1 + 0.18 * module,
+                    0.65 * s_i * (1.0 - 2.0 * DEDENDUM_FACTOR / teeth))
     hub = cq.Solid.makeCylinder(
         hub_outer, L["gear_hub_length"] + 0.20 * module,
         cq.Vector(0.0, 0.0, hub_start), cq.Vector(0.0, 0.0, 1.0))
-    gear = gear.fuse(hub)
-    # Through bore: on the Type-T box the output shaft runs the full height of
-    # the housing to its second bearing, so it must pass through its gear.
+    gear = gear.union(cq.Workplane(obj=hub))
     bore = cq.Solid.makeCylinder(
         0.5 * shaft_diameter_d1,
         s_o - hub_start + 1.0,
         cq.Vector(0.0, 0.0, hub_start - 0.5), cq.Vector(0.0, 0.0, 1.0))
-    return gear.cut(bore)
+    return gear.cut(cq.Workplane(obj=bore)).val()
 
 
 def _rotation_x(degrees):
