@@ -1,8 +1,8 @@
-"""truss_half_coupler_hook — the parametric part (assembly, solids=6).
+"""truss_half_coupler_hook — the parametric part (assembly, solids=8).
 
 A stage/theatre half coupler / hook clamp (Doughty T57000/T57200 class) drawn
-closed around the (phantom) Ø48-51 mm barrel, as the six parts it is assembled
-from. The outline is taken off the datasheet front view
+closed around the (phantom) Ø48-51 mm barrel, as the eight parts it is
+assembled from. The outline is taken off the datasheet front view
 (`docs/assets/refs/truss_half_coupler_hook_drawing.png`), measured against its
 own 107 / 55 / 19 / 16 dimensions — see NOTES.md for the pixel readings.
 
@@ -19,19 +19,25 @@ own 107 / 55 / 19 / 16 dimensions — see NOTES.md for the pixel readings.
                       pivot, into the long flat TAB the eyebolt swings in. The
                       tab is cantilevered with open air under it, and its tip
                       is the +X end of the 107.
-    3. hinge pin    — roll pin through the body's left ears and the tongue
+    3. hinge pin    — ISO 8752 slotted spring pin through the body's left ears
+                      and the tongue (hollow C-section, as the sheet draws it)
     4. closing bolt — eye on the pivot pin, plain shank up through the open
                       tab slot, ring-thread top (revolved rings, no helix)
-    5. pivot pin    — roll pin through the body's right ears and the bolt eye
-    6. wing nut     — DIN 315-D butterfly on the thread above the tab, its
-                      internal thread rings interleaved half a pitch with the
-                      bolt rings (engaged, zero interpenetration)
+    5. pivot pin    — ISO 8752 spring pin through the right ears and bolt eye
+    6. washer       — ISO 7089 plain washer bridging the tab's open slot
+    7. hex nut      — ISO 4032 hexagon nut on the washer
+    8. wing nut     — DIN 315-D butterfly on top of the hex nut
+
+The sheet draws all three of 6/7/8 on the eyebolt, not just the wing nut. The
+hex nut and the wing nut thread onto the SAME ring grid as the bolt, each
+taking its own stretch of it (half a pitch over the bolt's rings, radially
+nested) — engaged, with zero interpenetration.
 
 Every mate is contact-or-clearance, never fused: the strap is held by the hinge
 pin (0.15 mm radial) and BEARS on the body's left shoulder, which is the only
 face contact in the assembly; the bolt clears its tab slot by 0.7 mm a side,
-and the nut hovers 0.3 mm over the tab with its rings nested between the bolt
-rings. Tube axis is Y. The strap does NOT close onto the body — the
+and the washer / hex nut / wing nut stack stands off 0.2 mm at each step. Tube
+axis is Y. The strap does NOT close onto the body — the
 datasheet outline leaves the barrel exposed in two gaps, upper-right (where
 the eyebolt crosses) and upper-left, which is what lets the clamp open.
 
@@ -77,13 +83,28 @@ _DIN315D = {
 }
 
 
+# ISO 7089 plain washer, 200 HV, product grade A: d1 · d2 · h by nominal size.
+# ISO 4032 style-1 hexagon nut: s (width across flats) · m (height) by thread.
+# Both are what the datasheet actually draws under the wing nut — see NOTES.
+_ISO7089 = {8.0: (8.4, 16.0, 1.6), 10.0: (10.5, 20.0, 2.0),
+            12.0: (13.0, 24.0, 2.5), 16.0: (17.0, 30.0, 3.0)}
+_ISO4032 = {8.0: (13.0, 6.8), 10.0: (16.0, 8.4), 12.0: (18.0, 10.8),
+            16.0: (24.0, 14.8)}
+
+
+def _std_row(table, d1):
+    """The row of ``table`` nearest thread Ø ``d1``, scaled to the actual Ø so
+    a non-tabulated bolt still gets proportionate hardware."""
+    nom = min(table, key=lambda k: abs(k - d1))
+    k = d1 / nom
+    return tuple(v * k for v in table[nom])
+
+
 def _din315d(d1):
     """The DIN 315-D row nearest ``d1``, scaled to the actual thread Ø so the
     nut still screws onto a non-tabulated bolt. Returns the drawing symbols
     (d2, d3, e, h, m, g1, g2, r1, r4)."""
-    nom = min(_DIN315D, key=lambda k: abs(k - d1))
-    k = d1 / nom
-    return tuple(v * k for v in _DIN315D[nom])
+    return _std_row(_DIN315D, d1)
 
 
 def _lune(wp, rho, r3, y0):
@@ -153,6 +174,28 @@ def _y_cyl(x_c, y_c, width, radius):
         .circle(radius)
         .extrude(width)
     )
+
+
+# ISO 8752 / DIN 1481 heavy-duty slotted spring pin: wall thickness s by
+# nominal Ø. The datasheet draws both pins as two concentric circles broken by
+# a slot, which is this pin and not a solid dowel.
+_ISO8752_S = {3.0: 0.6, 4.0: 0.8, 5.0: 1.0, 6.0: 1.25, 8.0: 1.5,
+              10.0: 2.0, 12.0: 2.5}
+
+
+def _roll_pin(pin_d, length):
+    """A slotted spring pin: a C-section tube, wall per ISO 8752, with the slot
+    opening downward the way the sheet's pin circles are broken.
+
+    The slot width is NOT tabulated by the standard (it is a free-state
+    manufacturing dimension that closes on driving), so it is a proportion."""
+    nom = min(_ISO8752_S, key=lambda k: abs(k - pin_d))
+    s = _ISO8752_S[nom] * pin_d / nom
+    slot_w = 0.20 * pin_d                        # proportion, not from ISO 8752
+    pin = _y_cyl(0.0, 0.0, length, pin_d / 2.0).cut(
+        _y_cyl(0.0, 0.0, length + 2.0, pin_d / 2.0 - s).val())
+    return pin.cut(
+        _y_slab(0.0, 0.0, -pin_d, slot_w, length + 2.0, pin_d).val())
 
 
 def _y_prism(wire_fn, width):
@@ -233,19 +276,24 @@ def _strap_wire(wp, r_i, r_out, x_sh, z_top, z_tab_lo, z_tab_hi, x_tab, r_nose):
             .close())
 
 
-def _ring_stack(x_c, z0, z1, pitch, r_root, r_crest, phase):
+def _ring_stack(x_c, z0, z1, pitch, r_root, r_crest, phase, z_min=None):
     """Axisymmetric thread rings about the vertical axis at x_c: one annular
-    ring of axial width 0.4*pitch every pitch, from z0 to z1, offset by phase."""
+    ring of axial width 0.4*pitch every pitch, from z0 to z1, offset by phase.
+
+    ``z_min`` skips the rings below it WITHOUT moving the grid, so two nuts
+    running on the same bolt (the hex nut and the wing nut above it) each get
+    their own stretch of the one thread instead of two grids that collide."""
     rings = None
     z = z0 + phase
     while z + 0.4 * pitch <= z1:
-        ring = (
-            cq.Workplane("XY", origin=(x_c, 0.0, z))
-            .circle(r_crest)
-            .circle(r_root)
-            .extrude(0.4 * pitch)
-        )
-        rings = ring if rings is None else rings.union(ring)
+        if z_min is None or z >= z_min:
+            ring = (
+                cq.Workplane("XY", origin=(x_c, 0.0, z))
+                .circle(r_crest)
+                .circle(r_root)
+                .extrude(0.4 * pitch)
+            )
+            rings = ring if rings is None else rings.union(ring)
         z += pitch
     return rings
 
@@ -256,6 +304,8 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     r_o = r_i + wall_t
     bolt_d, pitch = _hardware(closing_bolt_d)
     d2, d3, e_span, h_nut, m_boss, g1, g2, r1, r4 = _din315d(bolt_d)
+    w_d1, w_d2, w_h = _std_row(_ISO7089, bolt_d)     # plain washer
+    n_s, n_m = _std_row(_ISO4032, bolt_d)            # hexagon nut
     pin_d = max(5.0, 0.5 * hang_d)               # hinge / pivot roll pin Ø
     fit = 0.15                                   # radial pin clearance
 
@@ -275,7 +325,7 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     # to have STARTED by there — otherwise the boss lands on the crown arc and
     # the nut interpenetrates the strap on the thick-wall rows (the crown is
     # higher than the tab, which is what the datasheet shows too).
-    x_nut_in = max(x_pin - d2 / 2.0 - 0.8, 0.1)
+    x_nut_in = max(x_pin - max(d2, w_d2) / 2.0 - 0.8, 0.1)
     z_clear = math.sqrt(max(r_out ** 2 - x_nut_in ** 2, 0.0)) + 0.4
     z_tab_hi = min(max(1.122 * r_i, z_clear), 0.93 * r_out)   # tab top face
     z_tab_lo = max(z_tab_hi - lug_h, 0.30 * r_i)  # tab underside
@@ -380,15 +430,23 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
                       .translate((0.0, 0.0, z_pin)).val())
 
     # ── 3./5. hinge pin and bolt pivot pin ───────────────────────────────────
-    hinge_pin = _y_cyl(0.0, 0.0, body_w - 0.4, pin_d / 2.0)
-    pivot_pin = _y_cyl(0.0, 0.0, body_w - 0.4, pin_d / 2.0)
+    hinge_pin = _roll_pin(pin_d, body_w - 0.4)
+    pivot_pin = _roll_pin(pin_d, body_w - 0.4)
 
     # ── 4. closing bolt ──────────────────────────────────────────────────────
     # The wing-nut row is needed first: the datasheet's 116 overall height is
     # measured to the eyebolt TIP protruding above the nut with the clamp shut,
-    # so the bolt has to be cut to the nut, not to the tab.
-    z_n0 = z_tab_hi + 0.3                        # nut bearing face, 0.3 over the tab
-    z_bolt_top = z_n0 + h_nut + 0.86 * bolt_d
+    # so the bolt has to be cut to the top of the whole nut stack. The sheet
+    # draws THREE things on the eyebolt above the tab, not one: an ISO 7089
+    # plain washer bridging the open tab slot, an ISO 4032 hexagon nut on it,
+    # and the wing nut on top of that.
+    z_w0 = z_tab_hi + 0.2                        # washer, 0.2 over the tab
+    z_h0 = z_w0 + w_h + 0.2                      # hex nut, 0.2 over the washer
+    z_n0 = z_h0 + n_m + 0.2                      # wing nut, 0.2 over the hex nut
+    # The sheet's 116 is measured to the TOP OF THE WING NUT, not to a
+    # protruding thread: with the clamp shut the eyebolt ends inside the nut's
+    # threaded boss and never comes out the top, so the bolt is cut to there.
+    z_bolt_top = z_n0 + m_boss + 0.35 * bolt_d
     r_minor = bolt_d / 2.0 - 0.61 * pitch
     # built in the assembly's own Z (eye on the pivot line), placed by x only
     bolt = _y_cyl(0.0, 0.0, eye_w, r_eye - 0.6).translate((0.0, 0.0, z_pin))
@@ -406,12 +464,30 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     if ext is not None:
         bolt = bolt.union(ext)
 
-    # ── 6. wing nut — DIN 315-D rounded wing, on the closing bolt ────────────
+    r_bore = bolt_d / 2.0 + 0.35 * pitch         # nut bore at the thread root
+
+    # ── 6. ISO 7089 plain washer ─────────────────────────────────────────────
+    # It bridges the tab's OPEN slot, which is why the sheet draws one: the hex
+    # nut's A/F is narrower than the slot is long, so without it the nut would
+    # bear on two thin slot edges.
+    washer = (cq.Workplane("XY", origin=(0.0, 0.0, z_w0))
+              .circle(w_d2 / 2.0).circle(w_d1 / 2.0).extrude(w_h))
+
+    # ── 7. ISO 4032 hexagon nut ──────────────────────────────────────────────
+    hex_nut = (cq.Workplane("XY", origin=(0.0, 0.0, z_h0))
+               .polygon(6, n_s / math.cos(math.pi / 6.0)).extrude(n_m)
+               .cut(cq.Workplane("XY", origin=(0.0, 0.0, z_h0 - 1.0))
+                    .circle(r_bore).extrude(n_m + 2.0)))
+    hex_rings = _ring_stack(0.0, z_t0, z_h0 + n_m - 0.15, pitch,
+                            bolt_d / 2.0 - 0.25 * pitch, r_bore + 0.01,
+                            phase=0.5 * pitch, z_min=z_h0 + 0.15)
+    if hex_rings is not None:
+        hex_nut = hex_nut.union(hex_rings)
+
+    # ── 8. wing nut — DIN 315-D rounded wing, on the closing bolt ────────────
     # The datasheet's front view (the one carrying the 107) shows the wings
     # splayed IN THAT PLANE, with a hex-to-round boss under them; the side view
     # shows only a narrow rib. So the wings lie in XZ, not along the tube axis.
-    r_bore = bolt_d / 2.0 + 0.35 * pitch         # bore at the nut thread root
-
     # boss: Ø d2 at the bearing face tapering to Ø d3 at the top
     nut = (cq.Workplane("XY", origin=(0.0, 0.0, z_n0))
            .circle(d2 / 2.0).workplane(offset=m_boss).circle(d3 / 2.0).loft())
@@ -448,8 +524,8 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
                   .circle(r_bore).extrude(h_nut + 3.0 * bolt_d))
     inr = _ring_stack(0.0, z_t0, z_n0 + m_boss - 0.2, pitch,
                       bolt_d / 2.0 - 0.25 * pitch, r_bore + 0.01,
-                      phase=0.5 * pitch)         # same grid as the bolt rings,
-                                                 # half a pitch over: nested
+                      phase=0.5 * pitch,         # same grid as the bolt rings,
+                      z_min=z_n0 + 0.15)         # half a pitch over: nested
     if inr is not None:
         nut = nut.union(inr)
 
@@ -461,5 +537,7 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     result.add(hinge_pin, name="hinge_pin", loc=cq.Location((-x_pin, 0.0, z_pin)))
     result.add(bolt, name="closing_bolt", loc=cq.Location((x_pin, 0.0, 0.0)))
     result.add(pivot_pin, name="pivot_pin", loc=cq.Location((x_pin, 0.0, z_pin)))
+    result.add(washer, name="washer", loc=cq.Location((x_pin, 0.0, 0.0)))
+    result.add(hex_nut, name="hex_nut", loc=cq.Location((x_pin, 0.0, 0.0)))
     result.add(nut, name="wing_nut", loc=cq.Location((x_pin, 0.0, 0.0)))
     return result

@@ -15,7 +15,7 @@ Riggatec / Global Truss / Kupo equivalents.
 | 16 | depth of that bore, base face up to the window floor | `1.26 * hang_d` = 16.0 at Ø12.7 | derived |
 | 19 | captive-nut window width ACROSS the clamp — and therefore the A/F of the M12 nut it traps | drawing | `tang_t` |
 | 107 | overall width = left lobe + closure-tab tip | **106.77** measured on the anchor row; asserted by `check()` | derived |
-| 116 | overall height = base face to the eyebolt tip, clamp shut | **116.51** measured on the anchor row | derived |
+| 116 | overall height = base face to the TOP OF THE WING NUT, clamp shut | **118.61** on the anchor row — see "the nut stack" below for the 2.6 | derived |
 
 ### Front view, measured off the sheet
 
@@ -60,19 +60,25 @@ pictorial symbol and the nut is taken from DIN 315-D instead. The M10 row's
 49.5 span ends at x = +58.8 on the anchor row, 1.4 mm inside the tab tip — which
 is what makes M10, and not M12, the closure that fits the 107 outline.
 
-## Assembly (6 solids, contact-or-clearance only)
+## Assembly (8 solids, contact-or-clearance only)
 
 lower shell (the one-piece body: lobed pentagon plate, U-jaw, hinge/pivot
 pockets, captive-nut window + Ø12.7 eye, or the M12 stud) · upper shell (the
 closure strap: hinge tongue → band over the barrel → flat tab) · hinge pin ·
-closing bolt (pivot eye + plain shank + ring thread) · pivot pin · wing nut.
+closing bolt (pivot eye + plain shank + ring thread) · pivot pin · **washer ·
+hex nut** · wing nut.
+
+The sheet draws **three** parts on the eyebolt above the tab, not one — an
+ISO 7089 plain washer, an ISO 4032 hexagon nut on it, and the wing nut on top
+of that. The washer is not decoration: the tab slot is open at +X, so without
+it the hex nut would bear on two thin slot edges.
 
 Clearances: pins 0.15 radial; hinge tongue 0.3 a side in its pocket; eyebolt
-0.7 a side in the tab slot and in the body's pivot slot; nut 0.3 over the tab.
-The strap's left end BEARS on the body's shoulder — that face contact is the
-hinge seat and is the only touching pair; every pair still measures zero
-intersection volume. Verified across all 24 sampled rows (3 difficulties × 8
-seeds): 0 interfering pairs.
+0.7 a side in the tab slot and in the body's pivot slot; 0.2 at each step of
+the washer / hex nut / wing nut stack. The strap's left end BEARS on the body's
+shoulder — that face contact is the hinge seat and is the only touching pair;
+every pair still measures zero intersection volume. Verified across all 24
+sampled rows (3 difficulties × 8 seeds): 0 interfering pairs.
 
 ## Hardware derivation (constants, not sampled)
 
@@ -89,9 +95,39 @@ seeds): 0 interfering pairs.
   internal rings sit on the SAME z-grid offset half a pitch, radially nested
   0.25 p past the bolt crest — engaged, with 0.1 p axial gaps, so the pair
   measures zero intersection volume.
-- pins Ø `max(5, 0.5 hang_d)`; bolt pivot-eye outer radius
+- pins Ø `max(5, 0.5 hang_d)`, hollow (see deviation 3); bolt pivot-eye outer radius
   `pin_d/2 + 0.26 bolt_d + 1.4`, sized off the pin it swings on (the drawing's
   pivot circles read ~Ø11 over a Ø6.35 pin), not off the thread diameter.
+
+### The nut stack, measured off the sheet
+
+| part | measured on the drawing | nearest standard row | code |
+|---|---|---|---|
+| plain washer | Ø **24.5** × **2.2** thick | **ISO 7089 M12**: d2 24, h 2.5 | `_ISO7089` |
+| hexagon nut | **18.2** across × **10.7** tall | **ISO 4032 M12**: s 18, m 10.8 | `_ISO4032` |
+| eyebolt shank | Ø **12.3** | M12 | — |
+
+So the sheet's eyebolt hardware is unambiguously **M12** — three independent
+dimensions land on the M12 row. Its *wing nut*, however, measures only ~42
+across and ~19.6 tall, which is nowhere near DIN 315-D M12 (63.5 / 32.2) and is
+closer to the M8 row. That is the same inconsistency the hex collar's off-centre
+position shows: the wing nut on the sheet is a pictorial symbol, the rest of the
+stack is to scale.
+
+This model therefore runs **M8/M10**, because a DIN 315-D M12 wing nut spans
+63.5 and puts the envelope at 112.4 — outside the 107 outline. The consequence
+is recorded rather than hidden: with a standard-conformant stack the anchor row
+stands **118.6 mm** tall against the catalog's **116**, the 2.6 being DIN 315-D
+M10's h = 24 versus the ~19.6 nut the sheet draws. Overall width is unaffected.
+
+ISO 4032 s/m and ISO 7089 d1/d2/h were read off
+[fasteners.eu](https://www.fasteners.eu/standards/iso/4032/) and
+[fasteners.eu](https://www.fasteners.eu/standards/iso/7089/), not iso.org,
+which returns HTTP 403 to automated fetches.
+
+The sheet's 116 is measured to the **top of the wing nut** (front view dark
+extent ends at z = +61.5, which is the nut, not a protruding thread), so with
+the clamp shut the eyebolt is cut to end inside the nut's threaded boss.
 
 ### Wing nut — DIN 315 form D (symbol → code)
 
@@ -121,9 +157,19 @@ nut still fits a non-tabulated bolt.
    body anywhere except its hinge seat.
 2. Ring thread substitutes the helix (framework-wide convention); run-out and
    chamfers on the bolt tip are not modelled.
-3. Hinge/pivot pin retention (the drawing shows split roll pins) is not
-   modelled; pins are plain cylinders 0.4 short of the body width so the ends
-   sit flush inside the ears.
+3. Both pins are hollow **ISO 8752 / DIN 1481 slotted spring pins**, which is
+   what the sheet draws — its pin circles are two concentric circles broken by
+   a slot, not a solid dowel. Modelled as a C-section tube with the wall
+   thickness taken from the standard's table by nominal Ø (Ø3 → 0.6, Ø4 → 0.8,
+   Ø5 → 1.0, Ø6 → 1.25, Ø8 → 1.5, Ø10 → 2.0, Ø12 → 2.5; `_ISO8752_S`, scaled
+   to a non-tabulated Ø), slot opening downward. The
+   free-state slot width is NOT tabulated (it closes as the pin is driven), so
+   0.20 d is a proportion. The s column was read off
+   [fasteners.eu/standards/iso/8752](https://www.fasteners.eu/standards/iso/8752/),
+   not from iso.org, which returns HTTP 403 to automated fetches; anyone
+   relying on it should confirm against the ISO catalogue.
+   The standard's chamfered lead-in is not modelled and
+   pins are 0.4 short of the body width so the ends sit flush inside the ears.
 4. The body is modelled as a plane-faced extrusion. The real casting has
    chamfered outer edges and a relieved front face; neither is modelled.
 5. The body outline scales with `bore_d`, so the 107 is reproduced at Ø51 and
