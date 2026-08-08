@@ -163,6 +163,11 @@ Additional unpublished construction dimensions are explicit proportions:
 
 - diametral shaft-tunnel clearance `max(0.12, 0.008*d1)`;
 - gear-cavity radial clearance `max(0.25, 0.015*b1)`;
+- hollow housing wall `max(1.4, 0.08*b1)`: the full XZ casting outline is
+  inset by this amount and removed between two broad side plates, while local
+  annular sleeves/posts retain the bearings and every mounting/thread hole;
+  the large front/side face therefore remains a closed thin wall, not a new
+  through opening.
 - bearing-opening chamfer `min(0.65, 0.045*d2)`;
 - shaft-end chamfer `min(0.50, 0.06*d1)`;
 - tapped-hole core diameter `0.8*d` and entry-chamfer depth `0.18*d`;

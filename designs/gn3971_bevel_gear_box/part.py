@@ -22,14 +22,14 @@ import math
 # module rather than being picked: choose the coarsest ISO 54 preferred module
 # that still leaves the face width at least 5.5 modules (straight bevel gears
 # are normally proportioned with b/m in the 6-12 band), then z = 2*r_mean/m.
-# A fixed 16 gave b/m 4.2-4.5 — the rim read as a sawblade; a fixed 24 fixed
+# A fixed 16 gave b/m 4.2-4.5; the rim read as a sawblade. A fixed 24 fixed
 # that but drove the module to 0.45 on the smallest boxes, finer than a real
 # steel gearbox that size would use. The ladder keeps both honest.
 # ISO 23509 straight-bevel tooth proportions, applied to the TRANSVERSE
 # section at each cone distance (Tredgold's substitute: the section is treated
 # as a spur gear of z teeth and the local module m_t = 2*s/z, and because
 # m_t scales with s the two end sections are similar, so the tip and root
-# cones both run through the pitch apex — the classic standard taper).
+# cones both run through the pitch apex: the classic standard taper).
 PRESSURE_ANGLE_DEG = 20.0
 ADDENDUM_FACTOR = 1.00
 DEDENDUM_FACTOR = 1.25          # 0.25*m tip clearance
@@ -39,7 +39,7 @@ TOE_WALL_MODULES = 0.30         # metal left between the toe root cone and bore
 INVOLUTE_STEPS = 6              # points sampled along each involute flank
 # STUB tooth proportions, measured PERPENDICULAR to the pitch cone: addendum
 # 0.8*m, dedendum 1.0*m (whole depth 1.8*m). Stub teeth are the standard
-# answer when the blank cannot host a full-depth tooth — here the bore is up
+# answer when the blank cannot host a full-depth tooth; here the bore is up
 # to 46% of the box, and a full-depth root cone dives straight into the shaft.  The tooth sections
 # below are sketched at constant z, and the tip/root cones are parallel to the
 # 45-degree pitch cone, so a perpendicular offset a becomes a RADIAL offset
@@ -109,7 +109,7 @@ def _layout(housing_size_b1, shaft_diameter_d1, bearing_boss_diameter_d2,
     #      smallest.  root(s_i) = s_i*(1 - 2*hf/z) >= d1/2 + wall
     #      =>  z >= 2*hf / (1 - (d1/2 + wall)/s_i)
     #      More teeth pull the root cone back toward the pitch cone, which is
-    #      what moves the teeth away from the shaft — and shrinks each tooth,
+    #      what moves the teeth away from the shaft and shrinks each tooth,
     #      since m = 2*s_o/z.
     #  (b) face width in modules: b/m = 6 (the middle of the gen-1 family's
     #      {4,5,6,7,8}) => z = 6 * 2*s_o / b.
@@ -166,14 +166,17 @@ def _axis_cylinder(radius, start, length, axis):
     if axis == "X":
         point = cq.Vector(start, 0.0, 0.0)
         direction = cq.Vector(1.0, 0.0, 0.0)
+    elif axis == "Y":
+        point = cq.Vector(0.0, start, 0.0)
+        direction = cq.Vector(0.0, 1.0, 0.0)
     else:
         point = cq.Vector(0.0, 0.0, start)
         direction = cq.Vector(0.0, 0.0, 1.0)
     return cq.Solid.makeCylinder(radius, length, point, direction)
 
 
-def _housing_profile(L, housing_size_b1, gearbox_type):
-    """Extrude the L profile or the vertically symmetric T profile."""
+def _housing_profile_sketch(L, housing_size_b1, gearbox_type):
+    """Return the closed XZ sketch for the L or symmetric T housing."""
     b1 = housing_size_b1
     half = 0.5 * b1
     front = L["front"]
@@ -231,12 +234,18 @@ def _housing_profile(L, housing_size_b1, gearbox_type):
             )
             .lineTo(half, -top)
         )
-    housing = (
+    return (
         profile
         .lineTo(L["rear"], L["bottom"])
         .close()
-        .extrude(half, both=True)
     )
+
+
+def _housing_profile(L, housing_size_b1, gearbox_type):
+    """Extrude the L profile or the vertically symmetric T profile."""
+    half = 0.5 * housing_size_b1
+    housing = _housing_profile_sketch(
+        L, housing_size_b1, gearbox_type).extrude(half, both=True)
     if L["edge_radius"] > 0.0:
         housing = housing.edges("|Y").fillet(L["edge_radius"])
     return housing.val()
@@ -270,6 +279,78 @@ def _housing(L, housing_size_b1, shaft_diameter_d1,
     d2 = bearing_boss_diameter_d2
     half = 0.5 * b1
     housing = _housing_profile(L, b1, gearbox_type)
+
+    # The casting is a hollow gear case, not a solid block pierced only by the
+    # two gear cylinders. Inset the complete XZ outline and remove its middle
+    # between the two broad side plates. Local keep-out cylinders leave real
+    # bearing sleeves and screw/bolt columns tied into that shell.
+    wall = max(1.4, 0.08 * b1)
+    chamber = (
+        _housing_profile_sketch(L, b1, gearbox_type)
+        .offset2D(-wall)
+        .extrude(half - wall, both=True)
+        .val()
+    )
+
+    def keep_bearing(center, axis):
+        support_length = L["bearing_width"] + 2.0 * wall
+        return _axis_cylinder(
+            0.5 * d2 + wall,
+            center - 0.5 * support_length,
+            support_length,
+            axis,
+        )
+
+    chamber = chamber.cut(keep_bearing(L["input_front_bearing"], "X"))
+    chamber = chamber.cut(keep_bearing(L["input_rear_bearing"], "X"))
+    chamber = chamber.cut(keep_bearing(L["output_top_bearing"], "Z"))
+    chamber = chamber.cut(keep_bearing(L["output_second_bearing"], "Z"))
+
+    # The two d4 holes visible on each broad side face retain tubular columns
+    # through the hollow case instead of terminating in unsupported plates.
+    if gearbox_type == 0:
+        d4_points = [(-lower_hole_offset_m2, -lower_hole_offset_m2),
+                     (upper_hole_offset_m3, upper_hole_offset_m3)]
+    else:
+        d4_points = [(upper_hole_offset_m3, upper_hole_offset_m3),
+                     (upper_hole_offset_m3, -upper_hole_offset_m3)]
+    d4_keep_r = 0.5 * mounting_hole_diameter_d4 + 0.55 * wall
+    for x, z in d4_points:
+        keep = cq.Solid.makeCylinder(
+            d4_keep_r, b1,
+            cq.Vector(x, -half, z), cq.Vector(0.0, 1.0, 0.0))
+        chamber = chamber.cut(keep)
+
+    # Face and rear tapped holes also keep local material for their full
+    # modeled thread depth. These are internal ribs/posts, not external bosses.
+    offset = 0.5 * face_hole_spacing_m4
+    d5_keep_r = 0.5 * mounting_thread_d5 + 0.45 * wall
+    d5_keep_len = 2.0 * mounting_thread_d5 + wall
+    for a in (-offset, offset):
+        for b in (-offset, offset):
+            chamber = chamber.cut(cq.Solid.makeCylinder(
+                d5_keep_r, d5_keep_len,
+                cq.Vector(L["front"], a, b), cq.Vector(-1.0, 0.0, 0.0)))
+            chamber = chamber.cut(cq.Solid.makeCylinder(
+                d5_keep_r, d5_keep_len,
+                cq.Vector(a, b, L["top"]), cq.Vector(0.0, 0.0, -1.0)))
+            if gearbox_type == 1:
+                chamber = chamber.cut(cq.Solid.makeCylinder(
+                    d5_keep_r, d5_keep_len,
+                    cq.Vector(a, b, L["bottom"]), cq.Vector(0.0, 0.0, 1.0)))
+
+    rear_z = (
+        L["bottom"] + rear_hole_height_m5
+        if gearbox_type == 0 else 0.0
+    )
+    d6_keep_r = 0.5 * rear_thread_d6 + 0.45 * wall
+    d6_keep_len = 2.0 * rear_thread_d6 + wall
+    for y in (-offset, offset):
+        chamber = chamber.cut(cq.Solid.makeCylinder(
+            d6_keep_r, d6_keep_len,
+            cq.Vector(L["rear"], y, rear_z), cq.Vector(1.0, 0.0, 0.0)))
+
+    housing = housing.cut(chamber)
 
     # Gear cavities follow each 45-degree bevel gear and overlap at the mesh.
     cavity_r = L["gear_tip_outer"] + L["cavity_clearance"]
@@ -333,12 +414,6 @@ def _housing(L, housing_size_b1, shaft_diameter_d1,
             cq.Vector(0.0, 0.0, L["bottom"]), cq.Vector(0.0, 0.0, 1.0)))
 
     # d4 clearance holes are the two circles in the official side view.
-    if gearbox_type == 0:
-        d4_points = [(-lower_hole_offset_m2, -lower_hole_offset_m2),
-                     (upper_hole_offset_m3, upper_hole_offset_m3)]
-    else:
-        d4_points = [(upper_hole_offset_m3, upper_hole_offset_m3),
-                     (upper_hole_offset_m3, -upper_hole_offset_m3)]
     for x, z in d4_points:
         cutter = cq.Solid.makeCylinder(
             0.5 * mounting_hole_diameter_d4,
@@ -349,7 +424,6 @@ def _housing(L, housing_size_b1, shaft_diameter_d1,
         housing = housing.cut(cutter)
 
     # Four d5 holes surround each bearing face on the official m4 square.
-    offset = 0.5 * face_hole_spacing_m4
     for a in (-offset, offset):
         for b in (-offset, offset):
             housing = _cut_tapped_hole(
@@ -364,10 +438,6 @@ def _housing(L, housing_size_b1, shaft_diameter_d1,
                     (a, b, L["bottom"] - 0.1), (0.0, 0.0, 1.0))
 
     # The rear view puts Type-L d6 holes at m5 and Type-T holes on center.
-    rear_z = (
-        L["bottom"] + rear_hole_height_m5
-        if gearbox_type == 0 else 0.0
-    )
     for y in (-offset, offset):
         housing = _cut_tapped_hole(
             housing, rear_thread_d6, 2.0 * rear_thread_d6,
