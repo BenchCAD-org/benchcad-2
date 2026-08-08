@@ -15,6 +15,7 @@ from research.bss_validation.row import (
     ValidationRow,
     applicability,
     applicability_class,
+    classify_iou,
     combine,
 )
 
@@ -38,13 +39,31 @@ class CombineTest(unittest.TestCase):
         self.assertEqual(status, "ok")
         self.assertAlmostEqual(value, 1.0, places=12)
 
-    def test_genuine_zero_is_valid_and_zeroes_the_product(self):
+    def test_genuine_zero_in_a_structural_component_still_zeroes(self):
         """0.0 is maximal disagreement, not an error. No epsilon, no floor."""
-        row = _row(iou_raw=0.0, iou_status=IouStatus.OK.value,
-                   s_topology=1.0, s_edge_global=1.0, s_face_global=1.0)
+        row = _row(iou_raw=0.5, iou_status=IouStatus.OK.value,
+                   s_topology=1.0, s_edge_global=0.0, s_face_global=1.0)
         value, status = combine(row, WEIGHTS)
         self.assertEqual(status, "ok")
         self.assertEqual(value, 0.0)
+
+    def test_valid_iou_zero_is_na_but_not_a_failure(self):
+        """Excluded from Q_raw, still visible and still distinct from failure."""
+        row = _row(iou_raw=0.0, iou_status=IouStatus.VALID_ZERO.value,
+                   s_topology=1.0, s_edge_global=1.0, s_face_global=1.0)
+        value, status = combine(row, WEIGHTS)
+        self.assertIsNone(value)
+        self.assertEqual(status, "na:iou")
+        self.assertEqual(row.iou_raw, 0.0)          # diagnostics keep the value
+        self.assertNotEqual(row.iou_status, IouStatus.FAILED_PARSE.value)
+
+    def test_classify_iou_separates_zero_from_failure(self):
+        self.assertEqual(classify_iou(0.73), (0.73, IouStatus.OK.value))
+        self.assertEqual(classify_iou(0.0), (0.0, IouStatus.VALID_ZERO.value))
+        self.assertEqual(
+            classify_iou(None, IouStatus.FAILED_PARSE.value),
+            (None, IouStatus.FAILED_PARSE.value))
+        self.assertEqual(classify_iou(None), (None, IouStatus.MISSING.value))
 
     def test_iou_failure_is_na_not_zero(self):
         """The canonical evaluator returns 0.0 on failure; that must not score."""

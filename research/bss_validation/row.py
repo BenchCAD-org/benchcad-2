@@ -35,7 +35,17 @@ SCHEMA_VERSION = "1.0.0"
 
 
 class IouStatus(str, Enum):
+    """A status is not a score.
+
+    ``VALID_ZERO`` is a *successful* computation that happened to find no
+    overlap. It is kept distinct from the failure statuses in diagnostics — you
+    can always see which happened — but both make the IoU component N/A for the
+    combined score, so a zero never becomes an absorbing state in the geometric
+    mean.
+    """
+
     OK = "ok"
+    VALID_ZERO = "valid_zero"
     FAILED_PARSE = "failed_parse"
     FAILED_TESSELLATE = "failed_tessellate"
     MISSING = "missing"
@@ -90,6 +100,12 @@ class ValidationRow:
 
 
 def applicability(row: ValidationRow) -> dict[str, bool]:
+    """Which components may enter ``Q_raw``.
+
+    A successfully computed IoU of exactly 0 is applicable=False but is *not* a
+    failure: `iou_raw` stays 0.0 and `iou_status` stays ``valid_zero`` so the
+    diagnostics keep the two apart.
+    """
     return {
         "iou": row.iou_status == IouStatus.OK.value and row.iou_raw is not None,
         "topology": row.s_topology is not None,
@@ -222,3 +238,24 @@ def evaluate_pair(
     if weights is not None:
         row.q_raw, row.q_raw_status = combine(row, weights)
     return row
+
+
+def classify_iou(value: float | None, failure: str | None = None) -> tuple[float | None, str]:
+    """Canonical-evaluator result -> ``(iou_raw, iou_status)``.
+
+    The canonical evaluator returns ``0.0`` on any failure, which is
+    indistinguishable from a genuine total mismatch. This is the boundary that
+    repairs the contract: pass the failure through explicitly and it becomes a
+    status, never a score.
+
+    A successful zero is reported as :attr:`IouStatus.VALID_ZERO` — kept in the
+    diagnostics, excluded from ``Q_raw``.
+    """
+    if failure:
+        return None, failure
+    if value is None:
+        return None, IouStatus.MISSING.value
+    value = float(value)
+    if value == 0.0:
+        return 0.0, IouStatus.VALID_ZERO.value
+    return value, IouStatus.OK.value

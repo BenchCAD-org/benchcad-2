@@ -164,6 +164,12 @@ rather than by convention:
 - **`iou_status` is separate from `iou_raw`.** The canonical evaluator returns
   `0.0` on any failure; that value must never reach a row as a score. A failure
   arrives as a status and the row's IoU is `None`.
+- **A successful IoU of exactly 0 is `valid_zero`.** It keeps `iou_raw = 0.0` in
+  the diagnostics, so it stays distinguishable from a failure, but it is not
+  applicable to `q_raw`: a pair with no overlap is not meaningfully comparable
+  structurally, and zero must not become an absorbing state in the geometric
+  mean. Both `valid_zero` and any failure make the IoU component N/A; which one
+  happened is never hidden.
 - **Strict N/A propagation.** If any required component is N/A, `q_raw` is
   `None` with a status naming the missing component. Weights are not
   renormalized. Every component score and diagnostic is still recorded.
