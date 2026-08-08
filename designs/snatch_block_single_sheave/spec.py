@@ -10,6 +10,8 @@ Source for every row: Crosby *Blocks* catalogue p.326, metric table —
 https://kitocrosby.com/wp-content/uploads/2025/07/15_Blocks_MET_326.pdf
 """
 
+import math
+
 from bench2 import Resample
 
 # One entry per geometrically distinct catalogue row:
@@ -122,6 +124,18 @@ PARAM_SPEC = {
                   "swivel tees and yokes, fitting-to-case clearance .031-.062 in) and "
                   "the catalogue photographs show it at every angle (proportion)",
     },
+    "roller_count": {
+        "desc": "bodies in the bearing: 1 bronze bushing, or the number of straight "
+                "rollers in a full complement round the centre pin",
+        "unit": "",
+        "integer": True,
+        "refine": True,
+        "range": {"easy": (1, 40), "medium": (1, 40), "hard": (1, 40)},
+        "source": "not published; a full complement is as many rollers as fit round "
+                  "the pin at 0.6 mm apart, so this follows from the pin and race "
+                  "(proportion) — the manual only says the roller option is a "
+                  "straight, unsealed roller bearing",
+    },
     "roller_bearing": {
         "desc": "0 = bronze bushing (catalogue code BB), 1 = roller bearing (code RB)",
         "unit": "",
@@ -129,8 +143,10 @@ PARAM_SPEC = {
         "feature": True,
         "range": {"easy": (0, 0), "medium": (0, 1), "hard": (0, 1)},
         "choices": {"easy": [0], "medium": [0, 1], "hard": [0, 1]},
-        "source": "catalogue column 'Bearing Code'; the roller option runs a thicker "
-                  "race, modelled as a larger sheave bore (proportion)",
+        "source": "catalogue column 'Bearing Code'; the manual (p.9, p.12) calls the "
+                  "option a straight, unsealed roller bearing, so it is modelled as a "
+                  "full complement of rollers running on the pin instead of a bronze "
+                  "sleeve — the roller size and count are proportion",
     },
 }
 
@@ -151,7 +167,20 @@ _PLATE_REACH = 0.36
 _SHEAVE_GAP = 4.0
 _BOLT_TO_BAR = 1.13
 _TEE_TO_BOLT = 0.95
+_EAR_SPAN = 0.73
+_EAR_W = 1.4
+_HEAD_R = 1.35
 _RACE_BB = 0.12
+_ROLLER = 0.22
+_ROLL_GAP = 0.6
+_FIT = 0.5
+
+
+def _bearing(p):
+    """Pin, race depth and roller pitch circle -- mirrored from part.py."""
+    pin_d = _PIN_TO_CHEEK * p["cheek_w_C"]
+    race_t = max(2.0, (_ROLLER if p["roller_bearing"] else _RACE_BB) * pin_d)
+    return pin_d, race_t, 0.5 * pin_d + _FIT + 0.5 * race_t
 
 
 def _stack(p):
@@ -184,6 +213,14 @@ def refine(p, difficulty, rng):
     p["bow_height_H"] = float(h)
     # The row gives the rope range the groove may be cut for; pick inside it.
     p["rope_d"] = round(float(rng.uniform(rope_lo, rope_hi)), 1)
+    # A bronze bushing is one body; a roller bearing is as many rollers as fit
+    # round the pin.  Either way it is the same component, so the body count
+    # follows this number and family.json declares no fixed `solids`.
+    if p["roller_bearing"]:
+        _pin_d, race_t, pitch_r = _bearing(p)
+        p["roller_count"] = int(2.0 * math.pi * pitch_r // (race_t + _ROLL_GAP))
+    else:
+        p["roller_count"] = 1
     for key in _ROW_KEYS:
         lo, hi = PARAM_SPEC[key]["range"][difficulty]
         if not (lo - 1e-6 <= p[key] <= hi + 1e-6):
@@ -266,5 +303,43 @@ def check(p):
         bad.append("swivel tee barrel r=%.1f reaches the shackle crown: the throat is "
                    "only H = %.0f mm deep under the bolt (anchor shackle proportion)"
                    % (tee_r, p["bow_height_H"]))
+
+    # 4. a full complement has to fit: the rollers must not touch each other.
+    if p["roller_bearing"]:
+        _pin_d, race_t, pitch_r = _bearing(p)
+        n = int(p["roller_count"])
+        chord = 2.0 * pitch_r * math.sin(math.pi / max(2, n))
+        if chord < race_t + 0.2:
+            bad.append("%d rollers of %.1f mm on a %.1f mm pitch circle leave only "
+                       "%.2f mm centre to centre: a full complement of that many does "
+                       "not fit round the pin (proportion, NOTES.md)"
+                       % (n, race_t, 2.0 * pitch_r, chord))
+
+    # 5. the bow's legs are the crown circle's tangents, so the ears have to
+    #    stand outside that circle or there is no pear shape to draw.
+    bar_r = 0.5 * p["bar_thk_E"]
+    major_r = 0.5 * p["bow_width_G"] + bar_r
+    ear_w = _EAR_W * p["bar_thk_E"]
+    ear_x = 0.5 * _EAR_SPAN * p["bow_width_G"] + 0.5 * ear_w
+    reach = p["bow_height_H"] + sb_r - 0.5 * p["bow_width_G"]
+    span = math.hypot(ear_x, reach)
+    if span <= major_r * 1.02:
+        bad.append("the shackle ears at x=%.1f sit inside the bow crown circle "
+                   "R=%.1f: no tangent leg exists (anchor shackle proportion)"
+                   % (ear_x, major_r))
+    else:
+        # 6. the bolt head bears on the ear's outer face, and the bow's leg
+        #    flares outboard below it.  The head has to clear that leg or the
+        #    shackle cannot be assembled -- caught by probe on the first draft.
+        phi = math.atan2(reach, ear_x) - math.acos(major_r / span)
+        t_x, t_z = major_r * math.cos(phi), -reach + major_r * math.sin(phi)
+        head_r = _HEAD_R * sb_r
+        lean = (t_x - ear_x) / max(1e-6, -t_z)
+        leg_out = ear_x + lean * head_r + bar_r * math.hypot(1.0, lean)
+        if leg_out > ear_x + 0.5 * ear_w - 0.5:
+            bad.append("the bow leg reaches x=%.1f at the rim of a %.1f mm bolt head "
+                       "but the ear face is only at x=%.1f: the head would foul the "
+                       "leg (anchor shackle proportion, NOTES.md)"
+                       % (leg_out, 2.0 * head_r, ear_x + 0.5 * ear_w))
 
     return bad

@@ -18,10 +18,11 @@ the manual does. Reading its disassembly order backwards:
 
 ```
 wire rope
-  └ sheave  ── bushing / roller race ── centre pin ─┐
-                                                    ├── both SIDE PLATES
-  shackle bow ── shackle bolt ── swivel TEE         │
-                    └ SWIVEL ── swivel CASE ── HOOK BOLT ┘
+  └ sheave ── bushing OR roller complement ── centre pin ─┐
+                                                          ├── both SIDE PLATES
+  shackle bow ── shackle bolt ── swivel TEE               │
+       (cotter)        └ SWIVEL ── swivel CASE ── HOOK BOLT ┘
+                                                    (retention nut + hitch pin)
 ```
 
 Every arrow above is a bore-and-pin pair in `part.py`, with 0.5 mm radial
@@ -45,6 +46,13 @@ The **tee** is a tee: a cross barrel pierced by the shackle bolt, with a vertica
 stem rising into the case. The hook version of the same block (McKissick 418)
 deletes the tee and puts the hook's own shank in the same case — which is why
 Crosby sells the hook and the shackle each *with* a yoke.
+
+The **retention nut is staked into the swing plate**, not carried on the bolt
+(US6481695 puts the threaded nut on the swing plate; the manual says to check it
+is "properly staked with 3 stakes"). That is not a detail — it is what makes the
+block openable at all. A bolt carrying its own nut cannot be unscrewed: backing
+it out of the plate drives the nut straight into the swivel case, which is
+exactly what the probe reported (1410 mm³) on the first attempt at this.
 
 Opening the block, manual p.12 step 2, verbatim: *"Remove hitch pin and unscrew
 the upper bolt allowing the side plate to rotate on the center pin and swing out
@@ -200,23 +208,36 @@ for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 | shackle bolt diameter `p` | `1.13 × E` | anchor-shackle practice: Crosby G-2130 runs the bolt one size over the bow (8.5 t: bow 28.7, bolt 32) |
 | tee barrel radius | `0.95 p` | proportion — the barrel stands proud of the shackle ears, as the product photographs show |
 | shackle ear boss radius | `0.72 p` | ordinary shackle-eye proportion |
+| shackle ear inside spacing | `0.73 × G` | measured off the sheet; it is why the bow is a pear and not a dee, and Crosby's own G-2130 anchor-shackle table has the same A < B relation |
+| shackle ear width along the bolt | `1.4 × E` | the ear is upset wider than the bar so the bolt head bears on it **clear of the flaring leg** — see below |
+| bolt head radius | `1.35 ×` shank radius | ordinary headed-bolt proportion |
+| retention nut | OD `2.4 ×` bolt radius, length `0.9 ×` | round staked nut (manual p.12) |
+| retaining wire diameter | `0.14 ×` its bolt's diameter | proportion |
+| straight roller diameter | `0.22 ×` centre pin diameter, `0.6` mm apart | proportion; sets `roller_count` |
 | head / nut diameter | `1.6 ×` shank, hex A/F `1.55 ×` shank | ordinary headed-pin proportions |
 | bushing wall / roller race depth | `0.12 ×` pin (BB) or `0.22 ×` pin (RB), min 2 mm | proportion; the catalogue gives only the BB/RB code, not race dimensions |
 | every pin-in-bore clearance | 0.5 mm radial | proportion |
 
-### Deliberate simplifications
+### The bearing changes the body count
 
-- The **hairpin (hitch pin) and the shackle cotter are not modelled.** Both are
-  orderable parts (LS5, LS14) and both appear in the sheet and the photographs,
-  but they are ~5 mm bent wire on a block up to 700 mm tall. The bolts they
-  retain are modelled; their retention is not.
-- The **roller-bearing option is one race sleeve of the correct radial depth**,
-  not a cage of rollers. The catalogue rows for BB and RB are identical in every
-  dimension, so the option cannot change the envelope; it changes the sheave
-  bore, and that is what the model changes.
-- The **bow is drawn with parallel legs**, so G is the inside width everywhere.
-  A real forging pears out slightly, with the ears about 0.73 × the crown width
-  (measured off the sheet). G is still the maximum inside width either way.
+BB and RB are the same **component**, so the body count follows `roller_count`
+rather than a fixed `solids`: 1 bronze bushing, or 15–16 straight rollers. The
+manual (p.9, p.12) describes the option as a *straight, unsealed* roller
+bearing, which is a full complement running directly on the pin — there is no
+race to model, and "not sealed … not recommended for higher speeds" is what a
+full complement behaves like. `family.json` therefore declares no `solids` and
+names `roller_count` as the quantity; `bench2 validate` resolves it per instance.
+
+### Retaining wire
+
+The hitch pin and the shackle cotter are Crosby's own line items (LS5/SS3
+*Hairpin for Hook Bolt*, LS14/SS6 *Cotter Pin Only*) and both are visible in the
+sheet and the photographs, so both are modelled: the hairpin is swept along a
+tangent-continuous path (line, semicircle, line) so it comes out as one solid
+with no booleans, and the swept volume equals `π r² L` exactly — which is the
+check that the sweep did not quietly return something else. The centre pin gets
+neither: the manual retains it with a prevailing-torque lock nut and a **roll
+pin** driven into it, which is not a visible clip.
 
 `open_angle` and `swivel_angle` are operating states, not dimensions. The
 manual gives the motion for both and dimensions neither.
@@ -245,10 +266,25 @@ groove needs no boolean at all.
 ## Probe
 
 `bench2 validate` cannot see interpenetration, and it cannot see a part that is
-attached to nothing — an assembly of ten free-floating solids passes every gate.
-So this family is checked with an explicit pairwise probe over all 13 rows: every
-pair's intersection volume must be 0, and every joint in the load path above must
-have a minimum distance ≤ the fit it is built with. Current result: **0 mm³
-overlap and 0.50 mm at every joint, on all 13 rows, closed and open.** The one
-joint that goes loose is `side_plate_02 | hook_bolt` once `open_angle > 0`, which
-is the bolt being unscrewed — the state the manual describes.
+attached to nothing — an assembly of free-floating solids passes every gate. So
+this family is checked with an explicit pairwise probe over all 13 rows × {bronze
+bushing closed, roller closed, roller open} = 39 instances: every pair's
+intersection volume must be 0, and every joint in the load path above must have a
+minimum distance no larger than the fit it is built with.
+
+Current result: **0 mm³ overlap and 0.55 mm worst joint clearance, on all 39
+instances.** Two joints are expected to open once `open_angle > 0` and are
+excluded there: `side_plate_02 | hook_bolt` and `hook_bolt | retention_nut`,
+because the bolt has been unscrewed out of the plate and the nut has swung away
+with it — the state the manual describes.
+
+Three defects were found by this probe and by nothing else, all of them while
+adding the retaining hardware:
+
+| what the probe said | cause |
+|---|---|
+| `shackle_bow \| shackle_bolt` 591 mm³ | the bolt head bears on the ear's outer face, but the bow's leg flares outboard below it and the head hung into that flare. Fixed by upsetting the ear to `1.4 E`; `check()` now computes the leg's outboard reach at the head's rim and rejects the row if it fouls |
+| `hook_bolt \| swivel_case` 1410 mm³, open only | a bolt carrying its own nut cannot be withdrawn — the nut travels inboard into the case. Fixed by staking the nut into the swing plate, which is what the real one does |
+| `shackle_bolt \| shackle_cotter` 58 mm³ | the cotter's eye reached back over the nut it locks. Fixed by parking the cotter clear of the nut face |
+
+None of the three moved `bench2 validate` off PASS.
