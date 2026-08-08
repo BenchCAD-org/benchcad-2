@@ -1,0 +1,43 @@
+{
+  "family": "truss_half_coupler_hook",
+  "standard": "Doughty T57000 / T57200 half coupler & hook clamp (\u00d848-51 barrel)",
+  "base_plane": "XZ",
+  "description": "Stage-rigging half coupler / hook clamp (Doughty T57000/T57200 class) as an eight-body assembly: the one-piece lobed-pentagon body with its deep U-jaw around the standard \u00d848-51 barrel, the closure strap that runs from a pinned hinge tongue over the barrel into a flat cantilevered tab, the two ISO 8752 slotted spring pins, the swing closing bolt with ring thread, and the nut stack the sheet draws on it \u2014 ISO 7089 washer, ISO 4032 hexagon nut, DIN 315-style wing nut, the last two threaded onto the bolt's ring grid. All mates are contact-or-clearance; the hook-clamp variant replaces the tang eye with the protruding M12 stud.",
+  "source": "Doughty T57000/T57010/T58080/T58100/T57200 datasheets (bore, width, eye, base drop, stud), front view measured against its own 107/55/19/16 dimensions at 3.6075 px/mm; cross-checked vs Riggatec/Global Truss/Kupo; ISO 8752 / ISO 7089 / ISO 4032 / DIN 315 for the hardware; wall, tab and lobe proportions",
+  "contributor": "BenchCAD-org",
+  "solids": 8,
+  "components": [
+    {
+      "name": "lower_shell",
+      "quantity": 1
+    },
+    {
+      "name": "upper_shell",
+      "quantity": 1
+    },
+    {
+      "name": "hinge_pin",
+      "quantity": 1
+    },
+    {
+      "name": "closing_bolt",
+      "quantity": 1
+    },
+    {
+      "name": "pivot_pin",
+      "quantity": 1
+    },
+    {
+      "name": "washer",
+      "quantity": 1
+    },
+    {
+      "name": "hex_nut",
+      "quantity": 1
+    },
+    {
+      "name": "wing_nut",
+      "quantity": 1
+    }
+  ]
+}
