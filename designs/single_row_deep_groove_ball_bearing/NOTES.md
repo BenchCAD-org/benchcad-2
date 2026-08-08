@@ -1,0 +1,134 @@
+# single_row_deep_groove_ball_bearing notes
+
+This family is table-driven and equation-heavy, so the mapping below is included
+for human review under `REVIEWING.md`.
+
+## Source categories
+
+- **standard:** ISO 15:2017 radial bearing boundary-dimension family, represented
+  here by the real 6000-series catalog rows.
+- **catalog table:** the provided 6000-series table supplies `d`, `D`, and `B`
+  for 6000-6005.
+- **reference-image calibrated:** only the 6000 rolling-element count, ball
+  diameter baseline, and pitch-circle baseline are calibrated from the supplied
+  TraceParts 6000 PNG views.
+- **proportion:** all unverified internal values, including raceway depth, cage
+  dimensions, and all 6001-6005 internal rolling-element layouts.
+- **benchmark perturbation:** small deterministic sample variation added in
+  `refine()` around the 6000 image-calibrated baseline and around the
+  proportion rows. These perturbations represent benchmark dataset variation,
+  not a measurement error model or a product tolerance claim.
+
+## ISO / catalog symbol mapping
+
+| Source symbol | Code parameter | Meaning |
+|---|---|---|
+| `d` | `bore_d` | bearing bore diameter |
+| `D` | `outer_d` | bearing outside diameter |
+| `B` | `width_B` | bearing width |
+| 6000-6005 row | `designation` | selector for the coupled `d/D/B` catalog row |
+
+The table rows are coupled in `spec.py`: `designation` selects `bore_d`,
+`outer_d`, and `width_B`. The sampler must not produce mixed rows such as a 6000
+bore with a 6005 outside diameter.
+
+## 6000 image-calibrated ball geometry
+
+The supplied 6000 axial reference PNG was used for a circle fit of the seven
+visible rolling balls. The outer bearing diameter is known from the table:
+`D = 26 mm`.
+
+Measured pixel anchors:
+
+- outer diameter: `P_D = 1228 px`
+- mean fitted ball diameter: `P_ball = 228.31 px`
+- mean pitch radius: `R_pitch = 426.10 px`
+- fitted ball count: `7`
+
+Manual recomputation for the 6000 row:
+
+- `ball_d = 26 x 228.31 / 1228 ~= 4.83 mm`
+- `pitch_d = 2 x 26 x 426.10 / 1228 ~= 18.04 mm`
+
+Only these 6000 ball layout values are reference-image calibrated. They are not
+claimed to be universal SKF internal dimensions for every 6000-series bearing.
+
+## 6001-6005 internal values
+
+No reliable model-specific CAD section or manufacturer table was available for
+the internal ball, raceway, and cage geometry of 6001-6005. Their internal rows
+therefore remain `proportion` values chosen to fit inside their real `d/D/B`
+envelopes, keep clearance between bodies, and provide meaningful benchmark
+variation. They must not be described as SKF/TraceParts internal measurements.
+
+## Derived ring and raceway construction
+
+The code keeps the inner and outer rings as continuous solids:
+
+- `span = outer_d - bore_d`
+- `inner_shoulder_d = bore_d + 0.30 * span`
+- `outer_race_d = outer_d - (3.4 / 16.0) * span`
+
+For the 6000 row, these normalize the SKF-style section anchors:
+
+- `inner_shoulder_d = 10 + 0.30 * 16 = 14.8 mm`
+- `outer_race_d = 26 - (3.4 / 16) * 16 = 22.6 mm`
+
+These shoulder relationships are then reused as proportions for 6001-6005.
+The current `part.py` builds both rings from a closed radial-axial profile
+revolved around the bearing axis. The profile includes the bore/outside
+cylindrical surfaces, end chamfers, shoulders, and the central deep-groove
+raceway. This replaced an earlier simple annular-cylinder plus torus-cut
+prototype.
+
+- `RACE_GAP = 0.04` — flat running fit between ball and raceway, so the balls
+  read as seamlessly seated while every pairwise intersection stays exactly 0
+- `groove circle radius r_g = ball_d / 2 + RACE_GAP` — the raceway section is
+  the BALL-CONFORMAL circle about the ball centre, not a loose wider arc
+- `groove_half_width = min(width * 0.40, sqrt(depth * (2*r_g - depth)))` where
+  `depth` is how far the land recesses below the groove bottom — the exact
+  chord where the conformal circle meets the shoulder land
+- raceway groove cross-section: a TRUE circular arc (`threePointArc`) through
+  shoulder edge - groove bottom - shoulder edge; since all three points lie on
+  the conformal circle, the revolved raceway is the torus of radius r_g that
+  cradles the ball — a real U in section
+- outer land (SKF D2 cue retired): `outer_race_d = pitch_d + ball_d +
+  2*RACE_GAP - 2*race_groove_depth` — the sampled recess drives how far each
+  ball sinks behind the outer land (0.23-0.30 ball_d across the rows), so the
+  outer U is obvious in the cutaway instead of the earlier 0.062*ball_d lip;
+  the inner land keeps the SKF 6000 d1 anchor (its real recess is shallower)
+
+`race_groove_depth` is not image-derived. It is a proportion constrained by
+ring-wall continuity, ball retention (never past the ball centre), and the
+need to keep a readable deep-groove shoulder in the preview.
+
+## Cage construction
+
+The cage is a simplified two-half stamped retainer:
+
+- `upper cage half` and `lower cage half` are independent solids.
+- each half has a shallow channel-like annular band with rounded exposed edges.
+- spherical cup regions open around each rolling ball.
+- ball-position pockets are centered on the actual ball centers.
+- the two halves stay separated; no middle ring or vertical post connects them.
+- pocket clearance uses `cage_clearance = max(0.10, min(0.20, ball_d * 0.035))`.
+
+This is a benchmark-readable simplification of an open bearing cage. It keeps
+the ball pockets open toward the inner and outer raceways, avoids the earlier
+closed-hoop failure mode, and avoids positive intersection with balls or rings.
+It does not model rivets or exact stamped-cage manufacturing details.
+
+## Deliberate deviations and limitations
+
+- Internal rolling-element, raceway, and cage dimensions are not ISO 15 boundary
+  dimensions.
+- 6001-6005 internal values are proportion estimates.
+- Raceway curvature and cage pocket details are simplified for stable CadQuery
+  generation and visual recognizability.
+- Edge chamfers from the 6000 reference are recorded as evidence but are not
+  modeled as a separate parameter in this first version.
+- `da`, `Da`, and `ra` are mounting/abutment recommendations and are not part of
+  the modeled bearing body.
+- There is currently no reliable DWG parser or true CAD section-measurement
+  chain in this local workflow; the only internal calibration used here is the
+  6000 PNG circle-fit baseline described above.
