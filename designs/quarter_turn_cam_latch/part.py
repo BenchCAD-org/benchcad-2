@@ -39,23 +39,27 @@ import cadquery as cq
 # ── stack constants, all off the E5 section ──────────────────────────────────
 WASHER_T = 0.5        # compressed sealing washer (sheet: "0.5 (.02)")
 PANEL_T = 1.0         # thinnest catalog panel (sheet: "1 (.04)")
-NUT_H = 4.2           # mounting nut height, scaled off the section
+NUT_H = 4.2           # mounting nut height, scaled off the section (4.05-4.24)
 CAM_JOINT = 0.2       # parting gap, housing end to cam hub
-SCREW_HEAD_H = 4.0    # ISO 4017 M6 head height
-SCREW_AF = 10.0       # ISO 4017 M6 head across-flats
-SCREW_D = 6.0         # M6 nominal
+SCREW_HEAD_H = 5.0    # scaled off the section; 1 over ISO 4017 M6 k=4, so the
+                      # sheet's screw is washer-faced or similar
+SCREW_AF = 10.0       # ISO 4017 M6 head A/F — the section's 13.1 silhouette is
+                      # this hex seen across corners (A/C 11.5), same cut as the nut
+SCREW_D = 6.0         # M6, called out on the sheet
 STEP_CLEAR = 0.6      # cam-to-housing-barrel clearance at the step foot
 STEP_MAX_SLOPE = 1.732  # steepest formed offset leg, tan(60 deg)
 MIN_GRIP = WASHER_T + PANEL_T + NUT_H + 1.0  # see the note by check()
 
 
 def nut_af(body_d):
-    """Mounting-nut across-flats. The section draws the nut ~27.3 wide over
-    the Ø22.5 body — taken here as across-FLATS, which leaves a 2.4 wall.
-    (Its two inner lines sit at half the silhouette, which would normally
-    read as across-corners; that reading gives A/F 23.6 and a 0.55 wall,
-    i.e. not a nut, so the flats reading is the one that can be made.)"""
-    return body_d + 4.8
+    """Mounting-nut across-flats. The section's nut silhouette measures 28.59
+    with its two inner lines at +-0.497 of the half-width, which is a hex cut
+    across CORNERS: A/F = 28.59 * 0.866 = 24.76 = body_d + 2.26 at Ø22.5.
+
+    Read the other way (silhouette = A/F) the corners would stand 5.1 proud of
+    the Ø28 head; the section shows 0.3. So it is a slim panel nut — 1.4 wall
+    over the M22x1.5 body thread (issue #32, p.156) — not a structural one."""
+    return body_d + 2.3
 
 
 def housing_length(body_l, cam_t):
@@ -75,17 +79,19 @@ def cam_hub_r(body_d, cam_w):
     return max(0.5 * body_d + 1.5, 0.55 * cam_w + 1.0)
 
 
-def cam_neck(cam_l, cam_w, r_hub):
+def cam_neck(cam_l, cam_w, tip_flat, r_hub):
     """The concave neck: an arc tangent to the hub circle and to the blade
     flank, so the blade grows out of the hub the way the sheet's top view
     shows it — the taper is still narrowing well outside the Ø28 head, which
     takes a blend radius of roughly 3x the blade width.
 
     Returns (radius, x of the flank tangency). The radius is capped so the
-    tangency always lands well inboard of the tip's corner rounds, whatever
-    the sampler picks."""
+    tangency lands well inboard of BOTH the tip's corner rounds and the step:
+    letting it coincide with the step (cam_l 29.63, cam_w 22, body_d 15) put a
+    4.5 micron edge in the cam and flipped its topology between neighbouring
+    cam_l values."""
     half, r_tip = 0.5 * cam_w, 0.22 * cam_w
-    cx_max = 0.55 * (cam_l - r_tip)
+    cx_max = min(0.55 * (cam_l - r_tip), 0.8 * (cam_l - tip_flat))
     r_max = (cx_max ** 2 / (r_hub - half) - r_hub - half) / 2.0
     r_neck = max(0.3 * cam_w, min(2.9 * cam_w, r_max))
     return r_neck, math.sqrt((r_hub + r_neck) ** 2 - (half + r_neck) ** 2)
@@ -107,16 +113,15 @@ def _housing(head_d, head_h, body_d, afl, housing_l, slotted):
         .edges(">Z").fillet(min(head_h * 0.45, head_d * 0.12))
     )
     if slotted:
+        # head style 00: the slot crosses the head's raised boss and stops
+        # there — on the sheet's icon it spans ~0.68 of the head, it does not
+        # run out across the rim. Always inside the flat top (>= 0.76*head_d).
         slot = (
             cq.Workplane("XY")
-            .box(head_d + 2.0, head_d * 0.14, head_h * 0.55)
+            .box(head_d * 0.70, head_d * 0.14, head_h * 0.55)
             .translate((0.0, 0.0, head_h))
         )
         head = head.cut(slot)
-    # the compressed sealing washer under the rim (the sheet's 0.5)
-    head = head.union(
-        cq.Workplane("XY").circle(head_d / 2.0 - 0.4).extrude(-WASHER_T)
-    )
     # double-D body: circle with two parallel flats (across-flats = afl)
     body = cq.Workplane("XY").circle(body_d / 2.0).extrude(-housing_l)
     flats = cq.Workplane("XY").box(afl, body_d + 4.0, 2.0 * housing_l + 4.0)
@@ -143,7 +148,7 @@ def _cam(cam_l, cam_w, cam_t, tip_flat, rise, r_hub, body_d):
     r_tip = 0.22 * cam_w
 
     # ── plan footprint ───────────────────────────────────────────────────────
-    r_neck, cx = cam_neck(cam_l, cam_w, r_hub)
+    r_neck, cx = cam_neck(cam_l, cam_w, tip_flat, r_hub)
     k = r_hub / (r_hub + r_neck)
     t1u = (cx * k, (half + r_neck) * k)
     t1l = (t1u[0], -t1u[1])
@@ -184,12 +189,17 @@ def _cam(cam_l, cam_w, cam_t, tip_flat, rise, r_hub, body_d):
     run = max(0.5, min(1.6 * rise + cam_t, cam_step_run(cam_l, tip_flat, body_d)))
     x_foot = x_step - run                           # inboard foot of the step
     x_lo, x_hi = -(r_hub + 1.0), cam_l + 1.0
+    # the back face is offset PERPENDICULAR to each segment, not vertically:
+    # a vertical offset would thin the sloped leg to cam_t*cos(angle) and the
+    # part would stop being the constant-thickness section cam_t is declared as
+    leg = math.hypot(run, rise)
+    back = cam_t * (leg - run) / rise
     side = (
         cq.Workplane("XZ")
         .moveTo(x_lo, 0.0)
         .lineTo(x_foot, 0.0).lineTo(x_step, rise).lineTo(x_hi, rise)
-        .lineTo(x_hi, rise - cam_t).lineTo(x_step, rise - cam_t)
-        .lineTo(x_foot, -cam_t).lineTo(x_lo, -cam_t)
+        .lineTo(x_hi, rise - cam_t).lineTo(x_step + back, rise - cam_t)
+        .lineTo(x_foot + back, -cam_t).lineTo(x_lo, -cam_t)
         .close()
         .extrude(cam_w + 4.0)
         .translate((0.0, half + 2.0, 0.0))
@@ -200,6 +210,16 @@ def _cam(cam_l, cam_w, cam_t, tip_flat, rise, r_hub, body_d):
     return cam.cut(
         cq.Workplane("XY").circle(SCREW_D / 2.0 + 0.2)
         .extrude(rise + cam_t + 6.0).translate((0.0, 0.0, -cam_t - 3.0))
+    )
+
+
+def _washer(head_d, body_d):
+    """The compressed sealing washer the sheet calls out at 0.5: its own part,
+    between the head underside and the panel, not a step on the housing."""
+    return (
+        cq.Workplane("XY").circle(head_d / 2.0 - 0.4).extrude(-WASHER_T)
+        .cut(cq.Workplane("XY").circle(body_d / 2.0 + 0.25)
+             .extrude(-WASHER_T - 2.0).translate((0.0, 0.0, 1.0)))
     )
 
 
@@ -238,6 +258,7 @@ def build(head_d, head_h, body_d, afl, body_l, grip, cam_l, cam_w, cam_t,
     result = cq.Assembly(name="quarter_turn_cam_latch")
     result.add(_housing(head_d, head_h, body_d, afl, housing_l, slotted),
                name="housing")
+    result.add(_washer(head_d, body_d), name="sealing_washer")
     result.add(_nut(body_d), name="mounting_nut",
                loc=cq.Location((0.0, 0.0, -(WASHER_T + PANEL_T))))
     result.add(_cam(cam_l, cam_w, cam_t, tip_flat, rise, r_hub, body_d), name="cam",
