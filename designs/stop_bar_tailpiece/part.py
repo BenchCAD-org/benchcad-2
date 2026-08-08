@@ -16,18 +16,52 @@ import math
 import cadquery as cq
 
 
+# Section proportions. The sheet dimensions the end view's 12.75 x 18 envelope
+# but not the crown's radius, so its shape is a proportion: LAND is how much of
+# the height stays a flat side face before the crown starts, and BLEND is the
+# fillet radius that carries the side into the crown.
+SECTION_LAND = 0.42          # flat side face, fraction of the height
+SECTION_BLEND = 0.20         # side->crown blend radius, fraction of the depth
+
+
 def _d_section(wp, w, h):
     """One D-shaped closed wire per the sheet's end view: the straight side is
-    the full-depth BOTTOM face (the 18 direction), short edge lands rise at
-    the front and back, and the crown arc sweeps the HEIGHT with its apex on
-    top — the photo's continuous dome from the back edge over to the string
-    holes. Same topology at every station so the loft is clean."""
-    rise = 0.2 * h  # the end view's short ~2.75 edge land under the 12.75 crown
+    the full-depth BOTTOM face (the 18 direction), flat side faces rise at the
+    front and back, and the crown arc sweeps the HEIGHT with its apex on top —
+    the photo's dome from the back edge over to the string holes. Same topology
+    at every station so the loft is clean.
+
+    The side faces run up to SECTION_LAND of the height and are carried into
+    the crown by a blend arc solved to be TANGENT to both, so there is no
+    crease down the length of the bar where they meet. A single arc springing
+    off a short land, as this used to be, left 80% of the height curved and
+    read as a half-round tube in the end view."""
+    # Clamp rather than branch. Every station of the loft has to emit the SAME
+    # six segments: fall back to a different wire on one station and the ruled
+    # loft dies with "BRep_API: command not done", because the ear stations run
+    # at tab height while the centre runs at the full crown.
+    a2 = w / 2.0
+    s = min(h - SECTION_LAND * h, 0.90 * a2)     # crown rise, kept under a2 so
+    z_f = h - s                                  # the crown stays flatter than
+    r_b = min(SECTION_BLEND * w, 0.45 * s, 0.45 * a2)   # the blend it carries
+    # tangent-circle solve; (a2 - s)^2 > 0 guarantees r_c > a2 > r_b
+    r_c = ((a2 - r_b) ** 2 + s ** 2 - r_b ** 2) / (2.0 * (s - r_b))
+    ccz = h - r_c                                # crown centre, on the axis
+    cby, cbz = a2 - r_b, z_f                # blend centre, +Y side
+    dy, dz = cby, cbz - ccz
+    dl = math.hypot(dy, dz) or 1.0
+    ty, tz = r_c * dy / dl, ccz + r_c * dz / dl  # blend <-> crown tangency
+    a0 = 0.0                                     # blend arc, from the side face
+    a1 = math.atan2(tz - cbz, ty - cby)
+    am = 0.5 * (a0 + a1)
+    my, mz = cby + r_b * math.cos(am), cbz + r_b * math.sin(am)
     return (
-        wp.moveTo(-w / 2.0, 0.0)
-        .lineTo(-w / 2.0, rise)
-        .threePointArc((0.0, h), (w / 2.0, rise))
-        .lineTo(w / 2.0, 0.0)
+        wp.moveTo(-a2, 0.0)
+        .lineTo(-a2, z_f)
+        .threePointArc((-my, mz), (-ty, tz))     # blend, tangent to the side
+        .threePointArc((0.0, h), (ty, tz))       # crown, apex on the axis
+        .threePointArc((my, mz), (a2, z_f))
+        .lineTo(a2, 0.0)
         .close()
     )
 
