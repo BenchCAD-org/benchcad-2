@@ -219,49 +219,62 @@ def _tangent(px, pz, cx, cz, r, side):
     return cx + r * math.cos(t), cz + r * math.sin(t)
 
 
-def _body_wire(wp, x_sh, z_top, x_pin, z_pin, r_lobe, w_base, z_base):
-    """The datasheet's body outline: flat top face, sloped flanks running
-    tangentially into a round lobe at each pin, and a flat base.
+def _body_wire(wp, z_top, x_pin, z_pin, r_lobe, w_base, z_base):
+    """The body outline as the manufacturer's own STEP model has it: a flat top
+    face TANGENT TO THE TOP OF EACH PIN LOBE, the lobe arc from there round to
+    a tangency with the sloped flank, and a flat base.
 
-    This is NOT a ring with a tang hung off it and it is NOT a plain trapezoid.
     The two widest points of the casting are the LOBES, they sit BELOW the tube
     centre, and the 107 overall width is measured from the left lobe across to
-    the tab tip. Modelling the corners as sharp fillets at tube-centre height
-    put the silhouette 13 mm narrow and made the part read as a box."""
-    tr_t = _tangent(x_sh, z_top, x_pin, z_pin, r_lobe, -1)      # upper tangency
-    tr_b = _tangent(w_base, z_base, x_pin, z_pin, r_lobe, +1)   # lower tangency
+    the closure-tab tip. There is no separate "shoulder corner": the top face
+    ends exactly at x = x_pin, where it meets the lobe tangentially, so the
+    whole upper outline is one G1 curve."""
+    tr_b = _tangent(w_base, z_base, x_pin, z_pin, r_lobe, +1)   # flank tangency
     out = (x_pin + r_lobe, z_pin)                               # lobe apex
-    return (wp.moveTo(-x_sh, z_top)
-            .lineTo(x_sh, z_top)
-            .lineTo(*tr_t)
+    return (wp.moveTo(-x_pin, z_top)
+            .lineTo(x_pin, z_top)
             .threePointArc(out, tr_b)
             .lineTo(w_base, z_base)
             .lineTo(-w_base, z_base)
             .lineTo(-tr_b[0], tr_b[1])
-            .threePointArc((-out[0], out[1]), (-tr_t[0], tr_t[1]))
+            .threePointArc((-out[0], out[1]), (-x_pin, z_top))
             .close())
 
 
-def _strap_wire(wp, r_i, r_out, x_sh, z_top, z_tab_lo, z_tab_hi, x_tab, r_nose):
-    """The closure strap: a band on the barrel that runs out into the flat tab.
+def _strap_wire(wp, r_i, r_out, x_pin, z_pin, r_lobe, z_tab_lo, z_tab_hi,
+                x_tab, r_nose):
+    """The closure strap, hinge knuckle included, as one profile.
 
-    Bounded below by the bore (which is where it grips) from the hinge end
-    round to where the tab underside leaves the tube, and above by a straight
-    taper off the hinge end onto the r_out crown arc and then the tab's flat
-    top. The old model put a 30 x 50 x 20 rectangular BLOCK here; the real
-    closure is a cantilevered plate with open air under it, and that gap is the
-    most recognisable thing about the part."""
+    Its hinge end is a FULL round knuckle of radius r_lobe about the hinge pin
+    — the same radius as the body's own lobe, so strap and body finish flush at
+    x = -(x_pin + r_lobe), which is the -X end of the 107. Modelling it as a
+    small stub buried inside the body left the knuckle 4 mm shy of the
+    silhouette and gave the joint nothing to carry load on.
+
+    That knuckle is externally TANGENT to the barrel bore: x_pin^2 + z_pin^2 =
+    (r_i + r_lobe)^2 holds exactly on the manufacturer's model, so the inner
+    surface runs off the bore straight onto the knuckle with no step. The outer
+    surface is the common external tangent of the knuckle and the r_out crown."""
     a_lo = math.asin(max(-1.0, min(1.0, z_tab_lo / r_i)))       # bore -> tab underside
     a_hi = math.asin(max(-1.0, min(1.0, z_tab_hi / r_out)))     # crown -> tab top
-    t_up = _tangent(-x_sh, z_top, 0.0, 0.0, r_out, -1)          # taper off the hinge end
-    a_up = math.atan2(t_up[1], t_up[0])
-    a_crown = 0.5 * (a_up + a_hi)
-    x_jaw = math.sqrt(max(r_i ** 2 - z_top ** 2, 1e-9))
-    a_end = math.atan2(z_top, -x_jaw)
-    a_bore = 0.5 * (a_end + a_lo)
+    ct = (-x_pin, z_pin)
+    # common external tangent of the knuckle (ct, r_lobe) and the crown (0, r_out)
+    dx, dz = -ct[0], -ct[1]
+    dl = math.hypot(dx, dz)
+    an = math.atan2(dz, dx) + math.acos(
+        max(-1.0, min(1.0, -(r_out - r_lobe) / dl)))
+    nx, nz = math.cos(an), math.sin(an)
+    t_lobe = (ct[0] + r_lobe * nx, ct[1] + r_lobe * nz)
+    t_out = (r_out * nx, r_out * nz)
+    # the bore and the knuckle touch here — one point, no step
+    p_t = (ct[0] * r_i / (r_i + r_lobe), ct[1] * r_i / (r_i + r_lobe))
+    a_bore = 0.5 * (math.atan2(p_t[1], p_t[0]) + a_lo)
+    a_kn = math.atan2(t_lobe[1] - ct[1], t_lobe[0] - ct[0])     # around the OUTSIDE
+    a_pt = math.atan2(p_t[1] - ct[1], p_t[0] - ct[0])
+    m_kn = 0.5 * (a_kn + (a_pt + 2.0 * math.pi))
+    a_crown = 0.5 * (an + a_hi)
     k = 0.7071 * r_nose
-    return (wp.moveTo(-x_sh, z_top)
-            .lineTo(-x_jaw, z_top)
+    return (wp.moveTo(*p_t)
             .threePointArc((r_i * math.cos(a_bore), r_i * math.sin(a_bore)),
                            (r_i * math.cos(a_lo), r_i * math.sin(a_lo)))
             .lineTo(x_tab - r_nose, z_tab_lo)
@@ -272,7 +285,10 @@ def _strap_wire(wp, r_i, r_out, x_sh, z_top, z_tab_lo, z_tab_hi, x_tab, r_nose):
                            (x_tab - r_nose, z_tab_hi))
             .lineTo(r_out * math.cos(a_hi), z_tab_hi)
             .threePointArc((r_out * math.cos(a_crown), r_out * math.sin(a_crown)),
-                           t_up)
+                           t_out)
+            .lineTo(*t_lobe)
+            .threePointArc((ct[0] + r_lobe * math.cos(m_kn),
+                            ct[1] + r_lobe * math.sin(m_kn)), p_t)
             .close())
 
 
@@ -306,72 +322,67 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     d2, d3, e_span, h_nut, m_boss, g1, g2, r1, r4 = _din315d(bolt_d)
     w_d1, w_d2, w_h = _std_row(_ISO7089, bolt_d)     # plain washer
     n_s, n_m = _std_row(_ISO4032, bolt_d)            # hexagon nut
-    pin_d = max(5.0, 0.5 * hang_d)               # hinge / pivot roll pin Ø
+    pin_d = 0.75 * hang_d                        # ISO 8752 spring pin, Ø9.5 at Ø12.7
     fit = 0.15                                   # radial pin clearance
 
-    # ── the datasheet front view, normalised on the barrel radius ────────────
-    # (pixel readings at Ø51 in NOTES.md: pins ±34.1 at z=-12.0, lobes r 12.5,
-    #  top face z=+2.9 out to x=39.7, base half-width 25.5, tab tip +60.1)
-    z_top = 0.113 * r_i                          # body top face, just over centre
-    x_pin = max(1.337 * r_i, r_i + 0.5 * pin_d + 2.0)
-    z_pin = -0.471 * r_i
-    r_lobe = max(0.490 * r_i, 0.55 * pin_d + 3.0)
+    # ── proportions read off the manufacturer's own STEP model ───────────────
+    # (T57000-T57010.step; every ratio below is one of its exact dimensions
+    #  divided by the Ø50.8 bore radius — see NOTES.md)
+    x_pin = 1.3780 * r_i                         # 35.00 : pin centres
+    r_lobe = 0.4724 * r_i                        # 12.00 : the round pin lobe
+    # The lobe is externally TANGENT to the barrel bore — x_pin^2 + z_pin^2 =
+    # (r_i + r_lobe)^2 holds to 4 decimals on the STEP model. Deriving z_pin
+    # from it instead of carrying an independent ratio keeps the joint on the
+    # bore at every sampled row, which is what makes strap and body finish
+    # flush instead of stepping.
+    z_pin = -math.sqrt(max((r_i + r_lobe) ** 2 - x_pin ** 2, 1e-9))   # -13.18
+    z_top = z_pin + r_lobe                       # -1.18 : top face, tangent to the lobe
     t_strap = 1.35 * wall_t                      # strap thickness over the crown
-    r_out = r_i + t_strap
-    x_sh = max(1.557 * r_i, r_out + 2.0)         # top face outer corner
-    w_base = 1.00 * r_i                          # base half-width
+    r_out = r_i + t_strap                        # 35.40 at the anchor wall
+    w_base = 0.9843 * r_i                        # 25.00 : base half-width
     z_base = -float(base_drop)
-    # Tab top face. The nut boss reaches inboard to x_pin - d2/2, so the tab has
-    # to have STARTED by there — otherwise the boss lands on the crown arc and
-    # the nut interpenetrates the strap on the thick-wall rows (the crown is
-    # higher than the tab, which is what the datasheet shows too).
+    x_slot = 0.6862 * r_i                        # 17.43 : inboard end of both slots
+    z_slot = -1.1720 * r_i                       # -29.77 : floor of both slots
+    # Tab top face. The washer/nut boss reaches inboard to x_pin - d/2, so the
+    # tab has to have STARTED by there — otherwise it lands on the crown arc
+    # and the stack interpenetrates the strap on the thick-wall rows.
     x_nut_in = max(x_pin - max(d2, w_d2) / 2.0 - 0.8, 0.1)
     z_clear = math.sqrt(max(r_out ** 2 - x_nut_in ** 2, 0.0)) + 0.4
-    z_tab_hi = min(max(1.122 * r_i, z_clear), 0.93 * r_out)   # tab top face
+    z_tab_hi = min(max(1.0524 * r_i, z_clear), 0.93 * r_out)   # 26.73 : tab top
     z_tab_lo = max(z_tab_hi - lug_h, 0.30 * r_i)  # tab underside
-    x_tab = 2.36 * r_i                           # tab tip -> the +X end of 107
-    r_nose = 0.11 * r_i
-    ear_w = 0.22 * body_w                        # one outer ear, each pin
-    tongue_w = body_w - 2.0 * ear_w - 0.6        # strap tongue (0.3 gap a side)
-    eye_w = min(0.30 * body_w, tongue_w - 2.0)   # bolt eye
-    r_eye = pin_d / 2.0 + 0.26 * bolt_d + 1.4
-    r_tongue = 0.62 * r_lobe
+    x_tab = 2.3657 * r_i                         # 60.09 : tab tip, the +X end of 107
+    r_nose = 0.1575 * r_i                        # 4.00 : tab nose
+    z_band = 0.0602 * r_i                        # 1.53 : below this the strap
+    tongue_w = 0.5600 * body_w                   # 28.00 : narrows to the tongue
+    pocket_w = 0.5900 * body_w                   # 29.50 : 0.75 clearance a side
+    eye_w = bolt_d                               # 12.00 : eye thickness = thread Ø
+    slot_w = bolt_d + 2.0                        # 14.00 : 1.0 clearance a side
+    r_eye = 0.84 * bolt_d                        # 10.10 : eye outer radius
 
-    def hinge_tongue(width, grow):
-        """The strap's downward tongue at the hinge, and (grown) the pocket the
-        body must give up for it: a boss around the pin plus the neck up to the
-        top face."""
-        boss = _y_cyl(-x_pin, 0.0, width, r_tongue + grow).translate((0.0, 0.0, z_pin))
-        x0, x1 = -x_sh, -x_pin + r_tongue + grow
-        # the neck runs 0.8 PAST the top face so the tongue lands inside the
-        # strap: an exactly coplanar join there makes the fuse drop a body
-        neck = _y_slab((x0 + x1) / 2.0, 0.0, z_pin, x1 - x0, width,
-                       z_top - z_pin + 0.8 + grow)
-        return boss.union(neck.val())
+    def joint_slot(sign, width):
+        """The slot each joint swings in: milled straight in from the outside
+        face, |x| >= x_slot, down to z_slot, open through the top.
 
-    def pivot_pocket(width, grow):
-        """The slot the eyebolt swings in: a boss clearance around the pivot
-        pin plus the channel the shank rises through to the top face."""
-        boss = _y_cyl(x_pin, 0.0, width, r_eye + grow).translate((0.0, 0.0, z_pin))
-        x0, x1 = x_pin - r_eye - grow, max(x_sh, x_pin + r_eye + grow) + 1.0
-        neck = _y_slab((x0 + x1) / 2.0, 0.0, z_pin, x1 - x0, width,
-                       z_top - z_pin + 0.8 + grow)
-        return boss.union(neck.val())
+        The STEP model cuts both joints this way — a full-depth clevis, not the
+        small closed pocket this part used to have. On the hinge side it is
+        what lets the strap's knuckle sit flush with the body's lobe; on the
+        pivot side it is what lets the eyebolt swing right out of the casting
+        instead of jamming on its own lobe after 20 degrees."""
+        x0 = sign * x_slot
+        x1 = sign * (x_pin + r_lobe + 4.0)
+        return _y_slab((x0 + x1) / 2.0, 0.0, z_slot, abs(x1 - x0), width,
+                       z_top - z_slot + 4.0)
 
     # ── 1. lower shell ───────────────────────────────────────────────────────
     lower = _y_prism(
-        lambda wp: _body_wire(wp, x_sh, z_top, x_pin, z_pin, r_lobe, w_base, z_base),
+        lambda wp: _body_wire(wp, z_top, x_pin, z_pin, r_lobe, w_base, z_base),
         body_w,
     )
     lower = lower.cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_i))        # the U-jaw
-    lower = lower.cut(hinge_tongue(tongue_w + 0.6, 0.3).val())    # hinge pocket
-    # the slot has to clear the SHANK as well as the eye: on the 30 mm slimline
-    # body the eye is only 9 wide, and an M10 shank in a 9.8 slot cut into the
-    # casting instead of swinging in it
-    lower = lower.cut(
-        pivot_pocket(max(eye_w + 0.8, bolt_d + 1.4), 0.4).val())   # eyebolt slot
-    for x_c in (-x_pin, x_pin):                                   # roll-pin bores
-        lower = lower.cut(_y_cyl(x_c, 0.0, 2.0 * body_w, pin_d / 2.0 + fit)
+    lower = lower.cut(joint_slot(-1.0, pocket_w).val())           # hinge clevis
+    lower = lower.cut(joint_slot(+1.0, slot_w).val())             # eyebolt clevis
+    for x_c in (-x_pin, x_pin):                                   # spring-pin bores
+        lower = lower.cut(_y_cyl(x_c, 0.0, 2.0 * body_w, pin_d / 2.0)
                           .translate((0.0, 0.0, z_pin)).val())
 
     if stud:
@@ -391,18 +402,18 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
         if srings is not None:
             lower = lower.union(srings)
     else:
-        # The sheet's fixing is VERTICAL: a Ø12.7 bore drilled 16 up from the
-        # base face into the captive-nut window, so the M12 hangs the fixture
-        # from below and threads into the nut sitting in the window. The window
-        # is `tang_t` (19) wide ACROSS the clamp and open along the tube — the
-        # two solid lines the sheet dimensions its 19 to — because 19 is the
-        # A/F of the M12 nut and those walls are what stop it spinning.
-        z_hole = z_base + 1.26 * hang_d              # sheet's 16 at hang_d 12.7
-        # capped 1.5 mm short of the jaw: on the deep-tang rows a full-height
-        # window would break through into the barrel bore
-        win_h = min(0.82 * tang_t, (-r_i - 1.5) - z_hole)
+        # The fixing is VERTICAL: a Ø12.7 bore up from the base face into the
+        # captive-nut window, so the M12 hangs the fixture from below and
+        # threads into the nut sitting in the window. On the STEP model that
+        # bore is 19.0 = 1.5 * Ø12.7 deep, and the window above it runs ALL THE
+        # WAY UP INTO THE JAW — its top edge lies exactly on the barrel bore,
+        # which is how you see it looking down into the trough on the real
+        # part. Leaving a floor between window and jaw, as this part used to,
+        # closes the pocket the nut is dropped into.
+        z_hole = z_base + 1.5 * hang_d
         lower = lower.cut(
-            _y_slab(0.0, 0.0, z_hole, tang_t, body_w + 2.0, win_h).val()
+            _y_slab(0.0, 0.0, z_hole, tang_t, body_w + 2.0,
+                    (-r_i) - z_hole + 0.1).val()
         )
         lower = lower.cut(
             cq.Workplane("XY").circle(hang_d / 2.0)
@@ -412,18 +423,27 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
 
     # ── 2. upper shell — the closure strap + tab ─────────────────────────────
     upper = _y_prism(
-        lambda wp: _strap_wire(wp, r_i, r_out, x_sh, z_top,
+        lambda wp: _strap_wire(wp, r_i, r_out, x_pin, z_pin, r_lobe,
                                z_tab_lo, z_tab_hi, x_tab, r_nose),
         body_w,
     )
-    upper = upper.union(hinge_tongue(tongue_w, 0.0).val())
+    # Below z_band the strap narrows to the tongue that goes into the body's
+    # clevis; above it, it is the full body width. One profile, then the two
+    # side slabs taken off the bottom of it -- which is how the STEP model has
+    # it, and it keeps the knuckle a single continuous piece with the band.
+    for sy in (1.0, -1.0):
+        upper = upper.cut(
+            _y_slab(0.0, sy * (tongue_w + body_w) / 4.0,
+                    z_pin - r_lobe - 4.0,
+                    4.0 * x_tab, (body_w - tongue_w) / 2.0,
+                    z_band - (z_pin - r_lobe) + 4.0).val())
     upper = upper.cut(_y_cyl(0.0, 0.0, body_w + 2.0, r_i).val())   # keep the barrel clear
     # the tab's slot is OPEN at +X: that is how the eyebolt swings clear and
     # the clamp comes off the barrel
     upper = upper.cut(
-        _y_slab((x_pin - bolt_d / 2.0 - 0.7 + x_tab + 2.0) / 2.0, 0.0,
+        _y_slab((x_pin - bolt_d / 2.0 - 1.0 + x_tab + 2.0) / 2.0, 0.0,
                 z_tab_lo - 1.0,
-                (x_tab + 2.0) - (x_pin - bolt_d / 2.0 - 0.7), bolt_d + 1.4,
+                (x_tab + 2.0) - (x_pin - bolt_d / 2.0 - 1.0), slot_w,
                 lug_h + 2.0).val()
     )
     upper = upper.cut(_y_cyl(-x_pin, 0.0, 2.0 * body_w, pin_d / 2.0 + fit)
@@ -449,7 +469,7 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     z_bolt_top = z_n0 + m_boss + 0.35 * bolt_d
     r_minor = bolt_d / 2.0 - 0.61 * pitch
     # built in the assembly's own Z (eye on the pivot line), placed by x only
-    bolt = _y_cyl(0.0, 0.0, eye_w, r_eye - 0.6).translate((0.0, 0.0, z_pin))
+    bolt = _y_cyl(0.0, 0.0, eye_w, r_eye).translate((0.0, 0.0, z_pin))
     bolt = bolt.union(
         cq.Workplane("XY").circle(bolt_d / 2.0).extrude(z_tab_hi - z_pin)
         .translate((0.0, 0.0, z_pin)))           # plain shank up through the slot

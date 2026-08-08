@@ -15,7 +15,67 @@ Riggatec / Global Truss / Kupo equivalents.
 | 16 | depth of that bore, base face up to the window floor | `1.26 * hang_d` = 16.0 at Ø12.7 | derived |
 | 19 | captive-nut window width ACROSS the clamp — and therefore the A/F of the M12 nut it traps | drawing | `tang_t` |
 | 107 | overall width = left lobe + closure-tab tip | **106.77** measured on the anchor row; asserted by `check()` | derived |
-| 116 | overall height = base face to the TOP OF THE WING NUT, clamp shut | **118.61** on the anchor row — see "the nut stack" below for the 2.6 | derived |
+| 116 | overall height = base face to the TOP OF THE WING NUT, clamp shut | **116.84** on the anchor row (STEP: 115.97) | derived |
+
+### The manufacturer's own 3D model is the primary source
+
+Doughty publish a STEP model of this exact product code alongside the data
+sheet: `T57000-T57010.step`, linked from
+<https://doughty-engineering.co.uk/products/doughty-half-coupler/>. It is a
+SolidWorks export and it is the primary source for the geometry below; the
+front view is now only a cross-check. It is NOT redistributed in this repo —
+only measurements taken from it are recorded here.
+
+It contains **eight solids**, the same eight this family builds, and its
+envelope is **107.09 x 50.00 x 115.97** against the sheet's 107 / 50 / 116.
+Barrel bore is **r 25.400** (Ø50.8 = 2 in). Ratios below are its exact
+dimensions divided by that radius, with the origin on the barrel axis:
+
+| feature | STEP | ratio | code |
+|---|---|---|---|
+| pin centres | x = ±35.00, z = −13.18 | 1.3780 r_i | `x_pin`, `z_pin` |
+| pin lobe | r = 12.00 | 0.4724 r_i | `r_lobe` |
+| body top face | z = **−1.18** | = `z_pin + r_lobe` | `z_top` |
+| body extremities | x = ±47.00 | = `x_pin + r_lobe` | — |
+| base face | z = −56.40, x = ±25.00 | 0.9843 r_i | `w_base` |
+| both joint slots | inboard end x = ±17.43, floor z = −29.77 | 0.6862 / −1.1720 r_i | `x_slot`, `z_slot` |
+| hinge slot / strap tongue | 29.50 / 28.00 wide | 0.59 / 0.56 body_w | `pocket_w`, `tongue_w` |
+| pivot slot / bolt eye | 14.00 / 12.00 wide | `bolt_d + 2` / `bolt_d` | `slot_w`, `eye_w` |
+| bolt eye outer | r = 10.10 | 0.84 bolt_d | `r_eye` |
+| spring pin | body bore Ø9.50, tongue bore Ø10.0, length 44.5 | 0.75 hang_d | `pin_d` |
+| strap outer | r = 35.40 (10.0 thick) | 1.35 wall_t | `r_out` |
+| tab tip / nose | x = 60.09, r = 4.00 | 2.3657 / 0.1575 r_i | `x_tab`, `r_nose` |
+| tab top face | z = 26.73 | 1.0524 r_i | `z_tab_hi` |
+| captive-nut window | x = ±9.62, z −37.40 up to the bore, through | `tang_t` | window |
+| Ø12.7 fixing bore | z −56.40 → −37.40, i.e. **19.0 deep** | 1.5 hang_d | `hang_d` |
+| washer / hex nut / wing nut | Ø24.0×2.3 / 18.3 A/F / 46.5 span × 20.6 tall | — | see below |
+
+**The lobe is externally tangent to the barrel bore.** On the STEP model
+`x_pin² + z_pin² = (r_i + r_lobe)²` holds to four decimals, and the tangency
+point (−23.77, −8.95) is an actual vertex of both the bore face and the lobe
+face. That is not a coincidence of one row — it is the design relation that
+makes strap and body finish flush. `part.py` therefore derives `z_pin` from it
+rather than carrying an independent ratio, and `z_top` from `z_pin + r_lobe`.
+
+**Three things this corrected**, all of them functional rather than cosmetic:
+
+1. **Both joints are full-depth clevises**, milled straight in from the outside
+   face down to z = −29.77 and open through the top — not the small closed
+   pockets this part had. On the hinge side that is what lets the strap's
+   knuckle be a FULL disc of radius `r_lobe` about the pin, flush with the
+   body's own lobe at x = −47.00, instead of a 7.75-radius stub buried 4 mm
+   inside the silhouette with nothing to carry load on. On the pivot side it is
+   what lets the eyebolt swing right out of the casting; the old pocket stopped
+   at x = 39.7 while the lobe ran to 46.6, so the bolt jammed on the body's own
+   lobe after about 20°, and the clamp could not be opened.
+2. **The captive-nut window runs all the way up into the jaw** — its top edge
+   lies exactly on the barrel bore (at x = ±9.62 the bore is at z = −23.51,
+   and the window's walls end at −23.50). The old version left a 1.5 mm floor
+   between window and jaw, which closes the pocket the nut is dropped into.
+3. **The Ø12.7 fixing bore is 19.0 deep**, = 1.5 × Ø12.7, not the 16 the sheet
+   dimensions. The sheet and the STEP disagree here by 3 mm; every other
+   dimension they share agrees, so this is recorded as a conflict rather than
+   averaged, and the code follows the STEP.
 
 ### Front view, measured off the sheet
 
@@ -117,8 +177,10 @@ stack is to scale.
 This model therefore runs **M8/M10**, because a DIN 315-D M12 wing nut spans
 63.5 and puts the envelope at 112.4 — outside the 107 outline. The consequence
 is recorded rather than hidden: with a standard-conformant stack the anchor row
-stands **118.6 mm** tall against the catalog's **116**, the 2.6 being DIN 315-D
-M10's h = 24 versus the ~19.6 nut the sheet draws. Overall width is unaffected.
+stands **116.8 mm** tall against the catalog's **116**. The STEP model settles the
+wing-nut question: its wing nut is **46.5 across x 20.6 tall**, which is not
+any DIN 315-D row — so Doughty's closure nut is simply not a DIN 315 part, and
+the M8/M10 restriction here is a modelling compromise, not a catalog fact.
 
 ISO 4032 s/m and ISO 7089 d1/d2/h were read off
 [fasteners.eu](https://www.fasteners.eu/standards/iso/4032/) and
