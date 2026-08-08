@@ -97,7 +97,8 @@ PARAM_SPEC = {
         "source": "catalogue dimension G",
     },
     "bow_height_H": {
-        "desc": "shackle bow height, pin axis to the outside of the crown, symbol H",
+        "desc": "shackle throat: clear opening under the bolt down to the inside of "
+                "the bow crown, symbol H — same lower datum as D",
         "unit": "mm",
         "refine": True,
         "range": {"easy": (88.0, 88.0), "medium": (40.0, 88.0), "hard": (40.0, 88.0)},
@@ -107,8 +108,19 @@ PARAM_SPEC = {
         "desc": "swing of the opening side plate about the centre pin; 0 is closed",
         "unit": "deg",
         "range": {"easy": (0.0, 0.0), "medium": (0.0, 30.0), "hard": (0.0, 75.0)},
-        "source": "operating state; the catalogue states the opening feature admits "
-                  "rope without reeving but does not dimension the swing (proportion)",
+        "source": "operating state; the McKissick Snatch Blocks manual p.12 gives the "
+                  "motion (pull the hitch pin, unscrew the upper bolt, the plate "
+                  "rotates on the centre pin) but does not dimension the swing "
+                  "(proportion)",
+    },
+    "swivel_angle": {
+        "desc": "rotation of the shackle fitting about the block axis in the swivel; "
+                "0 puts the bow in the plane of the side plates",
+        "unit": "deg",
+        "range": {"easy": (0.0, 0.0), "medium": (0.0, 90.0), "hard": (0.0, 180.0)},
+        "source": "operating state; the fitting swivels freely (Crosby: forged steel "
+                  "swivel tees and yokes, fitting-to-case clearance .031-.062 in) and "
+                  "the catalogue photographs show it at every angle (proportion)",
     },
     "roller_bearing": {
         "desc": "0 = bronze bushing (catalogue code BB), 1 = roller bearing (code RB)",
@@ -129,7 +141,35 @@ _ROW_KEYS = ("sheave_d", "head_w_B", "cheek_w_C", "pin_to_throat_D",
 _PLATE_T = 0.10
 _SIDE_CLR = 2.0
 _GROOVE_DEPTH_FACTOR = 1.5
-_TANG_FRACTION = 0.55
+_PIN_TO_CHEEK = 0.30
+_BOLT_TO_CHEEK = 0.26
+_BOSS_TO_BOLT = 0.95
+_EYE_TO_BOLT = 1.05
+_CASE_FOOT = 1.15
+_NECK = 0.35
+_PLATE_REACH = 0.36
+_SHEAVE_GAP = 4.0
+_BOLT_TO_BAR = 1.13
+_TEE_TO_BOLT = 0.95
+_RACE_BB = 0.12
+
+
+def _stack(p):
+    """The fitting stack part.py builds, so check() can constrain it.
+
+    Returns (hook bolt axis, shackle bolt axis, case foot centre) as z below the
+    centre pin, all negative.
+    """
+    bolt_d = _BOLT_TO_CHEEK * p["cheek_w_C"]
+    tail_r = _BOSS_TO_BOLT * bolt_d
+    eye_r = _EYE_TO_BOLT * bolt_d
+    z_bolt = -max(_PLATE_REACH * p["pin_to_throat_D"],
+                  0.5 * p["sheave_d"] + max(tail_r, eye_r) + _SHEAVE_GAP)
+    sb_r = 0.5 * _BOLT_TO_BAR * p["bar_thk_E"]
+    z_sb = -p["pin_to_throat_D"] + p["bow_height_H"] + sb_r
+    tee_r = _TEE_TO_BOLT * 2.0 * sb_r
+    z_foot = z_sb + tee_r + _NECK * bolt_d + _CASE_FOOT * bolt_d
+    return z_bolt, z_sb, z_foot
 
 
 def refine(p, difficulty, rng):
@@ -176,12 +216,15 @@ def check(p):
         bad.append("bow_height_H <= G/2 + E: no straight leg left between the shackle "
                    "pin and the bow crown (anchor shackle proportion)")
 
-    # Metal has to remain under the groove, over the bore.
+    # Metal has to remain under the groove, over the bore.  The bore is set by
+    # the centre pin, which is a load-sized part and so scales with C.
+    pin_d = _PIN_TO_CHEEK * p["cheek_w_C"]
+    bore_d = pin_d + 2.0 * max(2.0, _RACE_BB * pin_d)
     tread_d = p["sheave_d"] - 2.0 * _GROOVE_DEPTH_FACTOR * p["rope_d"]
-    if tread_d <= p["bar_thk_E"] + 12.0:
+    if tread_d <= bore_d + 12.0:
         bad.append("groove bottom reaches the bore: tread diameter %.1f leaves no rim "
-                   "over a %.1f pin (sheave practice, groove depth 1.5 d)"
-                   % (tread_d, p["bar_thk_E"]))
+                   "over a %.1f bore (sheave practice, groove depth 1.5 d)"
+                   % (tread_d, bore_d))
 
     # Two plates plus running clearance have to fit inside C, leaving a sheave
     # wide enough to hold the groove.
@@ -190,8 +233,38 @@ def check(p):
         bad.append("sheave width %.1f is under two rope diameters: the groove will not "
                    "fit inside cheek width C (sheave practice)" % sheave_w)
 
-    # The yoke tang drops between the shackle ears.
-    if _TANG_FRACTION * p["bow_width_G"] >= p["bow_width_G"] - 2.0:
-        bad.append("yoke tang does not clear the shackle bow opening G")
+    # ---- the fitting stack has to close -------------------------------------
+    # These three are what an assembly family owes the reader: every joint in
+    # the load path (bow -> shackle bolt -> tee -> swivel -> case -> hook bolt
+    # -> plates) has to have room to exist, or the fitting is not attached to
+    # the block at all.
+    bolt_d = _BOLT_TO_CHEEK * p["cheek_w_C"]
+    z_bolt, z_sb, z_foot = _stack(p)
+
+    # 1. the swivel case has to be long enough to hold the bolt eye above the
+    #    counterbore its stem head stands in.
+    case_len = z_bolt - z_foot
+    if case_len < 0.725 * bolt_d + 4.0:
+        bad.append("swivel case is %.1f mm between the hook bolt and its foot, under "
+                   "the %.1f mm the bolt eye plus the swivel counterbore need "
+                   "(fitting proportion, NOTES.md)"
+                   % (case_len, 0.725 * bolt_d + 4.0))
+
+    # 2. the hook bolt and the case eye run beside the sheave, so the tail of
+    #    the plate has to clear the rim.  On the big-sheave rows this is what
+    #    pushes the whole fitting down, not D.
+    clear = -z_bolt - 0.5 * p["sheave_d"] - _EYE_TO_BOLT * bolt_d
+    if clear < _SHEAVE_GAP - 1e-6:
+        bad.append("hook bolt sits %.1f mm from the sheave rim, under the %.1f mm the "
+                   "case eye needs to clear it (fitting proportion, NOTES.md)"
+                   % (clear, _SHEAVE_GAP))
+
+    # 3. the tee barrel hangs inside the shackle throat, between the ears.
+    sb_r = 0.5 * _BOLT_TO_BAR * p["bar_thk_E"]
+    tee_r = _TEE_TO_BOLT * 2.0 * sb_r
+    if z_sb - tee_r <= -p["pin_to_throat_D"] + p["bar_thk_E"]:
+        bad.append("swivel tee barrel r=%.1f reaches the shackle crown: the throat is "
+                   "only H = %.0f mm deep under the bolt (anchor shackle proportion)"
+                   % (tee_r, p["bow_height_H"]))
 
     return bad

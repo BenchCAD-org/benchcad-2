@@ -4,15 +4,60 @@ Reference: Crosby *Blocks* catalogue p.326, "Snatch Block with Shackle Fitting,
 Single Sheave, 2–12 t" —
 [imperial](https://kitocrosby.com/wp-content/uploads/2025/07/15_Blocks_326.pdf) ·
 [metric](https://kitocrosby.com/wp-content/uploads/2025/07/15_Blocks_MET_326.pdf).
-Standard cited by the catalogue: **ASME B30.26** (rigging hardware — construction
-and marking requirements; it does not dimension the block).
+Construction, part names and the disassembly order come from the McKissick
+[*Snatch Blocks* manual](https://www.thecrosbygroup.com/wp-content/uploads/2019/07/9999362_Snatch_Blocks_web.pdf)
+— parts reference p.2, disassembly views pp.10–11, disassembly instructions p.12,
+inspection diagram p.13. Standard cited by the catalogue: **ASME B30.26**
+(rigging hardware — construction and marking requirements; it does not dimension
+the block).
+
+## The load path — what actually connects to what
+
+A block is a chain of pinned joints, and the catalogue sheet does not show it;
+the manual does. Reading its disassembly order backwards:
+
+```
+wire rope
+  └ sheave  ── bushing / roller race ── centre pin ─┐
+                                                    ├── both SIDE PLATES
+  shackle bow ── shackle bolt ── swivel TEE         │
+                    └ SWIVEL ── swivel CASE ── HOOK BOLT ┘
+```
+
+Every arrow above is a bore-and-pin pair in `part.py`, with 0.5 mm radial
+clearance. Two members carry the whole fitting load and both are easy to leave
+out, because nothing in the catalogue table names them:
+
+- **hook bolt** (the manual's "upper bolt", parts ref. LS4/SS2). Runs side plate
+  → case → side plate. It is the *only* thing holding the two plates apart at
+  the fitting end, and the only path from the shackle into the block. Manual
+  p.12: a snap ring on its end stops it pulling through the plate, a round
+  retention nut is staked with three stakes, and a hairpin ("hitch pin") keeps
+  the nut from backing off.
+- **swivel case** (Crosby's "yoke"; LS8 is a *Tee and Yoke Assembly*). The lug
+  the hook bolt passes through. Its underside is counterbored, and the tee's
+  headed stem stands in that counterbore — that is the swivel, and it is why the
+  shackle turns freely under a loaded block. The manual's maintenance sheet sets
+  fitting-to-swivel-case clearance at **.031–.062 in** at the factory, which is
+  where the model's 1 mm end float comes from.
+
+The **tee** is a tee: a cross barrel pierced by the shackle bolt, with a vertical
+stem rising into the case. The hook version of the same block (McKissick 418)
+deletes the tee and puts the hook's own shank in the same case — which is why
+Crosby sells the hook and the shackle each *with* a yoke.
+
+Opening the block, manual p.12 step 2, verbatim: *"Remove hitch pin and unscrew
+the upper bolt allowing the side plate to rotate on the center pin and swing out
+of the way."* So `open_angle` is a rotation about the **centre pin**, and the
+hook bolt is modelled as withdrawn from the swing plate whenever `open_angle > 0`
+— the plate cannot turn while the bolt is through it.
 
 ## Frame
 
 The centre pin is the origin, because every catalogue dimension is anchored to
 it. The sheave axis is **Y**, the block hangs down **−Z**, the side plates lie in
-**XZ**, and the shackle bow is a semicircle in that same plane with its pin along
-**X**. `base_plane` is `XZ`.
+**XZ**, and at `swivel_angle = 0` the shackle bow is a semicircle in that same
+plane with its bolt along **X**. `base_plane` is `XZ`.
 
 ## Symbol map
 
@@ -20,12 +65,17 @@ it. The sheave axis is **Y**, the block hangs down **−Z**, the side plates lie
 |---|---|---|
 | A | overall height | not a parameter — see the identity below |
 | B | side plate head width | `head_w_B`, the plate crown diameter; the pin sits `B/2` under the crown |
-| C | width across the cheeks | `cheek_w_C`; sets plate thickness and sheave width |
+| C | width across the cheeks | `cheek_w_C`; sets plate thickness, sheave width, **and every load-carrying pin** |
 | D | centre pin to the bottom of the shackle throat | `pin_to_throat_D` |
-| E | shackle bar / fitting thickness | `bar_thk_E`; also the pin diameter |
+| E | shackle bar / fitting thickness | `bar_thk_E`, the bow bar diameter |
 | F | fitting thickness at the bottom of the front view | not modelled separately — equal to E on every row of this table |
 | G | shackle bow inside width | `bow_width_G` |
-| H | shackle bow height, pin axis to the outside of the crown | `bow_height_H` |
+| H | shackle throat: clear opening under the bolt, down to the inside of the crown | `bow_height_H` |
+
+H and D share a lower datum. On the catalogue sheet both dimension lines land on
+the same extension line at the inside of the bow crown, and H's upper arrow lands
+on the underside of the shackle bolt — so the bolt axis is `H + one bolt radius`
+above the throat, not `H` above the crown.
 
 ## The A = B/2 + D + E identity
 
@@ -56,8 +106,14 @@ the small ones where the printed values are rounded:
 
 So **A is reproduced, not tabulated**: the model builds the stack and the overall
 height falls out. `check()` asserts the identity to 2.5 mm, which would catch a
-mistyped row. The three rows spot-checked in the PR body come out at 481.0,
-236.0 and 695.5 mm against printed 481, 235 and 695.
+mistyped row.
+
+Measured bounding-box heights land on the identity to 0.0 mm on twelve of the
+thirteen rows. The exception is the 4 t row, and it is not an error: there the
+sheave radius (57) is larger than `B/2` (54), so the **sheave rim** is the top of
+the bounding box, not the plate crown, and the model measures 341.0. The printed
+A is 340 — between the identity's 338 and the rim's 341. It is the same row that
+broke the old `B ≥ sheave_d` check.
 
 ## The two ladders
 
@@ -69,13 +125,46 @@ catalogue rows pair them:
 - `B` and `D` **move with the sheave** inside a group.
 
 That is why `catalog_index` draws a whole row: picking the dimensions
-independently would produce blocks that do not exist.
+independently would produce blocks that do not exist. It is also why the centre
+pin and the hook bolt are scaled off **C** and not off the sheave — they are
+load-carrying parts, so they belong to the WLL ladder. The scale is calibrated on
+the 8 t block, where `0.30 × C = 31.8 mm` against a real 1¼ in centre pin and
+`0.26 × C = 27.6 mm` against a real 1⅛ in hook bolt.
 
 `B/sheave_d` stays inside **0.94–1.13** across all 13 rows, and it goes both ways
 — on the 4 t row (sheave 114, B 108) the sheave rim stands proud of the plate; on
 the 5 t row (sheave 102, B 114) the plate overhangs the sheave. An earlier
 version of `check()` asserted `B ≥ sheave_d` and rejected the 4 t row, which the
 coverage gate caught. The band is the constraint the catalogue actually holds.
+
+### Where the fitting hangs, and why the big rows differ
+
+The plates reach `0.36 × D` below the pin — the proportion the catalogue sheet
+draws — **except** that the plate's tail boss and the swivel case both sit beside
+the sheave, so on the large-sheave rows the rim pushes the whole fitting further
+down and `0.36 D` stops governing:
+
+| row | 0.36 D | sheave rim + case eye + 4 mm | hook bolt sits at |
+|---|---|---|---|
+| 8 t, sheave 152 | 134.3 | 109.0 | −134.3 (D governs) |
+| 8 t, sheave 203 | 143.3 | 134.5 | −143.3 (D governs) |
+| 8 t, sheave 254 | 153.0 | 160.0 | −160.0 (sheave governs) |
+| 8 t, sheave 305 | 169.6 | 185.5 | −185.5 (sheave governs) |
+| 8 t, sheave 356 | 174.2 | 211.0 | −211.0 (sheave governs) |
+
+The consequence is visible in the renders: on the biggest block the plate is
+nearly circular and the case is long, while on the small ones the plate is a
+long teardrop. `check()` asserts both bounds.
+
+## A caution about the catalogue sheet
+
+The p.326 two-view is **topologically right and dimensionally not to scale.**
+Measured off the raster at full resolution, against B taken as the plate crown
+width: the sheet draws H/B = 0.485 and D/B = 2.12, where the table's own rows run
+0.53–0.58 and 2.43–2.45, and it draws the crown 0.87 × (B/2) above the pin where
+its own A identity requires exactly B/2. Use the sheet for *what connects to
+what* and for the relative placement of parts within it; use the table for
+numbers.
 
 ## Excluded row
 
@@ -85,32 +174,56 @@ this one, and its G and H would not describe a bow.
 
 ## Proportions — everything the catalogue does not publish
 
-The catalogue dimensions the envelope and the shackle. It does not publish the
-groove profile, the plate thickness, the sheave width, or the yoke, so these are
-declared `"proportion"` and listed here for review:
+The catalogue dimensions the envelope and the shackle. It names the fitting parts
+but dimensions none of them, so these are declared `"proportion"` and listed here
+for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 
 | quantity | value | basis |
 |---|---|---|
-| groove bottom radius | `0.53 × rope_d` | wire-rope sheave practice: the groove is cut a little over half the rope diameter so the rope beds without pinching |
+| groove bottom radius | `0.53 × rope_d` | wire-rope sheave practice: cut a little over half the rope diameter so the rope beds without pinching |
 | groove depth | `1.5 × rope_d` | sheave practice: deep enough to hold the rope in the groove |
 | groove flank flare | 20° off radial | shop practice, so the rope enters without catching the lip |
 | plate thickness | `0.10 × C` | proportion — splits C into two plates, the sheave, and running clearance |
-| running clearance | 2 mm each side | proportion |
+| running clearance | 2 mm each side of the sheave | proportion |
 | sheave width | `C(1 − 2×0.10) − 4` | falls out of the two above |
-| plate tail radius | `0.16 × B` | proportion, read off the drawing's teardrop |
-| yoke length |  `1.8 × H` | proportion, set so the plate takes ~60% of the overall height A, matching the catalogue drawing |
-| yoke tang thickness | `0.55 × G` | proportion — the tang must drop between the shackle ears |
-| pin head diameter | `1.6 × pin diameter` | ordinary headed-pin proportion |
-| sheave bore | pin + 1.5 mm (bushing) or + 2.5 mm (roller) | proportion; the catalogue gives only the BB/RB code, not race dimensions |
+| centre pin diameter | `0.30 × C` | load-sized part, so it scales with the WLL ladder; calibrated on the 8 t block (31.8 mm vs a real 1¼ in pin) |
+| hook bolt diameter `d` | `0.26 × C` | same reasoning; 27.6 mm vs a real 1⅛ in bolt |
+| plate tail boss radius | `0.95 d` | lug practice — edge distance about one bolt diameter |
+| hook bolt axis | `max(0.36 D, sheave_r + max(boss, eye) + 4 mm)` below the pin | the first term is read off the sheet, the second is the sheave clearance that governs the big rows |
+| swivel case eye radius | `1.05 d` | lug practice — outside diameter about twice the hole |
+| swivel case foot radius | `1.15 d` | has to house the swivel counterbore |
+| swivel case thickness | plate gap − 1 mm | the case IS the spacer between the plates, so it fills the gap |
+| swivel end float | 1.0 mm | manual, maintenance item 7: fitting-to-swivel-case clearance .031–.062 in |
+| tee stem diameter | `0.85 d` | carries the same load as the bolt, in tension |
+| tee stem head diameter | `1.35 ×` stem | the shoulder that stands in the counterbore |
+| exposed stem length | `0.35 d` | proportion, read off the sheet's neck between the case and the tee |
+| shackle bolt diameter `p` | `1.13 × E` | anchor-shackle practice: Crosby G-2130 runs the bolt one size over the bow (8.5 t: bow 28.7, bolt 32) |
+| tee barrel radius | `0.95 p` | proportion — the barrel stands proud of the shackle ears, as the product photographs show |
+| shackle ear boss radius | `0.72 p` | ordinary shackle-eye proportion |
+| head / nut diameter | `1.6 ×` shank, hex A/F `1.55 ×` shank | ordinary headed-pin proportions |
+| bushing wall / roller race depth | `0.12 ×` pin (BB) or `0.22 ×` pin (RB), min 2 mm | proportion; the catalogue gives only the BB/RB code, not race dimensions |
+| every pin-in-bore clearance | 0.5 mm radial | proportion |
 
-`open_angle` is an operating state, not a dimension: the catalogue says the
-opening feature "permits easy insertion of rope without reeving", but does not
-dimension the swing. It is the block's equivalent of `jaw_open_fraction` in
-`three_jaw_scroll_chuck`.
+### Deliberate simplifications
+
+- The **hairpin (hitch pin) and the shackle cotter are not modelled.** Both are
+  orderable parts (LS5, LS14) and both appear in the sheet and the photographs,
+  but they are ~5 mm bent wire on a block up to 700 mm tall. The bolts they
+  retain are modelled; their retention is not.
+- The **roller-bearing option is one race sleeve of the correct radial depth**,
+  not a cage of rollers. The catalogue rows for BB and RB are identical in every
+  dimension, so the option cannot change the envelope; it changes the sheave
+  bore, and that is what the model changes.
+- The **bow is drawn with parallel legs**, so G is the inside width everywhere.
+  A real forging pears out slightly, with the ears about 0.73 × the crown width
+  (measured off the sheet). G is still the maximum inside width either way.
+
+`open_angle` and `swivel_angle` are operating states, not dimensions. The
+manual gives the motion for both and dimensions neither.
 
 ## CadQuery notes for anyone editing this
 
-Two traps cost a rebuild here and are worth knowing:
+Three traps cost a rebuild here and are worth knowing:
 
 - **`.center()` before `.revolve()`** moves the workplane origin, which drags
   revolve's local axis onto the section's own centre and degenerates the
@@ -120,7 +233,22 @@ Two traps cost a rebuild here and are worth knowing:
   extra zero-length edge makes the revolve return an empty solid, which then
   fails much later as `Bnd_Box is void`. But `revolve` needs a pending wire, so
   dropping `.close()` is not the fix either; `makeTorus` avoids both.
+- **`Workplane("XZ")` extrudes toward −Y and `Workplane("YZ")` toward +X.**
+  Every helper here places its result by the face the extrusion *ends* on, and
+  says so; getting this backwards puts a cutter entirely outside its target and
+  the cut silently does nothing.
 
 The sheave is one revolve of its complete section (bore, side face, flank, arc
 bottom, flank, side face) rather than a cylinder with a groove cut out, so the
 groove needs no boolean at all.
+
+## Probe
+
+`bench2 validate` cannot see interpenetration, and it cannot see a part that is
+attached to nothing — an assembly of ten free-floating solids passes every gate.
+So this family is checked with an explicit pairwise probe over all 13 rows: every
+pair's intersection volume must be 0, and every joint in the load path above must
+have a minimum distance ≤ the fit it is built with. Current result: **0 mm³
+overlap and 0.50 mm at every joint, on all 13 rows, closed and open.** The one
+joint that goes loose is `side_plate_02 | hook_bolt` once `open_angle > 0`, which
+is the bolt being unscrewed — the state the manual describes.
