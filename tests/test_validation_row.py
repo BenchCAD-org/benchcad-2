@@ -17,6 +17,7 @@ from research.bss_validation.row import (
     applicability_class,
     classify_iou,
     combine,
+    combine_penalty,
 )
 
 WEIGHTS = {"iou": 0.25, "topology": 0.25, "edge": 0.25, "face": 0.25}
@@ -117,6 +118,47 @@ class CombineTest(unittest.TestCase):
         light, _ = combine(row, {"iou": 0.1, "topology": 0.3,
                                  "edge": 0.3, "face": 0.3})
         self.assertLess(heavy, light)
+
+
+class PenaltyCompositionTest(unittest.TestCase):
+    """Q_raw = IoU * (S_T^wT * S_E^wE * S_F^wF): structure may only subtract."""
+
+    def test_structure_never_raises_the_geometric_score(self):
+        for iou, topo, edge, face in ((1.0, 1.0, 1.0, 1.0),
+                                      (0.946, 1.0, 0.725, 0.908),
+                                      (0.005, 1.0, 0.9, 0.9),
+                                      (0.474, 0.333, 0.788, 0.774),
+                                      (0.02, 1.0, 0.98, 0.89)):
+            row = _row(iou_raw=iou, iou_status=IouStatus.OK.value,
+                       s_topology=topo, s_edge_global=edge, s_face_global=face)
+            value, status = combine_penalty(row)
+            with self.subTest(iou=iou):
+                self.assertEqual(status, "ok")
+                self.assertLessEqual(value, iou + 1e-12)
+                self.assertGreaterEqual(value, 0.0)
+
+    def test_perfect_structure_retains_the_iou_exactly(self):
+        row = _row(iou_raw=0.63, iou_status=IouStatus.OK.value,
+                   s_topology=1.0, s_edge_global=1.0, s_face_global=1.0)
+        value, _ = combine_penalty(row)
+        self.assertAlmostEqual(value, 0.63, places=12)
+
+    def test_low_overlap_is_not_rescued_by_structure(self):
+        """The failure mode this composition exists to remove."""
+        row = _row(iou_raw=0.005, iou_status=IouStatus.OK.value,
+                   s_topology=1.0, s_edge_global=0.9, s_face_global=0.9)
+        flat, _ = combine(row, WEIGHTS)
+        penalty, _ = combine_penalty(row)
+        self.assertGreater(flat, 0.2)        # the flat mean rescued it
+        self.assertLess(penalty, 0.006)      # this one does not
+
+    def test_na_propagates_strictly(self):
+        row = _row(iou_raw=0.0, iou_status=IouStatus.VALID_ZERO.value,
+                   s_topology=1.0, s_edge_global=1.0, s_face_global=1.0)
+        self.assertEqual(combine_penalty(row), (None, "na:iou"))
+        row = _row(iou_raw=0.9, iou_status=IouStatus.OK.value, s_topology=None,
+                   s_edge_global=1.0, s_face_global=1.0)
+        self.assertEqual(combine_penalty(row), (None, "na:topology"))
 
 
 class ApplicabilityTest(unittest.TestCase):

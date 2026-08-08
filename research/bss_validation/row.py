@@ -259,3 +259,52 @@ def classify_iou(value: float | None, failure: str | None = None) -> tuple[float
     if value == 0.0:
         return 0.0, IouStatus.VALID_ZERO.value
     return value, IouStatus.OK.value
+
+
+STRUCTURAL_COMPONENTS = ("topology", "edge", "face")
+
+DEFAULT_STRUCTURAL_WEIGHTS = {"topology": 1 / 3, "edge": 1 / 3, "face": 1 / 3}
+
+
+def combine_penalty(
+    row: ValidationRow,
+    structural_weights: dict[str, float] | None = None,
+) -> tuple[float | None, str]:
+    """Alternate composition: IoU is the base, structure can only subtract.
+
+    ``Q_raw = IoU_raw * (S_topology^wT * S_edge^wE * S_face^wF)`` with the three
+    structural weights summing to 1, so ``0 <= Q_raw <= IoU_raw`` holds for
+    every applicable case by construction. There is no IoU exponent, no
+    threshold and no piecewise gate.
+
+    The motivation is semantic, not numerical. Under a flat four-way geometric
+    mean a candidate with almost no overlap could be *rescued* by structural
+    similarity — measured, IoU 0.005 reaching 0.212 — which inverts what the
+    structural descriptors are for. They exist to catch defects that overlap
+    misses, not to vouch for geometry that does not overlap.
+
+    Strict N/A propagation is unchanged: any N/A component makes the result
+    N/A, and surviving weights are never renormalized.
+    """
+    app = applicability(row)
+    missing = [k for k in REQUIRED_COMPONENTS if not app.get(k)]
+    if missing:
+        return None, "na:" + ",".join(missing)
+
+    weights = dict(structural_weights or DEFAULT_STRUCTURAL_WEIGHTS)
+    total = sum(weights[k] for k in STRUCTURAL_COMPONENTS)
+    if total <= 0.0:
+        return None, "na:zero_weight"
+
+    values = {
+        "topology": row.s_topology,
+        "edge": row.s_edge_global,
+        "face": row.s_face_global,
+    }
+    structure = 1.0
+    for name in STRUCTURAL_COMPONENTS:
+        value = float(values[name])
+        if value <= 0.0:
+            return 0.0, "ok"
+        structure *= value ** (weights[name] / total)
+    return float(row.iou_raw) * structure, "ok"
