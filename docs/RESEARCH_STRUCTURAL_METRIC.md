@@ -13,7 +13,7 @@ number. `framework/bench2/structural.py` is opt-in and wired into no default.
 
 The freeze covers the *architecture*. It is not a claim that every component is
 implemented here — see [Implementation status](#implementation-status) and
-[Open ambiguities](#open-ambiguities), which are the gate on large-scale
+[Open blockers](#open-blockers), which are the gate on large-scale
 validation.
 
 ## Design principle
@@ -40,8 +40,24 @@ theoretical collision, not grounds to complicate the metric.
 ## Frozen architecture
 
 ### 1. IoU
-Global geometric / occupancy agreement. **Not computed in this repository** —
-see [Open ambiguities](#open-ambiguities).
+Global geometric / occupancy agreement. **Raw IoU**, from the canonical
+benchmark evaluator — voxel IoU on a normalized 64^3 grid, STEP tessellated at a
+fixed 0.05 linear deflection, each shape normalized isotropically (bbox centre
+to 0.5, longest axis to 1), filled and dense-padded to 68^3.
+
+The baseline-relative `norm_iou` is **not** the component. Any benchmark-level
+baseline normalization happens *after* `Q_raw` exists, on the complete score:
+
+```
+Q_benchmark = clip((Q_raw - Q_baseline) / (1 - Q_baseline), 0, 1)
+```
+
+where `Q_baseline` is the complete metric score of the baseline model on that
+case. That outer normalization is not part of the metric definition.
+
+**Not computed in this repository** — supplied by the canonical evaluator.
+Its `0.0`-on-failure behaviour is an infrastructure hazard, see
+[Established limitations](#established-limitations) item 10.
 
 ### 2. Global topology
 Both shapes canonicalized with `ShapeUpgrade_UnifySameDomain`, then reduced to
@@ -73,8 +89,10 @@ normalization valid.
 
 ### 5. Optional spatial refinement (deep inspection)
 
-- Each shape is mapped **independently, from its own bounding box, to the unit
-  cube**. This is load-bearing: a frame shared between the two shapes destroys
+- **Frozen convention:** each shape is mapped **independently**, from its own
+  bounding box, **per-axis**, to the unit cube. Deliberately different from the
+  canonical IoU's isotropic normalization — different components have different
+  jobs and no artificial symmetry is forced between them. This is load-bearing: a frame shared between the two shapes destroys
   uniform-scale invariance (measured: scale x25 scored **0.0000** at levels
   >= 2 under a shared frame, **1.0000** under per-shape frames).
 - Buckets become `(cell, type, normalized measure)`.
@@ -99,9 +117,27 @@ IoU + topology + edge BSS + face BSS under a **weighted geometric mean**, four
 weights summing to 1.
 
 No epsilon and no score floor. A genuine zero in a valid component is allowed to
-zero the product; that represents an extreme mismatch and is not a defect. The
-distinction that must be preserved is **0 (maximally different)** versus
-**N/A (not applicable)** — N/A must never be silently converted to zero.
+zero the product; that represents an extreme mismatch and is not a defect.
+
+**Strict N/A propagation.** If any required component is N/A then `Q_raw` is
+N/A. Surviving weights are **not** renormalized. Renormalization was considered
+and rejected on measurement: dropping a factor is not neutral, because a
+component that usually scores 1.0 pulls the geometric mean *up*. With equal
+weights and identical applicable scores (I .90, E .90, F .90), a single-solid
+case whose topology scores 1.0 reaches **0.9240** while the same case with
+topology N/A reaches **0.9000** — a systematic 0.0240 penalty that grows to
+0.0487 at `w_T = 0.5`, and reverses into a reward when topology would have
+scored badly. Scores across differing applicability sets were therefore not
+comparable.
+
+The distinction preserved is **0 (valid measurement, maximal disagreement)**
+versus **N/A (cannot be validly computed)**. N/A must never be silently
+converted to zero. Individual component scores and diagnostics are still
+reported when `Q_raw` is N/A.
+
+Consequence, accepted deliberately: topology is single-solid scope, so **every
+assembly case yields `Q_raw` = N/A** until an assembly topology definition is
+introduced. One is not being invented now.
 
 ### Degrees of freedom
 
@@ -206,6 +242,35 @@ These are measured, not argued, and are part of the frozen record.
    without full entity correspondence. Classified as a theoretical collision;
    no action.
 
+10. **The canonical IoU reports failure as `0.0`.** A missing file, an
+    unparseable STEP, an empty tessellation or degenerate geometry all return
+    `0.0` from the evaluator, which is indistinguishable from a genuine total
+    mismatch. Under the epsilon-free geometric mean that value annihilates the
+    entire case: a pair that is geometrically perfect but failed to parse
+    scores `Q_raw = 0.0000`, where the correct N/A treatment gives `1.0000`.
+    This is an evaluator-side defect, not a metric-side one. The research row
+    schema refuses to accept a failure as a score, but it cannot recover
+    information already discarded upstream.
+
+11. **The canonical IoU's tessellation tolerance is absolute, and it is
+    measurably safe anyway.** The `0.05` linear deflection is applied to raw mm
+    geometry before normalization, so mesh fidelity is scale-dependent: the
+    same part tessellates to 1556 vertices at every scale from 4 mm to 40 m,
+    but coarsens to 700 at 0.4 mm. Guardrail regression, identical geometry
+    compared to itself and cross-scale across five orders of magnitude:
+
+    | pair | 64^3 (production) | 128^3 | 256^3 |
+    |---|---|---|---|
+    | x0.01 vs x1 | **1.0000** | 0.9992 | 1.0000 |
+    | x0.1 vs x1 | **1.0000** | 1.0000 | 1.0000 |
+    | each scale vs itself, x0.01 to x1000 | **1.0000** | — | — |
+
+    Maximum observed drift is 8e-4, against a 1/64 voxel discretization scale
+    of ~1.6e-2 — more than an order of magnitude below the noise floor of the
+    representation, and exactly 0 at the production resolution. **Retain the
+    existing implementation.** The margin would need re-checking if voxel
+    resolution were ever raised.
+
 ## Implementation status
 
 | component | status |
@@ -216,36 +281,39 @@ These are measured, not argued, and are part of the frozen record.
 | three-way weighted combination | implemented (`DEFAULT_WEIGHTS`, topology/edge/face) |
 | IoU | **not implemented in this repository** |
 | four-component geometric mean | **not implemented** |
-| spatial refinement | **not implemented in production**; isolated experiments only |
+| spatial refinement | **not in production**; research module `research/bss_validation/spatial.py` |
+| validation row + strict N/A | research module `research/bss_validation/row.py` |
 
 Input scope is a **single solid**; anything else raises `NotSingleSolidError`
 rather than falling back to a silent multi-solid heuristic.
 
-## Open ambiguities
+## Deliberately deferred
 
-These block moving to large-scale validation and are not resolved by this
-freeze.
+Not ambiguities — decisions that must be made **from validation data**, not
+intuition.
 
-1. **IoU has no home here.** The frozen architecture combines four components,
-   but this repository computes no IoU and `docs/STATUS.md`'s `frontier_iou` is
-   a value reported from elsewhere. Where IoU is computed, at what
-   voxelization/resolution, and in what frame, must be settled before any
-   four-component number can be produced or validated.
-2. **Weight values are unset.** The implemented default is a three-way
-   0.50 / 0.25 / 0.25 over topology/edge/face. No `w_I, w_T, w_E, w_F` are
-   fixed.
-3. **`p_edge` / `p_face` values are unset.** The contract is `1 <= p <= 2`; the
-   operating point is not chosen.
-4. **N/A propagation through the geometric mean is unspecified.** Topology is
-   N/A for multi-solid input, which is a large share of real families
-   (assemblies). The rule for a geometric mean with an N/A factor — renormalize
-   the remaining weights, or decline to produce a combined number — must be
-   fixed before validation, and must not collapse to zero.
-5. **Level schedule and maximum depth are unset**, and whether the unit-cube
-   mapping is per-axis (anisotropic, adapts to aspect ratio) or isotropic is
-   not stated. All experiments to date used per-axis.
-6. **Validation data does not exist in this repository.** There are no geometry
-   files and no IoU values in `main` or its history; the only comparable pairs
-   are adjacent `part.py` revisions across merged families, of which few are
-   single-solid. Large-scale validation needs a corpus from wherever the
-   scoring pipeline lives.
+1. **`p_edge` / `p_face`** — contract is `1 <= p <= 2`; operating point unset.
+2. **`w_I, w_T, w_E, w_F`** — unset. The implemented default is a three-way
+   0.50 / 0.25 / 0.25 over topology/edge/face, which predates the four-component
+   architecture and is not a proposal.
+3. **Spatial level schedule and maximum depth** — levels stay independent,
+   min-aggregated, not assumed monotone, not required to nest. Candidate
+   schedules are evaluated during validation.
+
+## Open blockers
+
+1. **The canonical IoU returns `0.0` on any failure** — missing file,
+   unparseable STEP, empty tessellation, degenerate geometry. Under an
+   epsilon-free geometric mean that fake zero annihilates the case, and it is
+   indistinguishable from a genuine total mismatch. It needs a sentinel
+   distinct from `0.0` before any calibration data is collected. The row schema
+   here refuses to accept a failure as a score, but it cannot recover
+   information the evaluator has already discarded.
+2. **No human-judgment labels exist anywhere.** Severity against a geometry
+   pair is not recorded in any accessible source, and the primary validation
+   question needs it. See
+   [`RESEARCH_VALIDATION_PROTOCOL.md`](RESEARCH_VALIDATION_PROTOCOL.md).
+3. **Corpus access and contamination policy.** Real prediction/reference pairs
+   exist outside this repository; using benchmark evaluation data for parameter
+   fitting would be contamination. Split policy proposed in the protocol
+   document, pending maintainer confirmation.
