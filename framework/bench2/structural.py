@@ -13,14 +13,22 @@ correspondence, centroid matching, adjacency or assignment: the point of the
 experiment is how far a very cheap descriptor goes.
 
 1. **Topology** — both shapes are canonicalized with
-   `ShapeUpgrade_UnifySameDomain`, then reduced to two counts: ``G``, the
-   handles summed over the solid's shells, and ``V``, the enclosed voids.
-   ``D = |dG| + |dV|`` and ``S = 1 / (1 + D)``. Summing the corrected Euler
-   characteristic instead would cancel: a handle contributes -2 and a void +2,
-   so a plain block and a block with one through hole *and* one void both sum
-   to 2 — measured, and the reason the decomposition is kept. **Single-solid
-   scope only**: out-of-scope input raises `NotSingleSolidError` rather than
-   getting a silent multi-solid heuristic.
+   `ShapeUpgrade_UnifySameDomain`, then reduced to three counts: ``C``, the
+   solid bodies; ``G``, the handles summed over every shell; and ``V =
+   shells - solids``, the enclosed voids. ``D = |dC| + |dG| + |dV|`` and
+   ``S = 1 / (1 + D)``. Summing the Euler characteristic instead would cancel:
+   a handle contributes -2 and a void +2, so a plain block and a block with one
+   through hole *and* one void both sum to 2 — measured, and the reason the
+   decomposition is kept.
+
+   Genus comes from a **welded triangulation**, not from B-Rep element counts.
+   The counting formula it replaced was representation-dependent — cadquery's
+   dedup and OCP's topological maps disagreed on real shells — and produced
+   impossible values on seam-heavy geometry: three of eight real families were
+   wrong, including one silently wrong by a factor of three (72 against a true
+   21). Assemblies are in scope; a shape whose topology cannot be validly
+   computed raises `TopologyUndefinedError`, which callers record as **N/A**,
+   never as zero.
 2. **Edge-length spectrum, type-aware** — canonical edge lengths, each
    normalized by that shape's total edge length, then bucketed by OCP curve
    type, sorted and zero-padded within each bucket. Length and area alone do
@@ -74,13 +82,21 @@ DEFAULT_P_EDGE = 1.0
 DEFAULT_P_FACE = 1.0
 
 
-class NotSingleSolidError(ValueError):
-    """Raised when a shape is outside this experiment's single-solid scope.
+# Mesh topology constants. **Not hyperparameters.** Genus was measured invariant
+# across deflection 0.5 -> 0.01 (50x) and weld tolerance 1e-2 -> 1e-6 (10000x);
+# only triangle counts move. They are here so the triangulation is reproducible,
+# not so anyone can tune the topology.
+_MESH_DEFLECTION = 0.1
+_MESH_ANGLE = 0.5
+_WELD_RELATIVE = 1e-4
 
-    The topology signal is deliberately defined for one solid only. Rather than
-    silently applying a multi-solid heuristic, out-of-scope input is reported.
-    The spectra are unaffected and remain available through
-    :func:`brep_descriptor` if you want them for a multi-solid shape.
+
+class TopologyUndefinedError(ValueError):
+    """Raised when topology cannot be validly computed for a shape.
+
+    Callers treat this as **N/A**, never as zero. It is a backstop, not an
+    alternative genus: nothing is clamped, rounded, ``abs()``-ed or repaired,
+    and the retired B-Rep counting formula is not used as a fallback.
     """
 
 
@@ -110,6 +126,113 @@ def _ocp_hashcode_fix():
             _cls.HashCode = lambda self, ub=2147483647: hash(self) % ub
 
 
+def _mesh_shell_complex(shell_wrapped):
+    """Welded triangulation of one shell -> ``(V, E, F, chi, watertight, k)``.
+
+    The B-Rep element counts this replaced were representation-dependent:
+    cadquery's dedup and OCP's topological maps disagreed on real shells, so the
+    same shell could yield two different Euler characteristics, and seam-heavy
+    geometry produced impossible values (chi > 2, negative genus) on three of
+    eight real families. A triangulation welded across faces is a genuine
+    combinatorial surface, so seams and periodic-face bookkeeping cannot leak
+    into the invariant.
+
+    Returns ``None`` when any face lacks a triangulation.
+    """
+    from OCP.BRep import BRep_Tool
+    from OCP.BRepMesh import BRepMesh_IncrementalMesh
+    from OCP.TopAbs import TopAbs_FACE
+    from OCP.TopExp import TopExp
+    from OCP.TopLoc import TopLoc_Location
+    from OCP.TopoDS import TopoDS
+    from OCP.TopTools import TopTools_IndexedMapOfShape
+
+    BRepMesh_IncrementalMesh(shell_wrapped, _MESH_DEFLECTION, False,
+                             _MESH_ANGLE, True)
+    faces = TopTools_IndexedMapOfShape()
+    TopExp.MapShapes_s(shell_wrapped, TopAbs_FACE, faces)
+
+    quantum = _MESH_DEFLECTION * _WELD_RELATIVE
+    node_id: dict = {}
+    triangles = []
+    for i in range(1, faces.Extent() + 1):
+        face = TopoDS.Face_s(faces.FindKey(i))
+        location = TopLoc_Location()
+        triangulation = BRep_Tool.Triangulation_s(face, location)
+        if triangulation is None:
+            return None
+        transform = location.Transformation()
+        local = []
+        for n in range(1, triangulation.NbNodes() + 1):
+            point = triangulation.Node(n).Transformed(transform)
+            key = (round(point.X() / quantum), round(point.Y() / quantum),
+                   round(point.Z() / quantum))
+            if key not in node_id:
+                node_id[key] = len(node_id)
+            local.append(node_id[key])
+        for t in range(1, triangulation.NbTriangles() + 1):
+            a, b, c = triangulation.Triangle(t).Get()
+            va, vb, vc = local[a - 1], local[b - 1], local[c - 1]
+            if va == vb or vb == vc or va == vc:
+                continue          # collapsed by welding; carries no topology
+            triangles.append((va, vb, vc))
+
+    edge_use: dict = {}
+    for a, b, c in triangles:
+        for u, v in ((a, b), (b, c), (c, a)):
+            key = (u, v) if u < v else (v, u)
+            edge_use[key] = edge_use.get(key, 0) + 1
+
+    n_v, n_e, n_f = len(node_id), len(edge_use), len(triangles)
+    watertight = bool(edge_use) and set(edge_use.values()) == {2}
+
+    parent = list(range(n_v))
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for u, v in edge_use:
+        ru, rv = find(u), find(v)
+        if ru != rv:
+            parent[rv] = ru
+    components = len({find(i) for i in range(n_v)}) if n_v else 0
+    return n_v, n_e, n_f, n_v - n_e + n_f, watertight, components
+
+
+def _mesh_shell_topology(shell_wrapped) -> tuple[int, int]:
+    """One shell -> ``(chi, genus)``. Raises when the shell is not valid.
+
+    Validity, all required: every face triangulated, watertight/manifold (every
+    mesh edge in exactly two triangles), ``k >= 1``, ``chi`` even, ``g >= 0``.
+    """
+    result = _mesh_shell_complex(shell_wrapped)
+    if result is None:
+        raise TopologyUndefinedError("a face has no triangulation")
+    _, _, _, chi, watertight, components = result
+    if not watertight:
+        raise TopologyUndefinedError(
+            "shell mesh is not watertight: some edge is not in exactly "
+            "two triangles"
+        )
+    if components < 1:
+        raise TopologyUndefinedError("shell mesh has no connected component")
+    if chi % 2:
+        raise TopologyUndefinedError(
+            f"shell mesh Euler characteristic {chi} is odd; a closed "
+            f"orientable surface has chi = 2k - 2g"
+        )
+    genus = (2 * components - chi) // 2
+    if genus < 0:
+        raise TopologyUndefinedError(
+            f"shell mesh implies negative genus {genus} "
+            f"(chi={chi}, components={components})"
+        )
+    return int(chi), int(genus)
+
+
 def canonicalize(shape):
     """Merge same-domain faces and edge chains.
 
@@ -137,17 +260,21 @@ class BRepDescriptor:
     faces: int
     edges: int
     vertices: int
-    euler: tuple[int, ...]              # corrected chi per shell, sorted
+    euler: tuple[int, ...]              # mesh chi per shell, sorted
     face_spectrum: tuple[float, ...]    # areas / total area, descending
     edge_spectrum: tuple[float, ...]    # lengths / total length, descending
     face_by_type: tuple = ()            # ((surface type, sorted shares), ...)
     edge_by_type: tuple = ()            # ((curve type, sorted shares), ...)
+    genera: tuple[int, ...] = ()        # mesh genus per shell, sorted
+    topology_error: str = ""            # non-empty => topology is N/A
 
     def as_dict(self) -> dict:
         return {
             "solids": self.solids, "shells": self.shells,
             "faces": self.faces, "edges": self.edges,
             "vertices": self.vertices, "euler": list(self.euler),
+            "genera": list(self.genera),
+            "topology_error": self.topology_error,
             "face_spectrum": list(self.face_spectrum),
             "edge_spectrum": list(self.edge_spectrum),
             "face_by_type": {t: list(v) for t, v in self.face_by_type},
@@ -161,6 +288,9 @@ class TopologyComparison:
 
     shell_count_reference: int
     shell_count_candidate: int
+    solid_count_reference: int
+    solid_count_candidate: int
+    abs_solid_difference: int
     void_count_reference: int
     void_count_candidate: int
     per_shell_chi_reference: tuple
@@ -181,6 +311,9 @@ class TopologyComparison:
         return {
             "shell_count_reference": self.shell_count_reference,
             "shell_count_candidate": self.shell_count_candidate,
+            "solid_count_reference": self.solid_count_reference,
+            "solid_count_candidate": self.solid_count_candidate,
+            "abs_solid_difference": self.abs_solid_difference,
             "void_count_reference": self.void_count_reference,
             "void_count_candidate": self.void_count_candidate,
             "per_shell_chi_reference": list(self.per_shell_chi_reference),
@@ -200,13 +333,20 @@ class TopologyComparison:
 
 
 def compare_topology(a: BRepDescriptor, b: BRepDescriptor) -> TopologyComparison:
-    """Full topology comparison of two canonical single-solid descriptors."""
+    """Full topology comparison. Assemblies are in scope.
+
+    Raises :class:`TopologyUndefinedError` when either shape's topology cannot
+    be validly computed; the caller records that as N/A, never as zero.
+    """
     ga, gb = shell_genera(a), shell_genera(b)
     Ga, Gb = int(sum(ga)), int(sum(gb))
     Va, Vb = void_count(a), void_count(b)
-    d = abs(Ga - Gb) + abs(Va - Vb)
+    Ca, Cb = solid_count(a), solid_count(b)
+    d = abs(Ca - Cb) + abs(Ga - Gb) + abs(Va - Vb)
     return TopologyComparison(
         shell_count_reference=a.shells, shell_count_candidate=b.shells,
+        solid_count_reference=Ca, solid_count_candidate=Cb,
+        abs_solid_difference=abs(Ca - Cb),
         void_count_reference=Va, void_count_candidate=Vb,
         per_shell_chi_reference=a.euler, per_shell_chi_candidate=b.euler,
         per_shell_genus_reference=ga, per_shell_genus_candidate=gb,
@@ -349,25 +489,26 @@ def _normalized_spectrum(values) -> tuple[float, ...]:
 def _describe(shape) -> BRepDescriptor:
     _ocp_hashcode_fix()
     shells = shape.Shells()
-    euler = []
+    euler: list[int] = []
+    genera: list[int] = []
+    topology_error = ""
     for shell in shells:
-        # chi = V - E + sum_f (2 - wires_f), NOT the naive V - E + F. A face
-        # with w boundary wires is a disk with w-1 holes (chi 2 - w), and
-        # periodic faces add seam edges. Measured on the pinned OCP the naive
-        # form is 2 for a plain block AND for a block with a through hole — it
-        # cannot see genus; the corrected form gives 2 and 0, and stays at 2
-        # for a pocket, a fillet and a glued split.
-        euler.append(int(
-            len(shell.Vertices()) - len(shell.Edges())
-            + sum(2 - len(f.Wires()) for f in shell.Faces())
-        ))
+        try:
+            chi, genus = _mesh_shell_topology(shell.wrapped)
+        except TopologyUndefinedError as exc:
+            topology_error = str(exc)
+            euler, genera = [], []
+            break
+        euler.append(chi)
+        genera.append(genus)
     faces, edges = shape.Faces(), shape.Edges()
     face_pairs = [(_surface_type(f), _area(f)) for f in faces]
     edge_pairs = [(_curve_type(e), _length(e)) for e in edges]
     return BRepDescriptor(
         solids=len(shape.Solids()), shells=len(shells),
         faces=len(faces), edges=len(edges), vertices=len(shape.Vertices()),
-        euler=tuple(sorted(euler)),
+        euler=tuple(sorted(euler)), genera=tuple(sorted(genera)),
+        topology_error=topology_error,
         face_spectrum=_normalized_spectrum(v for _, v in face_pairs),
         edge_spectrum=_normalized_spectrum(v for _, v in edge_pairs),
         face_by_type=_typed_spectrum(face_pairs, FACE_TYPE_ORDER),
@@ -407,31 +548,47 @@ def spectrum_similarity(a: tuple, b: tuple, p: float = 1.0) -> float:
     return float(max(0.0, 1.0 - distance / (2.0 ** (1.0 / p))))
 
 
-def _require_single_solid(descriptor: BRepDescriptor) -> None:
-    if descriptor.solids != 1:
-        raise NotSingleSolidError(
-            f"topology is defined for a single solid in this experiment; "
-            f"this shape has {descriptor.solids} solids "
-            f"({descriptor.shells} shells). The spectra are still available "
-            f"via brep_descriptor()."
+def _require_valid_topology(descriptor: BRepDescriptor) -> None:
+    """Topology is N/A rather than wrong. Assemblies are in scope."""
+    if descriptor.topology_error:
+        raise TopologyUndefinedError(descriptor.topology_error)
+    if len(descriptor.genera) != descriptor.shells:
+        raise TopologyUndefinedError(
+            f"{len(descriptor.genera)} shell genera for "
+            f"{descriptor.shells} shells"
         )
 
 
 def shell_genera(descriptor: BRepDescriptor) -> tuple[int, ...]:
-    """Genus of each closed shell, ``g = (2 - chi) / 2``, sorted."""
-    _require_single_solid(descriptor)
-    return tuple(sorted((2 - int(c)) // 2 for c in descriptor.euler))
+    """Genus of each closed shell from its welded mesh, ``g = (2k - chi)/2``."""
+    _require_valid_topology(descriptor)
+    return descriptor.genera
 
 
 def total_genus(descriptor: BRepDescriptor) -> int:
-    """``G`` — independent handles summed over the solid's shells."""
+    """``G`` — independent handles summed over every shell of the shape."""
     return int(sum(shell_genera(descriptor)))
 
 
+def solid_count(descriptor: BRepDescriptor) -> int:
+    """``C`` — connected solid bodies.
+
+    Earns its place on scale independence: a small stray body is invisible to
+    ``G`` and ``V``, asymptotically invisible to the spectra, and below one
+    voxel for IoU, yet it is a categorical defect at any size.
+    """
+    return int(descriptor.solids)
+
+
 def void_count(descriptor: BRepDescriptor) -> int:
-    """``V`` — enclosed internal voids, i.e. every shell past the outer one."""
-    _require_single_solid(descriptor)
-    return int(descriptor.shells - 1)
+    """``V = shells - solids`` — enclosed internal voids.
+
+    Every solid contributes exactly one outer shell, so what remains encloses a
+    void. The previous ``shells - 1`` was only correct for a single solid: on
+    real assemblies it claimed 8, 10 and 4 voids where there are none.
+    """
+    _require_valid_topology(descriptor)
+    return int(descriptor.shells - descriptor.solids)
 
 
 def summed_chi(descriptor: BRepDescriptor) -> int:
@@ -442,19 +599,21 @@ def summed_chi(descriptor: BRepDescriptor) -> int:
     both sum to 2. That cancellation is why the topology signal is built from
     ``(G, V)`` instead.
     """
-    _require_single_solid(descriptor)
+    _require_valid_topology(descriptor)
     return int(sum(descriptor.euler))
 
 
 def topology_difference(a: BRepDescriptor, b: BRepDescriptor) -> int:
-    """``D = |G_a - G_b| + |V_a - V_b|`` — how many independent topological
-    structures differ.
+    """``D_T = |dC| + |dG| + |dV|`` — independent topological structures that
+    differ.
 
-    One handle mismatch and one void mismatch each count as one unit. That is
-    deliberate: no separate handle/void weights and no tunable parameter until
-    benchmark evidence says the distinction needs one.
+    Each mismatch counts one unit. No internal C/G/V weights and no tunable
+    parameter. Because every term is a non-negative absolute difference,
+    ``D_G <= D_GV <= D_CGV`` holds structurally: adding a quantity can only
+    preserve or increase detected disagreement, never hide it.
     """
-    return (abs(total_genus(a) - total_genus(b))
+    return (abs(solid_count(a) - solid_count(b))
+            + abs(total_genus(a) - total_genus(b))
             + abs(void_count(a) - void_count(b)))
 
 

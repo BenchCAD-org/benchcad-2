@@ -61,11 +61,59 @@ Its `0.0`-on-failure behaviour is an infrastructure hazard, see
 
 ### 2. Global topology
 Both shapes canonicalized with `ShapeUpgrade_UnifySameDomain`, then reduced to
+three counts:
 
-- `G` — handles summed over the solid's shells,
-- `V` — enclosed voids,
+- `C` — connected solid bodies,
+- `G` — total genus, summed over every shell, from a **welded triangulation**,
+- `V = shells - solids` — enclosed voids,
 
-with `D = |dG| + |dV|` and `S_topology = 1 / (1 + D)`.
+with `D_T = |dC| + |dG| + |dV|` and `S_topology = 1 / (1 + D_T)`.
+
+No internal C/G/V weights. Because every term is a non-negative absolute
+difference, `D_G <= D_GV <= D_CGV` holds structurally: adding a quantity can
+only preserve or increase detected disagreement, never hide it.
+
+Each quantity earned its place on a counterexample the simpler descriptor
+misses: `G` on a missing through hole, `V` on a hollow part modelled solid
+(invisible to `G`), `C` on a solid split into two bodies (invisible to `G` and
+`V`). `C` survives despite a failed boolean fuse being caught decisively by the
+spectra, because topology is the only **scale-independent** channel: a 0.5 mm
+stray body in a 200 mm part holds `S_topology` at 0.5000 while `S_face` reaches
+1.0000 and the volume difference falls ~50x below a single 1/64 voxel.
+
+**Genus comes from a welded mesh, not from B-Rep element counts.** Each shell is
+tessellated with `BRepMesh_IncrementalMesh`, triangulation nodes are welded
+across faces, and `chi = V - E + F` is computed on the mesh complex, giving
+`g = (2k - chi) / 2` for `k` connected components.
+
+The retired formula reconstructed `chi` from B-Rep vertex/edge/wire counts. It
+was withdrawn because:
+
+- **the counts were representation-dependent** — cadquery's dedup and OCP's
+  topological maps disagreed on 3 of 5 shells of one family, so the same shell
+  yielded `chi = 2` or `chi = 0` depending on which API was asked;
+- **it produced impossible values on valid geometry** — `chi > 2` on a closed,
+  connected, manifold, OCC-valid shell, converted by floor division into a
+  **negative genus** with no guard;
+- **three of eight real families were wrong**;
+- **one was silently wrong while looking entirely reasonable** —
+  `three_jaw_scroll_chuck` reported `G = 72` against a true `21`. Nothing about
+  72 is anomalous, so no validity guard would ever have caught it. That is why
+  the formula was replaced rather than guarded.
+
+Every seam correction tried fixed one control and broke another; the mesh route
+was correct on all nine controls first time, because a welded triangulation is a
+genuine combinatorial surface and seam/periodic bookkeeping cannot leak into it.
+
+**Validity, all required per shell:** every face triangulated; watertight and
+manifold (each mesh edge in exactly two triangles); `k >= 1`; `chi` even;
+resulting `g >= 0`. Any failure makes topology **N/A** for the shape — never
+clamped, rounded, `abs()`-ed, repaired, or fallen back to the old formula.
+
+Tessellation deflection and weld tolerance are **implementation constants, not
+hyperparameters**: genus was measured invariant across deflection 0.5 to 0.01
+(50x) and weld tolerance 1e-2 to 1e-6 (10 000x), while triangle counts moved by
+orders of magnitude.
 
 Summed Euler characteristic is **diagnostic only** and must not be scored: a
 handle contributes -2 and a void +2, so a plain block and a block with one
@@ -135,9 +183,12 @@ versus **N/A (cannot be validly computed)**. N/A must never be silently
 converted to zero. Individual component scores and diagnostics are still
 reported when `Q_raw` is N/A.
 
-Consequence, accepted deliberately: topology is single-solid scope, so **every
-assembly case yields `Q_raw` = N/A** until an assembly topology definition is
-introduced. One is not being invented now.
+Assemblies are **in scope**. `C`, `G` and `V` are all defined over multiple
+solids with no new parameter, and were verified on real assemblies — chuck
+(9 solids, `G = 21`, `V = 0`), bearing (11 solids, `G = 4`, `V = 0`), T-handle
+pin (5 solids, `G = 0`, `V = 0`). The earlier `shells - 1` definition of `V`
+claimed 8, 10 and 4 voids on those same three. An assembly yields `Q_raw` = N/A
+only when its topology genuinely cannot be computed, like any other shape.
 
 ### Degrees of freedom
 
@@ -275,7 +326,7 @@ These are measured, not argued, and are part of the frozen record.
 
 | component | status |
 |---|---|
-| topology (`G`, `V`, `D`, `S`) | implemented, `framework/bench2/structural.py` |
+| topology (`C`, `G`, `V`, `D_T`, `S_T`) | implemented, `framework/bench2/structural.py` |
 | typed edge BSS | implemented |
 | typed face BSS | implemented |
 | three-way weighted combination | implemented (`DEFAULT_WEIGHTS`, topology/edge/face) |
@@ -284,8 +335,8 @@ These are measured, not argued, and are part of the frozen record.
 | spatial refinement | **not in production**; research module `research/bss_validation/spatial.py` |
 | validation row + strict N/A | research module `research/bss_validation/row.py` |
 
-Input scope is a **single solid**; anything else raises `NotSingleSolidError`
-rather than falling back to a silent multi-solid heuristic.
+Multiple solids are in scope. A shape whose topology cannot be validly computed
+raises `TopologyUndefinedError`, which callers record as N/A, never as zero.
 
 ## Deliberately deferred
 

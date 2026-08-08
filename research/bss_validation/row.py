@@ -190,12 +190,12 @@ def evaluate_pair(
         da.face_by_type, db.face_by_type, structural.FACE_TYPE_ORDER, p=p_face
     )
 
-    # Topology is single-solid scope. Multi-solid is N/A, not zero, and under
-    # strict propagation that makes the whole combined score N/A.
+    # Assemblies are in scope. Topology is N/A only when it cannot be validly
+    # computed, and under strict propagation that makes the whole score N/A.
     try:
         topo = structural.compare_topology(da, db)
         row.s_topology = topo.topology_similarity
-    except structural.NotSingleSolidError as exc:
+    except structural.TopologyUndefinedError as exc:
         row.s_topology = None
         row.notes = f"topology N/A: {exc}"
 

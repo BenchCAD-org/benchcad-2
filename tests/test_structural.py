@@ -20,12 +20,13 @@ from bench2.structural import (  # noqa: E402
     EDGE_TYPE_ORDER,
     _area,
     _length,
-    NotSingleSolidError,
     _ocp_hashcode_fix,
     brep_descriptor,
     canonicalize,
     compare,
+    compare_topology,
     shell_genera,
+    solid_count,
     spectrum_similarity,
     typed_spectrum_similarity,
     summed_chi,
@@ -250,14 +251,22 @@ class TestSingleSolidScope(unittest.TestCase):
         b = cq.Workplane("XY").box(10, 10, 10).translate((30, 0, 0)).val()
         return cq.Compound.makeCompound([a, b])
 
-    def test_multi_solid_input_is_reported_not_guessed(self):
-        two = self._two_solids()
-        self.assertEqual(brep_descriptor(two).solids, 2)
-        with self.assertRaises(NotSingleSolidError) as ctx:
-            total_genus(brep_descriptor(two))
-        self.assertIn("2 solids", str(ctx.exception))
-        with self.assertRaises(NotSingleSolidError):
-            compare(_block(), two)
+    def test_multi_solid_input_is_now_in_scope(self):
+        """Assemblies score topology; the single-solid restriction is gone."""
+        d = brep_descriptor(self._two_solids())
+        self.assertEqual(d.solids, 2)
+        self.assertEqual(total_genus(d), 0)
+        self.assertEqual(void_count(d), 0)      # shells - solids, not shells-1
+        self.assertEqual(solid_count(d), 2)
+
+    def test_two_disjoint_solids_differ_from_one_by_C_alone(self):
+        one = brep_descriptor(_block())
+        two = brep_descriptor(self._two_solids())
+        t = compare_topology(one, two)
+        self.assertEqual(t.abs_solid_difference, 1)
+        self.assertEqual(t.abs_genus_difference, 0)
+        self.assertEqual(t.abs_void_difference, 0)
+        self.assertEqual(t.topology_difference, 1)
 
     def test_spectra_remain_available_out_of_scope(self):
         d = brep_descriptor(self._two_solids())

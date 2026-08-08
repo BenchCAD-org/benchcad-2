@@ -168,9 +168,9 @@ rather than by convention:
   `None` with a status naming the missing component. Weights are not
   renormalized. Every component score and diagnostic is still recorded.
 
-Consequence to plan around: topology is single-solid scope, so **every assembly
-case yields `q_raw = N/A`**. Four of nine merged families are assemblies. Those
-rows remain fully useful for component-level and spatial analysis, and for
-comparisons A and B, but they cannot enter a combined-score comparison until an
-assembly topology definition exists — which is deliberately not being invented
-now.
+Assemblies are in scope. Topology is defined over multiple solids as
+`C = solids`, `G` = total welded-mesh genus, `V = shells - solids`, so the four
+assemblies among the nine merged families enter combined-score comparisons like
+any other case. A row is N/A only when topology genuinely cannot be computed —
+a shell that is not watertight, an untriangulable face, or an Euler result
+inconsistent with a closed orientable surface.
