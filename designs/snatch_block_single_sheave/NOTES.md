@@ -345,6 +345,28 @@ The sheave is one revolve of its complete section (bore, side face, flank, arc
 bottom, flank, side face) rather than a cylinder with a groove cut out, so the
 groove needs no boolean at all.
 
+## Three shapes that are not what they look like
+
+- The **hitch pin is an R-clip, not a U.** The straight leg drops through the
+  bolt's cross hole, the bend carries the wire over the top, the sprung leg
+  comes back down outside the bolt, and the tail then hooks back *in* under it.
+  That returning hook is what snaps the clip on and what draws the letter; a
+  plain U falls off. Swept in one path, `π r² L` exact.
+- The **bow is wide at the crown and narrow at the ears.** The inside width G is
+  the crown's, the ears stand at 0.68 of it, and the ear boss is small enough
+  (0.55 × bolt) that the **crown stays the widest point of the whole bow** —
+  which is what makes it a bow and not a dee. The ear is upset across the
+  cheeks by 1.3 × max(E, F): sizing it off E alone let the leg reach past the
+  ear face into the bolt head on the rows where F is the bigger axis.
+- The **swivel case is hollow, and it is two extrusions crossing.** The *lug* is
+  extruded across the cheeks (Y) — that is what the hook bolt runs through and
+  what fills the gap between the plates. The *socket* is extruded down the block
+  axis (Z) — that is what the tee swivels in, and it hangs below the plates
+  where it is free to be fat. Their bores meet, so the finished case is a shell
+  around one cavity: the bolt hole opens into the swivel counterbore, and the
+  tee's stem head sits in that cavity on the shoulder left by the smaller bore
+  through the floor.
+
 ## Probe
 
 `bench2 validate` cannot see interpenetration, and it cannot see a part that is
@@ -354,8 +376,18 @@ bushing closed, roller closed, roller open} = 39 instances: every pair's
 intersection volume must be 0, and every joint in the load path above must have a
 minimum distance no larger than the fit it is built with.
 
-Current result: **0 mm³ overlap and 0.87 mm worst joint clearance, on all 39
-instances** (15 solids bronze-bushed, 30 with the roller complement). Two joints are expected to open once `open_angle > 0` and are
+It now answers three questions, over all 13 rows × {bronze bushing, roller}:
+
+1. **fits** — no two parts occupy the same space;
+2. **per part** — each is exactly one solid, one closed shell, a valid B-rep and
+   a non-zero volume;
+3. **function** — the sheave and its bearing turn on the centre pin through a
+   full revolution, and the whole fitting swivels through a full revolution,
+   without anything jamming.
+
+Current result: **0 findings. 0 mm³ overlap, 0.87 mm worst joint clearance, no
+jam at any of 24 sheave angles or 24 swivel angles.** 15 solids bronze-bushed,
+30 with the roller complement. Two joints are expected to open once `open_angle > 0` and are
 excluded there: `side_plate_02 | hook_bolt` and `hook_bolt | retention_nut`,
 because the bolt has been unscrewed out of the plate and the nut has swung away
 with it — the state the manual describes.

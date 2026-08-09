@@ -168,8 +168,8 @@ _PLATE_REACH = 0.36
 _SHEAVE_GAP = 4.0
 _BOLT_TO_BAR = 1.13
 _TEE_TO_BOLT = 0.95
-_EAR_SPAN = 0.73
-_EAR_W = 1.4
+_EAR_SPAN = 0.68
+_EAR_W = 1.3
 _HEAD_R = 1.35
 # ISO 261 first-choice coarse sizes with their ISO 272 / 4014 / 4032 hardware:
 # nominal -> (across flats s, head height k, nut height m).  Mirrored from
@@ -218,8 +218,8 @@ def _stack(p):
     sb_r = 0.5 * float(_iso_size(_BOLT_TO_BAR * p["bar_thk_E"]))
     z_sb = -p["pin_to_throat_D"] + p["bow_height_H"] + sb_r
     tee_r = _TEE_TO_BOLT * 2.0 * sb_r
-    z_foot = z_sb + tee_r + _NECK * bolt_d + _CASE_FOOT * bolt_d
-    return z_bolt, z_sb, z_foot
+    z_case_bot = z_sb + tee_r + _NECK * bolt_d
+    return z_bolt, z_sb, z_case_bot
 
 
 def refine(p, difficulty, rng):
@@ -313,11 +313,11 @@ def check(p):
     # -> plates) has to have room to exist, or the fitting is not attached to
     # the block at all.
     bolt_d = float(_iso_size(_BOLT_TO_CHEEK * p["cheek_w_C"]))
-    z_bolt, z_sb, z_foot = _stack(p)
+    z_bolt, z_sb, z_case_bot = _stack(p)
 
     # 1. the swivel case has to be long enough to hold the bolt eye above the
     #    counterbore its stem head stands in.
-    case_len = z_bolt - z_foot
+    case_len = z_bolt - z_case_bot
     if case_len < 0.725 * bolt_d + 4.0:
         bad.append("swivel case is %.1f mm between the hook bolt and its foot, under "
                    "the %.1f mm the bolt eye plus the swivel counterbore need "
@@ -357,7 +357,7 @@ def check(p):
     #    stand outside that circle or there is no pear shape to draw.
     bar_r = 0.5 * p["bar_deep_F"]
     major_r = 0.5 * p["bow_width_G"] + bar_r
-    ear_w = _EAR_W * p["bar_thk_E"]
+    ear_w = _EAR_W * max(p["bar_thk_E"], p["bar_deep_F"])
     ear_x = 0.5 * _EAR_SPAN * p["bow_width_G"] + 0.5 * ear_w
     reach = p["bow_height_H"] + sb_r - 0.5 * p["bow_width_G"]
     span = math.hypot(ear_x, reach)
@@ -372,6 +372,7 @@ def check(p):
         phi = math.atan2(reach, ear_x) - math.acos(major_r / span)
         t_x, t_z = major_r * math.cos(phi), -reach + major_r * math.sin(phi)
         head_r = _ISO_HEX[int(sb_d)][0] / math.sqrt(3.0)   # hex circumradius
+        bar_r = 0.5 * max(p["bar_thk_E"], p["bar_deep_F"])
         lean = (t_x - ear_x) / max(1e-6, -t_z)
         leg_out = ear_x + lean * head_r + bar_r * math.hypot(1.0, lean)
         if leg_out > ear_x + 0.5 * ear_w - 0.5:
@@ -406,7 +407,7 @@ def check(p):
     for nom in _ISO_SPLIT:
         if nom <= 0.20 * sb_d:
             cot_nom = nom
-    ear_w2 = _EAR_W * p["bar_thk_E"]
+    ear_w2 = _EAR_W * max(p["bar_thk_E"], p["bar_deep_F"])
     x_nut2 = 0.5 * _EAR_SPAN * p["bow_width_G"] + ear_w2
     nut_face = x_nut2 + _ISO_HEX[int(sb_d)][2]
     bolt_end = x_nut2 + _ISO_HEX[int(sb_d)][2] + 1.03 * cot_nom + 1.5 + 1.1 * cot_nom

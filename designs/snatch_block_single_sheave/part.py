@@ -85,9 +85,12 @@ _PLATE_REACH = 0.36              # hook bolt axis below the centre pin / D
 _SHEAVE_GAP = 4.0                # mm the fitting-end parts clear the sheave rim
 _BOLT_TO_BAR = 1.13              # shackle bolt diameter / bow bar E
 _TEE_TO_BOLT = 0.95              # tee barrel radius / shackle bolt diameter
-_EAR_TO_BOLT = 0.72              # shackle ear boss radius / shackle bolt diameter
-_EAR_SPAN = 0.73                 # shackle ear inside spacing / bow inside width G
-_EAR_W = 1.4                     # shackle ear width along the bolt / bow bar E --
+_EAR_TO_BOLT = 0.55              # shackle ear boss radius / shackle bolt diameter --
+                                 # small enough that the CROWN stays the widest part
+                                 # of the bow, which is what makes it a bow
+_EAR_SPAN = 0.68                 # shackle ear inside spacing / bow inside width G --
+                                 # the bow is wide at the crown and narrow at the ears
+_EAR_W = 1.3                     # shackle ear width along the bolt / bow bar E --
                                  # the ear is upset wider than the bar so the bolt
                                  # head bears on it clear of the flaring leg
 _HEAD_R = 1.35                   # hook bolt head radius / shank radius -- the
@@ -118,24 +121,6 @@ _RACE_BB = 0.12                  # bronze bushing wall / centre pin diameter
 _ROLLER = 0.22                   # straight roller diameter / centre pin diameter
 _ROLL_GAP = 0.6                  # mm between rollers in the full complement
 _WIRE = 0.14                     # retaining-wire diameter / its bolt's diameter
-
-
-def _case_taper(y_top, y_neck, y_collar, z_top, z_waist, z_neck, z_foot, z_bot):
-    """The swivel case's silhouette ACROSS the cheeks, as a prism on X that gets
-    intersected with its in-plane hull.
-
-    The sheet's side view does not draw a slab: the case fills the gap where the
-    hook bolt runs through it, necks down as it leaves the plates, and flares
-    back out into a collar at the foot where the swivel counterbore lives.
-    """
-    return (
-        cq.Workplane("YZ")
-        .moveTo(y_top, z_top).lineTo(y_top, z_waist)
-        .lineTo(y_neck, z_neck).lineTo(y_collar, z_foot).lineTo(y_collar, z_bot)
-        .lineTo(-y_collar, z_bot).lineTo(-y_collar, z_foot)
-        .lineTo(-y_neck, z_neck).lineTo(-y_top, z_waist).lineTo(-y_top, z_top)
-        .close().extrude(8.0 * y_top).translate((-4.0 * y_top, 0.0, 0.0))
-    )
 
 
 def _hull(r_top, z_top, r_bot, z_bot, thick):
@@ -273,21 +258,32 @@ def _hex_nut_y(shank_r, y0, z, across_flats, height):
 
 
 def _hairpin(wire_r, shank_r):
-    """Hitch pin (R-clip), built at the origin with its straight leg on Z and
-    the bolt it retains on Y: one leg drops through the bolt's cross hole, the
-    bend passes over the bolt, and the sprung leg comes back down outside it.
+    """Hitch pin -- an R-CLIP (DIN 11024), built at the origin with its straight
+    leg on Z and the bolt it retains on Y.
 
-    Swept along a tangent-continuous path (line, semicircle, line), so it is one
-    solid with no booleans -- and the swept volume equals pi*r^2*L, which is the
-    check that the sweep did not quietly return something else.
+    It is an R and not a U: the straight leg drops through the bolt's cross
+    hole, the bend carries the wire over the top, the sprung leg comes back down
+    OUTSIDE the bolt, and then the tail hooks back IN under it -- that returning
+    hook is what snaps the clip on and what draws the letter.  A plain U would
+    fall off.
+
+    Swept along a tangent-continuous path, so it is one solid with no booleans,
+    and the swept volume equals pi*r^2*L -- the check that the sweep really ran.
     """
-    x2 = shank_r + 2.5 * wire_r
-    z_bot = -(shank_r + 2.0 * wire_r)
+    x2 = shank_r + 2.4 * wire_r          # the sprung leg, just outside the bolt
+    z_bot = -(shank_r + 2.2 * wire_r)
     z_top = shank_r + 2.2 * wire_r
+    hook_r = 1.5 * wire_r                # the returning hook at the tail
+    turn = math.radians(140.0)
+    cx = x2 - hook_r
+    z_hook = z_bot + hook_r
+    mid = (cx + hook_r * math.cos(0.5 * turn), z_hook - hook_r * math.sin(0.5 * turn))
+    end = (cx + hook_r * math.cos(turn), z_hook - hook_r * math.sin(turn))
     path = (
         cq.Workplane("XZ").moveTo(0.0, z_bot).lineTo(0.0, z_top)
         .threePointArc((0.5 * x2, z_top + 0.5 * x2), (x2, z_top))
-        .lineTo(x2, -0.3 * shank_r)
+        .lineTo(x2, z_hook)
+        .threePointArc(mid, end)
     )
     return cq.Workplane("XY").workplane(offset=z_bot).circle(wire_r).sweep(path)
 
@@ -415,7 +411,10 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     sb_r = 0.5 * sb_d
     bar_r = 0.5 * bar_deep_F        # radial: F closes the A stack
     ear_r = _EAR_TO_BOLT * 2.0 * sb_r
-    ear_w = _EAR_W * bar_thk_E     # the ear is upset across the cheeks
+    # the ear is upset across the cheeks, and it has to cover the DEEPER of the
+    # bow's two axes: on the 4/5/6 t rows F (18) exceeds E (16), and sizing the
+    # ear off E alone let the leg reach past its face into the bolt head
+    ear_w = _EAR_W * max(bar_thk_E, bar_deep_F)
     ear_x = 0.5 * _EAR_SPAN * bow_width_G + 0.5 * ear_w
     tee_r = _TEE_TO_BOLT * 2.0 * sb_r
     # H is the clear throat under the shackle bolt and D reaches the inside of
@@ -423,8 +422,7 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     z_sb = -pin_to_throat_D + bow_height_H + sb_r
 
     neck = _NECK * bolt_d
-    z_foot = z_sb + tee_r + neck + foot_r        # centre of the case's foot arc
-    z_case_bot = z_foot - foot_r                 # case underside
+    z_case_bot = z_sb + tee_r + neck             # the socket's underside
     stem_r = 0.5 * _STEM_TO_BOLT * bolt_d
     head_r_stem = _HEAD_TO_STEM * stem_r
     head_t = stem_r
@@ -493,17 +491,25 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
         .cut(_bore_y(bolt_r + 0.3, z_bolt, 4.0 * (y_face + nut_len)))
     )
 
+    # The case is not a lump: it is two extrusions crossing, and it is HOLLOW.
+    #   * the LUG is extruded across the cheeks (Y) -- that is what the hook bolt
+    #     runs through, and it is what fills the gap between the plates;
+    #   * the SOCKET is extruded down the block axis (Z) -- that is what the
+    #     tee swivels in, and it hangs below the plates where it can be fat.
+    # Their bores meet, so the finished case is a shell around one cavity: the
+    # bolt hole opens into the swivel counterbore, and the tee's stem head sits
+    # in that cavity on the shoulder left by the smaller bore through the floor.
     case_t = gap - 2.0 * _FIT
-    case = _hull(eye_r, z_bolt, foot_r, z_foot, case_t).translate(
+    z_plate_bot = z_bolt - tail_r
+    z_lug_bot = z_case_bot + 0.55 * (z_bolt - z_case_bot)
+    lug_r = 0.60 * eye_r
+    case = _hull(eye_r, z_bolt, lug_r, z_lug_bot, case_t).translate(
         (0.0, 0.5 * case_t, 0.0))
-    case = case.intersect(_case_taper(
-        0.5 * case_t, 0.31 * case_t, 0.41 * case_t,
-        z_bolt + eye_r + 1.0, z_bolt - tail_r, z_bolt - tail_r - 0.35 * bolt_d,
-        z_foot, z_case_bot - 1.0))
-    case = case.cut(_bore_y(bolt_r + _FIT, z_bolt, 4.0 * case_t))
+    case = case.union(_disc_z(foot_r, z_case_bot, z_lug_bot - z_case_bot))
     cb_floor = z_case_bot + _CASE_WALL * bolt_d
-    cb_top = z_bolt - bolt_r - _CASE_WEB * bolt_d
-    case = case.cut(_disc_z(head_r_stem + _FIT, cb_floor, cb_top - cb_floor))
+    case = case.cut(_bore_y(bolt_r + _FIT, z_bolt, 4.0 * case_t))
+    case = case.cut(_disc_z(head_r_stem + _FIT, cb_floor,
+                            (z_bolt - bolt_r + 0.5) - cb_floor))
     case = case.cut(_disc_z(stem_r + _FIT, z_case_bot - 1.0,
                             cb_floor - z_case_bot + 1.0))
 
