@@ -251,7 +251,7 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
     for name, _quantity in contract:
         verts, tris = local_meshes[groups[name][0]]
         dx, dy, dz = (verts.max(axis=0) - verts.min(axis=0)).tolist()
-        row = render.render_catalog_views(_normalized([verts])[0], tris)
+        row = render.render_bench_views(_normalized([verts])[0], tris)
         cw_verts, cw_tris = cutaway_meshes[name]
         row.append(render.render_iso(cw_verts, cw_tris, front=(1.0, -1.0, 1.0)))
         rows.append(row)
@@ -264,7 +264,7 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
     posed = list(zip(shared, [tris for _, tris in world_meshes]))
     assembly_actors = [(verts, tris, render.TEAL_STYLE) for verts, tris in posed]
     rows.append([render.render_actors(assembly_actors, front=f)
-                 for f in render.CATALOG_FRONTS])
+                 for f in render.BENCH_FRONTS])
     labels.append(f"assembly overview\nhard / seed 0\n{param_caption(spec, p)}")
 
     if per_instance:
@@ -286,7 +286,7 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
             for i, (verts, tris) in enumerate(posed)
         ]
         rows.append([render.render_actors(actors, front=f)
-                     for f in render.CATALOG_FRONTS])
+                     for f in render.BENCH_FRONTS])
         labels.append(f"{row_no}. {label} highlighted\n{detail}\n{others_note}")
 
     render.compose_grid(rows, labels, out)

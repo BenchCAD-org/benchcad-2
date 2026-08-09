@@ -250,16 +250,22 @@ CodeGen prompt labels 180° out of step with its own renderer
 view set here is written as the **camera position** and negated once, at the
 definition.
 
-The four *scored* cameras are `(−1,−1,−1)`, `(1,1,1)`, `(1,−1,1)`, `(−1,1,−1)`.
-They are two antipodal pairs, and all four satisfy `x = z` — the set has rank 2,
-so the four "diagonal" views are four points on one great circle rather than
-four viewpoints spread over the sphere. A y-mirror maps each onto another
-member, so a part that is mirror-symmetric about its own XZ plane (most
-hardware) shows only **two** distinct aspects across all four. They stay exactly
-as they are, because they are what the benchmark scores and they match
-benchcad-main. The preview-parts sheet is documentation, so it uses
-`CATALOG_CAMERAS`: rank 3, all four above the part, none antipodal, none
-mirror-related.
+The four scored cameras are the vertices of a **regular tetrahedron**:
+
+```
+(1, 1, 1)   (-1, 1, -1)   (-1, -1, 1)   (1, -1, -1)
+```
+
+All six pairwise angles are **109.47°** — the Tammes optimum for four points on
+a sphere; no other four directions separate better. They replace
+`(−1,−1,−1)`, `(1,1,1)`, `(1,−1,1)`, `(−1,1,−1)`, which were two antipodal
+pairs, all satisfied `x = z` (rank 2 — four points on one great circle), and
+were closed under a y-mirror, so a part mirror-symmetric about its own XZ plane
+showed only **two** distinct aspects across all four. The tetrahedron is rank 3
+and no axis mirror maps it onto itself.
+
+The preview-parts sheet uses the same four, so what a reviewer reads is what the
+benchmark scores.
 
 The cutaway is a **fixed** half-section: the +Y half of the shape is removed at
 that shape's own bounding-box centre, the same plane `preview_hard_zoom.png`

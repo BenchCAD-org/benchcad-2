@@ -14,8 +14,6 @@ import numpy as np
 
 ISO_FRONT = (-1.0, -1.0, -1.0)  # classic above-front iso octant
 # the benchmark's four diagonal cameras (matches BenchCAD-main scoring/views.py)
-BENCH_FRONTS = [(1.0, 1.0, 1.0), (-1.0, -1.0, -1.0), (-1.0, 1.0, -1.0), (1.0, -1.0, 1.0)]
-
 # CAMERA_DISTANCE below is NEGATIVE, so `front` is the direction the camera is
 # negated FROM: eye = focal + front * -0.9. A "front" of (1,1,1) is a camera in
 # the (-1,-1,-1) octant. Getting this backwards is what put benchcad-main's
@@ -23,21 +21,19 @@ BENCH_FRONTS = [(1.0, 1.0, 1.0), (-1.0, -1.0, -1.0), (-1.0, 1.0, -1.0), (1.0, -1
 # (BenchCAD/BenchCAD-main PR #1), so every view set here is written as the
 # CAMERA position and negated once, at the definition.
 #
-# The four scored cameras are (-1,-1,-1), (1,1,1), (1,-1,1), (-1,1,-1). They are
-# two antipodal pairs AND all four satisfy x == z: the set has rank 2, so the
-# four "diagonal" views are four points on a single great circle, not four
-# viewpoints spread over the sphere. A y-mirror maps each onto another member,
-# so a part that is mirror-symmetric about its own XZ plane -- most hardware --
-# shows only TWO distinct aspects across all four. They stay exactly as they
-# are: they are what the benchmark scores and they match benchcad-main's
-# CAMERA_FRONTS.
+# The four scored cameras are the vertices of a REGULAR TETRAHEDRON. All six
+# pairwise angles are 109.47 deg, which is the Tammes optimum for four points on
+# a sphere -- no other four directions separate better.
 #
-# The preview-parts SHEET is documentation, not the scored view, so it uses four
-# cameras that actually span space (rank 3), all ABOVE the part, none antipodal
-# and none mirror-related.
-CATALOG_CAMERAS = [(1.0, 0.60, 0.80), (-0.50, 1.00, 0.55),
-                   (-1.00, -0.55, 0.90), (0.55, -1.00, 0.40)]
-CATALOG_FRONTS = [tuple(-c for c in cam) for cam in CATALOG_CAMERAS]
+# They replace (-1,-1,-1), (1,1,1), (1,-1,1), (-1,1,-1), which were two
+# antipodal pairs, all satisfied x == z (rank 2, four points on ONE great
+# circle) and were closed under a y-mirror -- so on a part that is mirror-
+# symmetric about its own XZ plane, most hardware, all four collapsed to two
+# distinct aspects. The tetrahedron is rank 3 and no axis mirror maps it onto
+# itself, so four views really are four.
+BENCH_CAMERAS = [(1.0, 1.0, 1.0), (-1.0, 1.0, -1.0),
+                 (-1.0, -1.0, 1.0), (1.0, -1.0, -1.0)]
+BENCH_FRONTS = [tuple(-c for c in cam) for cam in BENCH_CAMERAS]
 LOOKAT = np.array([0.5, 0.5, 0.5], dtype=np.float64)
 CAMERA_DISTANCE = -0.9
 TEAL01 = (110 / 255, 195 / 255, 192 / 255)
@@ -267,11 +263,6 @@ def compose_grid(rows: list[list], row_labels: list[str], out_png: Path,
     out_png.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_png)
     return out_png
-
-
-def render_catalog_views(verts, tris, img_size: int = 320):
-    """Four genuinely distinct views for the preview-parts sheet."""
-    return [render_iso(verts, tris, img_size, front=f) for f in CATALOG_FRONTS]
 
 
 def render_bench_views(verts, tris, img_size: int = 320):
