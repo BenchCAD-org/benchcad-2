@@ -164,3 +164,27 @@ plug costs nothing in reconstructability and is what makes the latch operable.
 - Offset and deep-offset cams — how the catalog reaches grips below the
   mounting nut. `check()` rejects those rather than pretending.
 - Roller cams, and the detent ramps some E5 variants carry.
+
+## Standards: checked, and what does NOT apply
+
+There is no dimensional standard for this latch. That is a checked result, not
+an assumption, and it is recorded here so it does not get re-litigated:
+
+- **DIN 43668** (quarter-turn locks for switchgear/control cabinets) is the
+  standard this class of part is usually cited against, and it was checked
+  first. **It does not apply.** Its insert cutout is a **32 x 20.1 rectangle**;
+  the E5's is a **double-D, 20.1 across flats on a o22.5 circle**. The shared
+  20.1 is a coincidence of the flats dimension, not a shared cutout. Writing
+  DIN 43668 into `family.json` would be a fabricated citation, so `standard`
+  stays "Southco E5 quarter-turn cam latch" — a product family, not a norm.
+- What genuinely does apply, per feature rather than per part:
+  | feature | standard |
+  |---|---|
+  | body thread M22x1.5 | ISO 261 fine-pitch series (ISO 965 tolerances) |
+  | internal O-ring | ISO 3601-1 size series |
+  | internal compression spring | EN 13906-1 / DIN 2098 |
+  | sealed variants' ingress rating | IEC 60529 |
+  These are cited for the feature class only. The E5 sheet does not give a
+  size code for the O-ring or the spring, so their dimensions here remain
+  proportion (see the table above) and are NOT claimed to be ISO 3601 rows.
+- Architecture (rotating plug in a fixed body) follows Southco US 6,527,308.

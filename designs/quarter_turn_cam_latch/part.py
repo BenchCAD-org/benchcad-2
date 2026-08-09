@@ -197,7 +197,13 @@ def _plug(head_d, head_h, body_d, housing_l, cam_t, slotted):
     drive standing proud of the housing end for the cam. Housing's frame."""
     d_face, d_shaft = plug_face_d(head_d, body_d), plug_shaft_d(body_d)
     drv = drive_af(body_d)
-    p = (cq.Workplane("XY").circle(d_face / 2.0).extrude(head_h)
+    # The exposed cap is the one face a user ever touches, and on the E5 it is
+    # a domed cap with a radiused rim, not a flat disc with a sharp edge. Break
+    # it BEFORE the shaft and drive are unioned on: once they are, `>Z` no
+    # longer selects the rim alone and the slot cut splits it in two.
+    face = (cq.Workplane("XY").circle(d_face / 2.0).extrude(head_h)
+            .edges(">Z").fillet(min(head_h * 0.40, d_face * 0.10)))
+    p = (face
          .union(cq.Workplane("XY").circle(d_shaft / 2.0).extrude(-housing_l))
          # the drive stops flush with the cam's back face, where the screw
          # head seats — any longer and the two would occupy the same space
