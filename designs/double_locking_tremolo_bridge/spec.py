@@ -14,6 +14,8 @@ https://g-gotoh.com/product/ge1996t/?lang=en for finishes, block heights,
 string spacing and saddle radius.
 """
 
+import math
+
 from bench2 import Resample
 
 # n_strings -> (plate span, plate depth, post spacing, saddle radius), mm.
@@ -75,11 +77,18 @@ PARAM_SPEC = {
         "range": {"easy": (3.2, 3.2), "medium": (3.2, 3.2), "hard": (3.2, 3.2)},
         "source": "sheet dimension 3.2, identical on both sizes",
     },
-    "knife_h": {
-        "desc": "height of the knife-edge boss under the plate",
+    "string_h": {
+        "desc": "string height above the plate face — the saddle top sits on "
+                "the fingerboard-radius cylinder at this height",
         "unit": "mm",
         "range": {"easy": (8.6, 8.6), "medium": (8.6, 8.6), "hard": (8.6, 8.6)},
-        "source": "sheet dimension 8.6, identical on both sizes",
+        # Measured off the elevation at 7.97 px/mm (scaled from the plate's own
+        # 3.2): the 8.6 runs from the plate face to the R350 arc through the
+        # saddle notches. An earlier revision read it as the knife-edge height
+        # and named the parameter knife_h; the sheet does not dimension the
+        # knife at all, so its depth is a proportion of this (_KNIFE_DROP).
+        "source": "sheet dimension 8.6 (plate face to the R350 string arc), "
+                  "identical on both sizes",
     },
     "block_height": {
         "desc": "sustain block height below the plate",
@@ -163,11 +172,27 @@ def check(p):
     # Saddle tops lie on the fingerboard-radius cylinder. If the outer saddles
     # drop past what the knife boss gives, the radius is too tight for the span.
     drop = p["saddle_radius"] - (p["saddle_radius"] ** 2 - (string_span / 2.0) ** 2) ** 0.5
-    if drop >= p["knife_h"] * 0.85:
+    if drop >= p["string_h"]:
         bad.append("saddle radius %.0f drops the outer saddles %.2f mm over a %.1f mm "
-                   "span, past the %.2f mm the knife boss allows: too tight a radius "
+                   "span, past the %.2f mm of string height there is: too tight a radius "
                    "for this string count (sheet R350 / R430)"
-                   % (p["saddle_radius"], drop, string_span, p["knife_h"] * 0.85))
+                   % (p["saddle_radius"], drop, string_span, p["string_h"]))
+
+    # The tremolo arm collet lives outboard of the last saddle, in what the
+    # plate leaves past it. Too little room and there is nowhere to put it.
+    _lean = p["string_h"] * 1.35 * math.sin(math.radians(12.0))   # _ARM_TILT
+    _room = (p["plate_span"] / 2.0
+             - (string_span / 2.0 + p["string_pitch"] * 0.43 + 0.8) - _lean)
+    if _room < 5.0:
+        bad.append("only %.1f mm of plate outboard of the last saddle once the "
+                   "arm collet's rake is counted: nowhere to put it (the sheet "
+                   "leaves ~11 at 91.5 span / 54 string span)" % _room)
+
+    # The knife ridges sit at the post centres and have to stay on the plate.
+    if p["plate_span"] - p["post_spacing"] < 8.0:
+        bad.append("posts at %.1f centres on a %.1f plate leave under 8 mm for "
+                   "the knife ridges to bear on"
+                   % (p["post_spacing"], p["plate_span"]))
 
     # The sustain block hangs in the body cavity between the posts.
     if _BLOCK_W * p["plate_span"] >= p["post_spacing"] - 2.0 * p["bushing_d"]:

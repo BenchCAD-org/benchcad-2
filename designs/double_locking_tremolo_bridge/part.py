@@ -18,14 +18,15 @@ import math
 
 # Proportions the sheet does not dimension (all listed in NOTES.md).
 _KNIFE_INSET = 0.14        # knife-edge line from the back edge / plate depth
+_KNIFE_DROP = 0.42         # knife ridge depth below the plate / string height
+_KNIFE_HALF = 0.75         # knife ridge half-width in Y / its own depth
+_KNIFE_RUN = 2.2           # knife ridge length along X / post head diameter
 _SADDLE_ROW = 0.50         # saddle row centre from the front edge / plate depth
 _CLAMP_H = 0.34            # clamp block height / saddle height
 _SCREW_D = 0.30            # clamp screw diameter / string pitch
 _BLOCK_W = 0.55            # sustain block width / plate span
 _BLOCK_D = 0.62            # sustain block depth / plate depth
 _POST_HEAD = 1.5           # post head diameter / post shaft diameter
-_STEP_H = 0.45             # clamp-bearing step height / knife-edge height
-_STEP_D = 0.30             # clamp-bearing step depth / plate depth
 _ARM_BOSS = 1.25           # arm collet boss diameter / string pitch
 _ARM_TILT = 12.0           # deg, arm collet rake off vertical
 
@@ -68,18 +69,22 @@ def _clamp_step(span, depth_y, thick, corner_r):
     )
 
 
-def _knife_edge(span, post_spacing, thick, knife_h, depth_y):
-    """The two hardened bearing ridges the plate rocks on: a prism running along
-    X, broken by the gap between the posts so each post sees its own edge."""
-    half = knife_h
+def _knife_edge(post_spacing, drop, half_y, run_x):
+    """The two hardened bearing ridges the plate rocks on.
+
+    The apex line runs along **X**, the post-to-post direction, because that is
+    the axis the plate rocks about — a ridge along Y would only let it rock
+    along the strings. The section is therefore drawn in YZ and swept along X,
+    one segment over each post head.
+    """
     section = (
-        cq.Workplane("XZ")
-        .moveTo(-half, 0.0)
-        .lineTo(half, 0.0)
-        .lineTo(0.0, -knife_h)
+        cq.Workplane("YZ")
+        .moveTo(-half_y, 0.0)
+        .lineTo(half_y, 0.0)
+        .lineTo(0.0, -drop)
         .close()
-        .extrude(depth_y)
-        .translate((0.0, depth_y / 2.0, 0.0))
+        .extrude(run_x)
+        .translate((-run_x / 2.0, 0.0, 0.0))
     )
     out = None
     for side in (-1.0, 1.0):
@@ -100,8 +105,13 @@ def _saddle(width, length, height, slot_w):
     return body.cut(slot)
 
 
-def _clamp_block(width, length, height):
-    return cq.Workplane("XY").box(width, length, height, centered=(True, True, False))
+def _clamp_block(width, length, height, screw_d):
+    """The block that traps the string against the saddle. It is bored for the
+    clamp screw — without the bore the screw simply occupies the same space."""
+    return (cq.Workplane("XY").box(width, length, height,
+                                   centered=(True, True, False))
+            .cut(cq.Workplane("XY").circle(screw_d / 2.0 + 0.15)
+                 .extrude(height * 3.0).translate((0.0, 0.0, -height))))
 
 
 def _screw(dia, length):
@@ -115,7 +125,8 @@ def _screw(dia, length):
 
 
 def _post(shaft_d, length, head_d):
-    """Mounting post: threaded shaft with a domed bearing head."""
+    """Mounting post: threaded shaft with a flat-topped bearing head — the
+    knife edge is a line, so it bears on a flat, not on a dome."""
     shaft = cq.Workplane("XY").circle(shaft_d / 2.0).extrude(length)
     head = (
         cq.Workplane("XY").circle(head_d / 2.0).extrude(head_d * 0.55)
@@ -144,36 +155,48 @@ def _bushing(outer_d, inner_d, length):
     )
 
 
-def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, knife_h,
+def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, string_h,
           post_spacing, block_height, saddle_radius, saddle_len, post_shaft_d,
           bushing_d, bushing_len, pivot_angle):
     corner_r = plate_span * 0.055
-    plate = _rounded_plate(plate_span, plate_depth, plate_t, corner_r)
-    knife = _knife_edge(plate_span, post_spacing, plate_t, knife_h,
-                        plate_depth * 0.30)
+    head_d = post_shaft_d * _POST_HEAD
+    knife_drop = _KNIFE_DROP * string_h
     knife_y = plate_depth * (0.5 - _KNIFE_INSET)
+    # the ridge hangs from the plate underside, so its tip is the bearing line
+    knife_tip = -knife_drop
+
+    plate = _rounded_plate(plate_span, plate_depth, plate_t, corner_r)
+    # the ridge segments have to stay inside the plate: at post_spacing centres
+    # each reaches post_spacing/2 + run/2, which must not pass plate_span/2
+    knife_run = min(_KNIFE_RUN * head_d, plate_span - post_spacing - 1.0)
+    knife = _knife_edge(post_spacing, knife_drop + plate_t * 0.5,
+                        _KNIFE_HALF * knife_drop, knife_run)
     # lift the ridge into the plate so the join is a buried volume rather than
     # two coincident faces, which OCC unions unreliably
     plate = plate.union(knife.translate((0.0, knife_y, plate_t * 0.5)))
 
-    # raised band the string clamps bear on — the feature that makes this a
-    # locking bridge rather than a flat plate
-    step_h = knife_h * _STEP_H
+    # Tremolo arm collet, outboard of the last saddle on the treble end. It has
+    # to fit in what the plate leaves past the outer saddle — placed by ratio it
+    # sat 2.7 mm inside saddle_06.
+    # The boss is raked, so its top swings `lean` further outboard than its
+    # base — count that or the collet hangs past the plate edge (it put the
+    # assembly 93.7 across a 91.5 plate).
+    span_half_x = string_pitch * (n_strings - 1) / 2.0
+    boss_h = string_h * 1.35
+    lean = boss_h * math.sin(math.radians(_ARM_TILT))
+    arm_room = (plate_span / 2.0
+                - (span_half_x + string_pitch * 0.43 + 0.8) - lean)
+    boss_d = min(string_pitch * _ARM_BOSS, arm_room)
+    boss_x = plate_span / 2.0 - boss_d / 2.0 - 0.1 - lean
     plate = plate.union(
-        _clamp_step(plate_span * 0.97, plate_depth * _STEP_D, step_h + plate_t * 0.5,
-                    corner_r * 0.6)
-        .translate((0.0, plate_depth * (0.5 - _STEP_D / 2.0) - corner_r,
-                    plate_t * 0.5))
+        _arm_socket(boss_d, boss_h, boss_d * 0.42, _ARM_TILT)
+        .translate((boss_x, -plate_depth * 0.22, plate_t * 0.4))
     )
 
-    # tremolo arm collet on the treble end
-    boss_d = string_pitch * _ARM_BOSS
-    plate = plate.union(
-        _arm_socket(boss_d, knife_h * 1.35, boss_d * 0.42, _ARM_TILT)
-        .translate((plate_span / 2.0 - boss_d * 0.75, -plate_depth * 0.22,
-                    plate_t * 0.4))
-    )
-
+    # The sustain block bolts to the plate underside: its top face MEETS the
+    # plate, it does not enter it. An earlier revision buried it 0.8*plate_t
+    # into the plate to make the union robust — legitimate inside one solid,
+    # but these are two components and it left them 2875 mm3 interpenetrating.
     block_w = _BLOCK_W * plate_span
     block_d = _BLOCK_D * plate_depth
     block = (
@@ -181,20 +204,17 @@ def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, knife_h,
         .box(block_w, block_d, block_height, centered=(True, True, False))
         .translate((0.0, 0.0, -block_height))
     )
-    # bury the block a little into the plate so the join is a volume, not a face
-    block = block.union(
-        cq.Workplane("XY")
-        .box(block_w, block_d, plate_t * 0.8, centered=(True, True, False))
-    )
 
     saddle_y = plate_depth * (_SADDLE_ROW - 0.5)
     span_half = string_pitch * (n_strings - 1) / 2.0
 
     def _rock(shape):
-        """Everything carried by the plate rocks about the knife-edge line — an
-        X axis through knife_y at the plate underside. The posts and bushings
-        are set into the guitar body and do not move with it."""
-        return shape.rotate((0.0, knife_y, 0.0), (1.0, knife_y, 0.0), pivot_angle)
+        """Everything carried by the plate rocks about the KNIFE-EDGE LINE —
+        an X axis through knife_y at the ridge tip, which is the line actually
+        bearing on the post heads. Rotating about the plate underside instead,
+        as an earlier revision did, swings the ridge into the posts."""
+        return shape.rotate((0.0, knife_y, knife_tip),
+                            (1.0, knife_y, knife_tip), pivot_angle)
 
     result = cq.Assembly(name="double_locking_tremolo_bridge")
     result.add(_rock(plate), name="base_plate")
@@ -205,24 +225,28 @@ def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, knife_h,
         # the saddle tops lie on a cylinder of radius `saddle_radius`, so the
         # outer saddles stand lower than the middle ones
         drop = saddle_radius - math.sqrt(max(1.0, saddle_radius ** 2 - x * x))
-        h = plate_t + knife_h * 0.85 - drop
+        h = string_h - drop
         clamp_y = saddle_y + saddle_len * 0.22
+        screw_d = _SCREW_D * string_pitch
         sad = _saddle(string_pitch * 0.86, saddle_len, h, string_pitch * 0.30)
         result.add(_rock(sad.translate((x, saddle_y, plate_t))),
                    name="saddle_%02d" % (i + 1))
-        clamp = _clamp_block(string_pitch * 0.72, saddle_len * 0.42, _CLAMP_H * h)
+        clamp = _clamp_block(string_pitch * 0.72, saddle_len * 0.42,
+                             _CLAMP_H * h, screw_d)
         result.add(_rock(clamp.translate((x, clamp_y, plate_t + h))),
                    name="clamp_block_%02d" % (i + 1))
-        scr = _screw(_SCREW_D * string_pitch, _CLAMP_H * h * 1.4)
+        scr = _screw(screw_d, _CLAMP_H * h * 1.4)
         result.add(_rock(scr.translate((x, clamp_y, plate_t + h))),
                    name="clamp_screw_%02d" % (i + 1))
 
     # The post head is the bearing surface the knife edge sits on, so its top
-    # lands on the knife tip; the bushing is pressed into the body around it.
-    knife_tip = plate_t * 0.5 - knife_h
-    head_d = post_shaft_d * _POST_HEAD
+    # lands on the knife tip; the bushing is pressed into the body around the
+    # SHAFT and has to stop clear of the head, which is wider than its bore.
+    # _post puts its head top at length + 0.40*head_d and its head bottom at
+    # length - 0.15*head_d, both measured from the shaft base.
     post_len = bushing_len * 1.05
-    post_z = knife_tip - (post_len + head_d * 0.4)
+    post_z = knife_tip - post_len - head_d * 0.40   # head top lands ON the tip
+    bush_top = knife_tip - head_d * 0.55 - 0.5      # clear under the head
     for j, side in enumerate((-1.0, 1.0)):
         px = side * post_spacing / 2.0
         result.add(
@@ -231,7 +255,7 @@ def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, knife_h,
         )
         result.add(
             _bushing(bushing_d, post_shaft_d * 1.12, bushing_len)
-            .translate((px, knife_y, knife_tip - bushing_len / 2.0 - 2.0)),
+            .translate((px, knife_y, bush_top - bushing_len / 2.0)),
             name="insert_bushing_%02d" % (j + 1),
         )
     return result
