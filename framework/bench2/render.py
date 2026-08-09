@@ -96,6 +96,11 @@ TEAL_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.6, 0.3, 0.7, 1.0)
 HIGHLIGHT_STYLE = ((0.83, 0.15, 0.16), (0.40, 0.04, 0.05), 1.8, 0.3, 0.7, 1.0)
 DIMMED_STYLE = ((0.80, 0.80, 0.82), (0.46, 0.46, 0.48), 1.0, 0.55, 0.45, 1.0)
 GHOST_STYLE = ((0.72, 0.74, 0.76), (0.58, 0.60, 0.62), 0.8, 0.6, 0.35, 0.22)
+# the assembly OVERVIEW rendered see-through: same teal identity, but the outer
+# bodies stop hiding everything inside them. A gearbox's overview is otherwise a
+# featureless can — the planetary set's sun, planets, ring and carrier are all
+# behind a housing. Edges stay near full strength so the silhouette still reads.
+TEAL_GHOST_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.4, 0.35, 0.65, 0.28)
 
 
 def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
