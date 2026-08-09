@@ -212,9 +212,9 @@ for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 | shackle ear width along the bolt | `1.4 × E` | the ear is upset wider than the bar so the bolt head bears on it **clear of the flaring leg** — see below |
 | bolt head radius | `1.35 ×` shank radius | ordinary headed-bolt proportion |
 | retention nut | OD `2.4 ×` bolt radius, length `0.9 ×` | round staked nut (manual p.12) |
-| retaining wire diameter | `0.14 ×` its bolt's diameter | proportion |
+| retaining wire size | ISO 1234 nominal at or below `0.14–0.20 ×` its bolt's diameter | the standard series; which size Crosby fits is not published |
 | straight roller diameter | `0.22 ×` centre pin diameter, `0.6` mm apart | proportion; sets `roller_count` |
-| head / nut diameter | `1.6 ×` shank, hex A/F `1.55 ×` shank | ordinary headed-pin proportions |
+| hook bolt head radius | `1.35 ×` shank radius | the one non-standard head: Crosby's hook bolt is a special forging |
 | bushing wall / roller race depth | `0.12 ×` pin (BB) or `0.22 ×` pin (RB), min 2 mm | proportion; the catalogue gives only the BB/RB code, not race dimensions |
 | every pin-in-bore clearance | 0.5 mm radial | proportion |
 
@@ -228,16 +228,50 @@ race to model, and "not sealed … not recommended for higher speeds" is what a
 full complement behaves like. `family.json` therefore declares no `solids` and
 names `roller_count` as the quantity; `bench2 validate` resolves it per instance.
 
+### Fasteners come out of the standards, not out of ratios
+
+The catalogue publishes no fastener dimension at all. Rather than invent
+ratios, every pin is snapped to the **largest ISO 261 first-choice coarse size
+at or below** its load-derived diameter, and its hardware then comes straight
+out of the standards:
+
+| part | standard | what it fixes |
+|---|---|---|
+| hexagon head | **ISO 4014** | head height `k` |
+| hexagon nut | **ISO 4032** (style 1) | nut height `m` |
+| width across flats | **ISO 272** | `s`, shared by head and nut |
+| split pin | **ISO 1234** | nominal = the hole it fits |
+| hitch pin (R-clip) form | **DIN 11024** | size taken from the ISO 1234 series, which the standard does not publish for this application |
+
+| row | centre pin | hook bolt | shackle bolt |
+|---|---|---|---|
+| 2 t, C 67, E 13 | M20 | M16 | M12 |
+| 4 t, C 79, E 16 | M20 | M20 | M16 |
+| 6 t, C 94, E 16 | M24 | M24 | M16 |
+| 8 t / 12 t, C 106, E 32 | M30 | M24 | M36 |
+
+Snapping *down* is deliberate — a pin must fit the space it has — but it can
+throw away section if the derived diameter lands just above a step, so
+`check()` rejects any row that loses more than a fifth. The **hook bolt is the
+one exception**: Crosby's is a special forging with a round staked nut, so only
+its shank size is standard here and its head stays a proportion.
+
+Every nut is a **separate body**. That is not cosmetic: it is the only way the
+hook bolt can be unscrewed (see above), and it is how the parts list sells them.
+
 ### Retaining wire
 
 The hitch pin and the shackle cotter are Crosby's own line items (LS5/SS3
 *Hairpin for Hook Bolt*, LS14/SS6 *Cotter Pin Only*) and both are visible in the
-sheet and the photographs, so both are modelled: the hairpin is swept along a
-tangent-continuous path (line, semicircle, line) so it comes out as one solid
-with no booleans, and the swept volume equals `π r² L` exactly — which is the
-check that the sweep did not quietly return something else. The centre pin gets
-neither: the manual retains it with a prevailing-torque lock nut and a **roll
-pin** driven into it, which is not a visible clip.
+sheet and the photographs, so both are modelled — and both are **swept along a
+tangent-continuous centreline**, not unioned from primitives, so each is one
+solid with no booleans and no seams. The split pin is drawn the way it is
+formed: one wire folded double, short leg up, eye bend over the top, long leg
+back down through the bolt, tail bent clear. For both, the swept volume equals
+`π r² L` exactly — which is the check that the sweep really ran and did not
+quietly return something else. The centre pin gets neither: the manual retains
+it with a prevailing-torque lock nut and a **roll pin** driven into it, which is
+not a visible clip.
 
 `open_angle` and `swivel_angle` are operating states, not dimensions. The
 manual gives the motion for both and dimensions neither.
@@ -272,8 +306,8 @@ bushing closed, roller closed, roller open} = 39 instances: every pair's
 intersection volume must be 0, and every joint in the load path above must have a
 minimum distance no larger than the fit it is built with.
 
-Current result: **0 mm³ overlap and 0.55 mm worst joint clearance, on all 39
-instances.** Two joints are expected to open once `open_angle > 0` and are
+Current result: **0 mm³ overlap and 0.87 mm worst joint clearance, on all 39
+instances** (15 solids bronze-bushed, 30 with the roller complement). Two joints are expected to open once `open_angle > 0` and are
 excluded there: `side_plate_02 | hook_bolt` and `hook_bolt | retention_nut`,
 because the bolt has been unscrewed out of the plate and the nut has swung away
 with it — the state the manual describes.

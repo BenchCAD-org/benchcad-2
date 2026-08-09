@@ -170,6 +170,19 @@ _TEE_TO_BOLT = 0.95
 _EAR_SPAN = 0.73
 _EAR_W = 1.4
 _HEAD_R = 1.35
+# ISO 261 first-choice coarse sizes with their ISO 272 / 4014 / 4032 hardware:
+# nominal -> (across flats s, head height k, nut height m).  Mirrored from
+# part.py so check() constrains the fasteners build() actually draws.
+_ISO_HEX = {
+    12: (18.0, 7.5, 10.8), 16: (24.0, 10.0, 14.8), 20: (30.0, 12.5, 18.0),
+    24: (36.0, 15.0, 21.5), 30: (46.0, 18.7, 25.6), 36: (55.0, 22.5, 31.0),
+    42: (65.0, 26.0, 34.0), 48: (75.0, 30.0, 38.0),
+}
+
+
+def _iso_size(target):
+    fits = [d for d in sorted(_ISO_HEX) if d <= target]
+    return fits[-1] if fits else min(_ISO_HEX)
 _RACE_BB = 0.12
 _ROLLER = 0.22
 _ROLL_GAP = 0.6
@@ -178,7 +191,7 @@ _FIT = 0.5
 
 def _bearing(p):
     """Pin, race depth and roller pitch circle -- mirrored from part.py."""
-    pin_d = _PIN_TO_CHEEK * p["cheek_w_C"]
+    pin_d = float(_iso_size(_PIN_TO_CHEEK * p["cheek_w_C"]))
     race_t = max(2.0, (_ROLLER if p["roller_bearing"] else _RACE_BB) * pin_d)
     return pin_d, race_t, 0.5 * pin_d + _FIT + 0.5 * race_t
 
@@ -189,12 +202,12 @@ def _stack(p):
     Returns (hook bolt axis, shackle bolt axis, case foot centre) as z below the
     centre pin, all negative.
     """
-    bolt_d = _BOLT_TO_CHEEK * p["cheek_w_C"]
+    bolt_d = float(_iso_size(_BOLT_TO_CHEEK * p["cheek_w_C"]))
     tail_r = _BOSS_TO_BOLT * bolt_d
     eye_r = _EYE_TO_BOLT * bolt_d
     z_bolt = -max(_PLATE_REACH * p["pin_to_throat_D"],
                   0.5 * p["sheave_d"] + max(tail_r, eye_r) + _SHEAVE_GAP)
-    sb_r = 0.5 * _BOLT_TO_BAR * p["bar_thk_E"]
+    sb_r = 0.5 * float(_iso_size(_BOLT_TO_BAR * p["bar_thk_E"]))
     z_sb = -p["pin_to_throat_D"] + p["bow_height_H"] + sb_r
     tee_r = _TEE_TO_BOLT * 2.0 * sb_r
     z_foot = z_sb + tee_r + _NECK * bolt_d + _CASE_FOOT * bolt_d
@@ -255,7 +268,7 @@ def check(p):
 
     # Metal has to remain under the groove, over the bore.  The bore is set by
     # the centre pin, which is a load-sized part and so scales with C.
-    pin_d = _PIN_TO_CHEEK * p["cheek_w_C"]
+    pin_d = float(_iso_size(_PIN_TO_CHEEK * p["cheek_w_C"]))
     bore_d = pin_d + 2.0 * max(2.0, _RACE_BB * pin_d)
     tread_d = p["sheave_d"] - 2.0 * _GROOVE_DEPTH_FACTOR * p["rope_d"]
     if tread_d <= bore_d + 12.0:
@@ -275,7 +288,7 @@ def check(p):
     # the load path (bow -> shackle bolt -> tee -> swivel -> case -> hook bolt
     # -> plates) has to have room to exist, or the fitting is not attached to
     # the block at all.
-    bolt_d = _BOLT_TO_CHEEK * p["cheek_w_C"]
+    bolt_d = float(_iso_size(_BOLT_TO_CHEEK * p["cheek_w_C"]))
     z_bolt, z_sb, z_foot = _stack(p)
 
     # 1. the swivel case has to be long enough to hold the bolt eye above the
@@ -297,7 +310,8 @@ def check(p):
                    % (clear, _SHEAVE_GAP))
 
     # 3. the tee barrel hangs inside the shackle throat, between the ears.
-    sb_r = 0.5 * _BOLT_TO_BAR * p["bar_thk_E"]
+    sb_d = float(_iso_size(_BOLT_TO_BAR * p["bar_thk_E"]))
+    sb_r = 0.5 * sb_d
     tee_r = _TEE_TO_BOLT * 2.0 * sb_r
     if z_sb - tee_r <= -p["pin_to_throat_D"] + p["bar_thk_E"]:
         bad.append("swivel tee barrel r=%.1f reaches the shackle crown: the throat is "
@@ -333,7 +347,7 @@ def check(p):
         #    shackle cannot be assembled -- caught by probe on the first draft.
         phi = math.atan2(reach, ear_x) - math.acos(major_r / span)
         t_x, t_z = major_r * math.cos(phi), -reach + major_r * math.sin(phi)
-        head_r = _HEAD_R * sb_r
+        head_r = _ISO_HEX[int(sb_d)][0] / math.sqrt(3.0)   # hex circumradius
         lean = (t_x - ear_x) / max(1e-6, -t_z)
         leg_out = ear_x + lean * head_r + bar_r * math.hypot(1.0, lean)
         if leg_out > ear_x + 0.5 * ear_w - 0.5:
@@ -341,5 +355,17 @@ def check(p):
                        "but the ear face is only at x=%.1f: the head would foul the "
                        "leg (anchor shackle proportion, NOTES.md)"
                        % (leg_out, 2.0 * head_r, ear_x + 0.5 * ear_w))
+
+    # 7. every pin is snapped DOWN to an ISO size, so a row whose load-derived
+    #    diameter lands just above a step would otherwise get a pin much smaller
+    #    than the load asks for.  Reject anything that loses more than a fifth.
+    for label, target, chosen in (
+            ("centre pin", _PIN_TO_CHEEK * p["cheek_w_C"], pin_d),
+            ("hook bolt", _BOLT_TO_CHEEK * p["cheek_w_C"], bolt_d),
+            ("shackle bolt", _BOLT_TO_BAR * p["bar_thk_E"], sb_d)):
+        if chosen < 0.80 * target:
+            bad.append("%s: the load-derived %.1f mm snaps down to M%d, losing %.0f%% "
+                       "of the section (ISO 261 first-choice ladder, NOTES.md)"
+                       % (label, target, int(chosen), 100.0 * (1.0 - chosen / target)))
 
     return bad

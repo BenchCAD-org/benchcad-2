@@ -79,8 +79,30 @@ _EAR_SPAN = 0.73                 # shackle ear inside spacing / bow inside width
 _EAR_W = 1.4                     # shackle ear width along the bolt / bow bar E --
                                  # the ear is upset wider than the bar so the bolt
                                  # head bears on it clear of the flaring leg
-_HEAD_R = 1.35                   # bolt head radius / shank radius
-_HEX = 1.55                      # nut across flats / shank diameter
+_HEAD_R = 1.35                   # hook bolt head radius / shank radius -- the
+                                 # hook bolt is a Crosby special, not a standard
+                                 # fastener, so only its shank size is standard
+
+# The catalogue publishes no fastener dimension at all, so every pin here is
+# taken to the nearest ISO 261 first-choice coarse size AT OR BELOW its
+# load-derived diameter, and its head and nut then come straight out of the
+# standards rather than out of a made-up ratio:
+#   s = width across flats (ISO 272, shared by ISO 4014 heads and ISO 4032 nuts)
+#   k = hexagon head height (ISO 4014)
+#   m = hexagon nut height (ISO 4032, style 1)
+_ISO_HEX = {
+    12: (18.0, 7.5, 10.8),
+    16: (24.0, 10.0, 14.8),
+    20: (30.0, 12.5, 18.0),
+    24: (36.0, 15.0, 21.5),
+    30: (46.0, 18.7, 25.6),
+    36: (55.0, 22.5, 31.0),
+    42: (65.0, 26.0, 34.0),
+    48: (75.0, 30.0, 38.0),
+}
+# ISO 1234 split pins: nominal diameter = the hole it fits.  The same preferred
+# series sizes the hitch pin's wire; its R-clip form is DIN 11024.
+_ISO_SPLIT = (2.0, 2.5, 3.2, 4.0, 5.0, 6.3, 8.0, 10.0, 13.0, 16.0, 20.0)
 _RACE_BB = 0.12                  # bronze bushing wall / centre pin diameter
 _ROLLER = 0.22                   # straight roller diameter / centre pin diameter
 _ROLL_GAP = 0.6                  # mm between rollers in the full complement
@@ -169,32 +191,45 @@ def _sleeve(outer_r, inner_r, width):
     )
 
 
-def _bolt_y(shank_r, y0, y1, z, tail):
-    """Headed bolt on the Y axis, shank spanning y0..y1+nut+tail: a round head
-    standing proud beyond y0, a hex nut beyond y1, and a plain tail past the nut
-    cross-drilled for the hitch pin.
+def _iso_size(target):
+    """Largest ISO 261 first-choice coarse size at or below `target`."""
+    fits = [d for d in sorted(_ISO_HEX) if d <= target]
+    return fits[-1] if fits else min(_ISO_HEX)
 
-    Both the centre pin and the hook bolt are built this way -- the manual calls
-    one a pin with a nut and the other a bolt with a round staked retention nut,
-    and both are headed one end and nutted the other.  Workplane("XZ") extrudes
-    toward -Y, so each piece is placed by its HIGH-Y face.
-    """
-    head_t = 0.8 * shank_r
-    y_nut = y1 + head_t
+
+def _iso_split(target):
+    """Largest ISO 1234 split-pin nominal at or below `target`."""
+    fits = [d for d in _ISO_SPLIT if d <= target]
+    return fits[-1] if fits else _ISO_SPLIT[0]
+
+
+def _hex_prism(across_flats, height, axis):
+    """ISO 272 hexagon of `across_flats`, `height` deep, on `axis` ("XZ" runs
+    along -Y, "YZ" along +X).  polygon() takes the CIRCUMSCRIBED circle, so the
+    diameter is s * 2/sqrt(3); writing s there makes every nut in the model 42%
+    undersize, which is exactly what happened here once."""
+    return cq.Workplane(axis).polygon(6, 2.0 * across_flats / math.sqrt(3.0)) \
+             .extrude(height)
+
+
+def _hex_bolt_y(shank_r, y_head, y_end, z, across_flats, head_k):
+    """ISO 4014 hexagon head bolt on the Y axis: head standing outboard of
+    `y_head`, plain shank running to `y_end`.  Its nut is a SEPARATE body --
+    a bolt that carries its own nut cannot be unscrewed, because backing it out
+    of the plate drives the nut into whatever is between the plates."""
     shank = (
-        cq.Workplane("XZ").circle(shank_r).extrude(y_nut + tail - y0)
-        .translate((0.0, y_nut + tail, z))
+        cq.Workplane("XZ").circle(shank_r).extrude(y_end - y_head)
+        .translate((0.0, y_end, z))
     )
-    head = (
-        cq.Workplane("XZ").circle(_HEAD_R * shank_r).extrude(head_t)
-        .translate((0.0, y0, z))
-    )
-    nut = (
-        cq.Workplane("XZ").polygon(6, 4.0 * _HEX * shank_r / math.sqrt(3.0))
-        .extrude(head_t)
-        .translate((0.0, y_nut, z))
-    )
-    return shank.union(head).union(nut)
+    head = _hex_prism(across_flats, head_k, "XZ").translate((0.0, y_head, z))
+    return shank.union(head)
+
+
+def _hex_nut_y(shank_r, y0, z, across_flats, height):
+    """ISO 4032 hexagon nut on the Y axis, spanning y0 .. y0 + height."""
+    return (_hex_prism(across_flats, height, "XZ")
+            .translate((0.0, y0 + height, z))
+            .cut(_bore_y(shank_r + 0.2, z, 8.0 * (abs(y0) + height))))
 
 
 def _hairpin(wire_r, shank_r):
@@ -217,29 +252,39 @@ def _hairpin(wire_r, shank_r):
     return cq.Workplane("XY").workplane(offset=z_bot).circle(wire_r).sweep(path)
 
 
-def _cotter(wire_r, shank_r):
-    """Split pin for the shackle bolt: eye, leg down through the bolt's cross
-    hole, and the tail bent clear so it cannot back out.  Same frame as
-    `_hairpin` -- leg on Z, the bolt it retains on X."""
-    # cq 2.3's makeTorus takes no sweep angle, so the eye is a closed loop --
-    # which is what a split pin's eye is anyway.  The leg buries one wire radius
-    # into the bottom of the loop instead of crossing its hole.
-    eye_r = 1.8 * wire_r
-    z_eye = shank_r + 1.6 * wire_r + eye_r
-    z_bot = -(shank_r + 2.4 * wire_r)
-    eye = cq.Workplane("XY").newObject([
-        cq.Solid.makeTorus(eye_r, wire_r, cq.Vector(0.0, 0.0, z_eye),
-                           cq.Vector(0.0, 1.0, 0.0))
-    ])
-    leg = _disc_z(wire_r, z_bot, (z_eye - eye_r + wire_r) - z_bot)
-    tilt = math.radians(35.0)
-    tail = cq.Workplane("XY").newObject([
-        cq.Solid.makeCylinder(
-            wire_r, 3.0 * wire_r,
-            cq.Vector(0.0, 0.0, z_bot + wire_r),
-            cq.Vector(math.sin(tilt), 0.0, -math.cos(tilt)))
-    ])
-    return eye.union(leg).union(tail)
+def _split_pin(nominal, shank_r):
+    """ISO 1234 split pin, ONE swept solid: the wire is folded double, so the
+    whole part is a single centreline -- short leg up, eye bend over the top,
+    long leg back down through the bolt, and the tail bent clear so it cannot
+    back out.
+
+    Built in XZ with the legs on Z and the bolt it locks on X, and swept rather
+    than unioned from primitives: every junction on the path is tangent, so the
+    result has no seams and no boolean at all.  As with `_hairpin`, the swept
+    volume equals pi*r^2*L, which is how you know the sweep really ran.
+    """
+    w = 0.46 * nominal                       # ISO 1234 wire runs under nominal
+    gap = 2.05 * w                           # the folded pair, just clear
+    z_top = shank_r + 2.0 * w                # centre of the eye bend
+    z_short = -(shank_r + 1.0 * w)
+    z_long = -(shank_r + 3.2 * w)
+    bend_r = 2.2 * w
+    half = math.radians(22.5)
+    full = math.radians(45.0)
+    cx = 0.5 * gap + bend_r
+    mid = (cx - bend_r * math.cos(half), z_long - bend_r * math.sin(half))
+    end = (cx - bend_r * math.cos(full), z_long - bend_r * math.sin(full))
+    tip = (end[0] + 2.4 * w * math.sin(full), end[1] - 2.4 * w * math.cos(full))
+    path = (
+        cq.Workplane("XZ").moveTo(-0.5 * gap, z_short)
+        .lineTo(-0.5 * gap, z_top)
+        .threePointArc((0.0, z_top + 0.5 * gap), (0.5 * gap, z_top))
+        .lineTo(0.5 * gap, z_long)
+        .threePointArc(mid, end)
+        .lineTo(tip[0], tip[1])
+    )
+    return (cq.Workplane("XY").workplane(offset=z_short)
+            .moveTo(-0.5 * gap, 0.0).circle(w).sweep(path))
 
 
 def _shackle_bow(inside_w, bar_r, bolt_r, ear_r, ear_w, ear_x, crown_c):
@@ -290,8 +335,12 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     plate_t = _PLATE_T * cheek_w_C
     gap = cheek_w_C - 2.0 * plate_t              # inner face to inner face
     sheave_w = gap - 2.0 * _SIDE_CLR
-    pin_r = 0.5 * _PIN_TO_CHEEK * cheek_w_C
-    bolt_d = _BOLT_TO_CHEEK * cheek_w_C
+    # Load-derived diameters, snapped to the ISO 261 first-choice ladder; the
+    # head and nut then come out of ISO 4014 / ISO 4032 rather than a ratio.
+    pin_d = float(_iso_size(_PIN_TO_CHEEK * cheek_w_C))
+    pin_s, pin_k, pin_m = _ISO_HEX[int(pin_d)]
+    pin_r = 0.5 * pin_d
+    bolt_d = float(_iso_size(_BOLT_TO_CHEEK * cheek_w_C))
     bolt_r = 0.5 * bolt_d
     race_t = max(2.0, (_ROLLER if roller_bearing else _RACE_BB) * 2.0 * pin_r)
     bore_r = pin_r + 2.0 * _FIT + race_t         # sheave bore
@@ -310,7 +359,9 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     z_bolt = -max(_PLATE_REACH * pin_to_throat_D,
                   0.5 * sheave_d + max(tail_r, eye_r) + _SHEAVE_GAP)
 
-    sb_r = 0.5 * _BOLT_TO_BAR * bar_thk_E        # shackle bolt
+    sb_d = float(_iso_size(_BOLT_TO_BAR * bar_thk_E))     # shackle bolt
+    sb_s, sb_k, sb_m = _ISO_HEX[int(sb_d)]
+    sb_r = 0.5 * sb_d
     bar_r = 0.5 * bar_thk_E
     ear_r = _EAR_TO_BOLT * 2.0 * sb_r
     ear_w = _EAR_W * bar_thk_E
@@ -342,9 +393,13 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
 
     # ---- sheave train ----------------------------------------------------
     sheave = _sheave(0.5 * sheave_d, bore_r, sheave_w, rope_d)
-    # The centre pin is retained by a prevailing-torque lock nut and a roll pin
-    # driven into it (manual p.12), not by a visible clip -- so it gets no tail.
-    centre_pin = _bolt_y(pin_r, -0.5 * cheek_w_C, 0.5 * cheek_w_C, 0.0, 0.0)
+    # The centre pin is retained by a lock nut and a roll pin driven into it
+    # (manual p.12), not by a visible clip -- so it gets no cotter, and the nut
+    # is its own body like every other nut here.
+    y_face = 0.5 * cheek_w_C                     # the plates' outer faces
+    centre_pin = _hex_bolt_y(pin_r, -y_face, y_face + pin_m + 0.35 * pin_d,
+                             0.0, pin_s, pin_k)
+    centre_pin_nut = _hex_nut_y(pin_r, y_face, 0.0, pin_s, pin_m)
 
     # bearing: a bronze bushing, or a full complement of straight rollers
     # running directly on the pin.  Same component either way, so the body count
@@ -367,9 +422,8 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     # cannot rotate while the bolt is through it, so an open block has the bolt
     # backed out of the swing plate (which is the +Y one, and carries the nut).
     withdraw = 0.0 if open_angle <= 0.0 else plate_t + 2.0
-    bolt_wire = _WIRE * bolt_d
+    bolt_wire = 0.5 * _iso_split(_WIRE * bolt_d)
     nut_len = 0.9 * bolt_r
-    y_face = 0.5 * cheek_w_C                     # the plates' outer faces
     hitch_y = y_face + nut_len + 2.6 * bolt_wire
     hook_bolt = (
         cq.Workplane("XZ").circle(bolt_r).extrude(2.0 * y_face + nut_len
@@ -418,22 +472,26 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     crown_z = 0.5 * bow_width_G - bow_height_H - sb_r
     bow = _shackle_bow(bow_width_G, bar_r, sb_r + _FIT, ear_r, ear_w, ear_x,
                        crown_z).translate((0.0, 0.0, z_sb))
-    sb_wire = _WIRE * 2.0 * sb_r
+    cot_nom = _iso_split(0.20 * sb_d)
+    cot_w = 0.46 * cot_nom
     x_nut = ear_x + 0.5 * ear_w                  # the ears' outer faces
-    # the cotter's eye stands clear of the nut it is locking, or the two foul
-    cot_x = x_nut + 0.8 * sb_r + 3.4 * sb_wire
+    # the split pin stands clear of the nut it locks, or the eye fouls the nut
+    cot_x = x_nut + sb_m + 1.03 * cot_nom + 1.5
     shackle_bolt = (
-        cq.Workplane("YZ").circle(sb_r).extrude(x_nut + cot_x + 1.8 * sb_wire)
+        cq.Workplane("YZ").circle(sb_r).extrude(x_nut + cot_x + 2.2 * cot_nom)
         .translate((-x_nut, 0.0, z_sb))
-        .union(cq.Workplane("YZ").polygon(6, 4.0 * _HEX * sb_r / math.sqrt(3.0))
-               .extrude(0.8 * sb_r).translate((x_nut, 0.0, z_sb)))
-        .union(cq.Workplane("YZ").circle(_HEAD_R * sb_r).extrude(0.8 * sb_r)
-               .translate((-x_nut - 0.8 * sb_r, 0.0, z_sb)))
+        .union(_hex_prism(sb_s, sb_k, "YZ")
+               .translate((-x_nut - sb_k, 0.0, z_sb)))
     )
+    # the folded wire needs a hole wide enough for both legs
     shackle_bolt = shackle_bolt.cut(
-        _disc_z(sb_wire + 0.3, z_sb - 4.0 * sb_r, 8.0 * sb_r)
+        _disc_z(1.03 * cot_nom + 0.25, z_sb - 4.0 * sb_r, 8.0 * sb_r)
         .translate((cot_x, 0.0, 0.0)))
-    shackle_cotter = _cotter(sb_wire, sb_r).translate((cot_x, 0.0, z_sb))
+    shackle_nut = (
+        _hex_prism(sb_s, sb_m, "YZ").translate((x_nut, 0.0, z_sb))
+        .cut(_bore_x(sb_r + 0.2, z_sb, 8.0 * (x_nut + sb_m)))
+    )
+    shackle_cotter = _split_pin(cot_nom, sb_r).translate((cot_x, 0.0, z_sb))
 
     # the swivel is the whole point of the fitting: everything below the case
     # turns about Z together, and nothing above it moves.
@@ -445,6 +503,7 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     result.add(swing, name="side_plate_02")
     result.add(sheave, name="sheave")
     result.add(centre_pin, name="centre_pin")
+    result.add(centre_pin_nut, name="centre_pin_nut")
     result.add(hook_bolt, name="hook_bolt")
     result.add(retention_nut, name="retention_nut")
     result.add(hitch_pin, name="hitch_pin")
@@ -452,6 +511,7 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     result.add(_turn(tee), name="swivel_tee")
     result.add(_turn(bow), name="shackle_bow")
     result.add(_turn(shackle_bolt), name="shackle_bolt")
+    result.add(_turn(shackle_nut), name="shackle_nut")
     result.add(_turn(shackle_cotter), name="shackle_cotter")
     for k, element in enumerate(elements):
         result.add(element, name="bearing_element_%02d" % (k + 1))
