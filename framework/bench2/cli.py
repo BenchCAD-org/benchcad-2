@@ -178,14 +178,15 @@ def cmd_preview(family: str, per_diff: int) -> int:
     return 0
 
 
-def cmd_preview_parts(family: str, per_instance: bool, transparent: bool) -> int:
+def cmd_preview_parts(family: str, per_instance: bool, opaque: bool) -> int:
     from .preview_parts import build_preview_parts
 
     fam_dir = _designs_root() / family
     if not fam_dir.is_dir():
         sys.exit(f"bench2: designs/{family}/ not found")
     try:
-        out = build_preview_parts(fam_dir, per_instance=per_instance, transparent=transparent)
+        out = build_preview_parts(fam_dir, per_instance=per_instance,
+                                  transparent=not opaque)
     except (ValueError, RuntimeError) as e:
         sys.exit(f"bench2: preview-parts: {e}")
     print(f"assembly components + highlights → {out}")
@@ -228,9 +229,15 @@ def main() -> None:
         help="one highlight row per instance (bolt_01, bolt_02) instead of per component",
     )
     p_parts.add_argument(
+        "--opaque",
+        action="store_true",
+        help="keep the non-highlighted components solid instead of ghosting them "
+             "(the highlight rows ghost them by default, so internal parts stay visible)",
+    )
+    p_parts.add_argument(
         "--transparent",
         action="store_true",
-        help="ghost the non-highlighted components (see-through) so internal parts stay visible",
+        help="no-op: ghosting is the default. Kept so older commands still run.",
     )
     sub.add_parser("status", help="regenerate docs/STATUS.md")
     a = ap.parse_args()
@@ -241,6 +248,6 @@ def main() -> None:
     if a.cmd == "preview":
         sys.exit(cmd_preview(a.family, a.per_diff))
     if a.cmd == "preview-parts":
-        sys.exit(cmd_preview_parts(a.family, a.per_instance, a.transparent))
+        sys.exit(cmd_preview_parts(a.family, a.per_instance, a.opaque))
     if a.cmd == "status":
         sys.exit(cmd_status())
