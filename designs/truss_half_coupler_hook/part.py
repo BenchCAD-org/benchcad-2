@@ -71,16 +71,30 @@ def _hardware(closing_bolt_d):
     return bolt_d, pitch
 
 
-# DIN 315 form D, mid-band per row (mm). Symbols are the datasheet's:
-#   d2 boss Ø at the bearing face · d3 boss Ø at the top · m boss height
-#   e span over the wing tips · h overall height · g2/g1 wing thickness at the
-#   root/ear · r1 ear radius · r4 concave underside radius
-_DIN315D = {
-    8.0:  (14.5, 11.5, 37.5, 19.0,  8.2, 2.4, 4.0,  6.0, 3.0),
-    10.0: (18.5, 15.5, 49.5, 24.0, 10.0, 4.0, 5.0,  8.0, 5.0),
-    12.0: (21.5, 18.5, 63.5, 32.2, 12.0, 4.5, 6.0, 10.0, 6.0),
-    16.0: (27.5, 22.0, 71.5, 36.2, 15.0, 6.0, 7.0, 11.0, 7.0),
+# DIN 315 rounded-wing form, verbatim from BenchCAD's own wing_nut family
+# (Cadance cad_synth/families/wing_nut.py) so the wing nut on this clamp is the
+# same part the corpus draws everywhere else. Symbols:
+#   d2 boss Ø at the bearing face · m boss height · e span over the wing tips
+#   h overall height · d3 the ear THICKNESS driver (Y thickness = d3/4, not a
+#   diameter) · hole_d the through-hole
+# An earlier revision of this family carried a different table under the same
+# "DIN 315" name — 63.5 span at M12 against 55 here, 49.5 at M10 against 45 —
+# and a hand-tuned wing profile that came out as a pair of round blobs. Both
+# are replaced by the corpus form.
+_DIN315 = {
+    3.0:  (8.0,   4.0, 19.0, 10.0,  6.0,  3.2),
+    4.0:  (10.0,  5.0, 25.0, 12.0,  8.0,  4.3),
+    5.0:  (12.0,  6.0, 30.0, 14.0, 10.0,  5.3),
+    6.0:  (14.0,  8.0, 35.0, 16.0, 11.0,  6.4),
+    8.0:  (16.0, 10.0, 39.0, 20.0, 12.5,  8.4),
+    10.0: (20.0, 12.0, 45.0, 24.0, 16.0, 10.5),
+    12.0: (24.0, 14.0, 55.0, 28.0, 20.0, 13.0),
+    16.0: (32.0, 18.0, 70.0, 36.0, 26.0, 17.0),
+    20.0: (40.0, 22.0, 90.0, 44.0, 32.0, 21.0),
 }
+HUB_TOP_RATIO = 1.0 / 3.0      # boss top radius = d2/3   (family default)
+EAR_THICK_RATIO = 1.0 / 8.0    # ear Y thickness = d3/4   (family default)
+EAR_FILLET_RATIO = 0.8         # on the ear perimeter     (family default)
 
 
 # ISO 7089 plain washer, 200 HV, product grade A: d1 · d2 · h by nominal size.
@@ -100,62 +114,41 @@ def _std_row(table, d1):
     return tuple(v * k for v in table[nom])
 
 
-def _din315d(d1):
-    """The DIN 315-D row nearest ``d1``, scaled to the actual thread Ø so the
-    nut still screws onto a non-tabulated bolt. Returns the drawing symbols
-    (d2, d3, e, h, m, g1, g2, r1, r4)."""
-    return _std_row(_DIN315D, d1)
+def _din315(d1):
+    """The DIN 315 row nearest ``d1``, scaled to the actual thread Ø so the nut
+    still screws onto a non-tabulated bolt. Returns (d2, m, e, h, d3, hole_d)."""
+    return _std_row(_DIN315, d1)
 
 
-def _lune(wp, rho, r3, y0):
-    """The r3 root-fillet lune at boss radius ``rho``: the curvilinear triangle
-    bounded by the wing face (y = y0), the boss circle and the fillet circle of
-    radius r3 tangent to both — the drawing's r3 as seen from below. Lofted
-    along the boss cone it becomes the flare from the plate into the boss, which
-    OCC cannot produce as a fillet on a plate-on-cone seam at any radius."""
-    cx = math.sqrt(max((rho + r3) ** 2 - (y0 + r3) ** 2, 1e-9))
-    cy = y0 + r3
-    tx, ty = cx * rho / (rho + r3), cy * rho / (rho + r3)   # tangency on the boss
-    bx = math.sqrt(max(rho ** 2 - y0 ** 2, 1e-9))           # boss circle at y = y0
-    ab, at = math.atan2(y0, bx), math.atan2(ty, tx)
-    am = 0.5 * (ab + at)
-    bm = (rho * math.cos(am), rho * math.sin(am))           # midpoint on the boss
-    ux, uy = (tx - cx) / r3, (ty - cy) / r3
-    n = math.hypot(ux, uy - 1.0) or 1.0
-    fm = (cx + r3 * ux / n, cy + r3 * (uy - 1.0) / n)       # midpoint on the fillet
-    return (wp.moveTo(bx, y0).lineTo(cx, y0)
-            .threePointArc(fm, (tx, ty))
-            .threePointArc(bm, (bx, y0)).close())
+def _wing(d2, d3, e, h, m):
+    """ONE ear on the +X side, built exactly as BenchCAD's wing_nut family
+    draws a DIN 315 rounded wing (Cadance cad_synth/families/wing_nut.py):
 
+        (0,0) -> (d2/2, 0) -> 45 deg take-off to (e/2, e/2 - d2/2)
+              -> three-point arc up to the apex (e/4 + d2/4, h)
+              -> back in to (d3/2, m) -> (0, m), closed
 
-def _wing(e, h, m, r_boss, g_root, ear_r1, under_r4):
-    """ONE lobed wing on the +X side, as the DIN 315-D front view draws it: an
-    ear of radius r1 at the tip, a concave underside r4 sweeping back to the
-    boss, and a valley up from the boss top. Built in XZ — the 107-width plane,
-    which is where the datasheet shows the wings splayed — and extruded across
-    the tube axis. The caller mirrors it for the -X side rather than
-    re-deriving the profile with sign flips, which is how the arc midpoints get
-    silently reflected onto the wrong side."""
-    cx, cz = e / 2.0 - ear_r1, h - ear_r1              # ear centre
-    tip = (e / 2.0, cz)                                # outermost point
-    top = (cx, h)                                      # ear apex
-    v0 = (r_boss * 0.55, m)                            # valley root, boss top
-    ain, aun = math.radians(118.0), math.radians(-72.0)
-    ein = (cx + ear_r1 * math.cos(ain), cz + ear_r1 * math.sin(ain))
-    eun = (cx + ear_r1 * math.cos(aun), cz + ear_r1 * math.sin(aun))
-    u1 = (r_boss * 0.95, 0.30 * m)                     # wing root on the boss
-    vm = ((v0[0] + ein[0]) / 2.0 - 0.35 * ear_r1,
-          (v0[1] + ein[1]) / 2.0 + 0.35 * ear_r1)      # concave valley
-    um = ((u1[0] + eun[0]) / 2.0, (u1[1] + eun[1]) / 2.0 + 0.45 * under_r4)
-    mid = ((tip[0] + eun[0]) / 2.0 + 0.18 * ear_r1, (tip[1] + eun[1]) / 2.0)
+    extruded both ways by d3*EAR_THICK_RATIO/2, i.e. a flat plate of thickness
+    d3/4 lying in XZ. The arc radius is the closed form the family derives —
+    R = (dX^2 + dZ^2) / (2 dZ) about a centre directly under the apex — not a
+    hand-picked ear radius.
+    """
+    x_arc = e / 4.0 + d2 / 4.0
+    x_end, z_end = e / 2.0, e / 2.0 - d2 / 2.0
+    dx, dz = x_end - x_arc, h - z_end
+    r = (dx * dx + dz * dz) / (2.0 * dz)
+    z_c = h - r
+    a_mid = (math.atan2(z_end - z_c, dx) + math.pi / 2.0) / 2.0
+    mid = (x_arc + r * math.cos(a_mid), z_c + r * math.sin(a_mid))
     return (cq.Workplane("XZ")
-            .moveTo(*v0)
-            .threePointArc(vm, ein)          # valley, concave
-            .threePointArc(top, tip)         # ear: inner tangent -> apex -> tip
-            .threePointArc(mid, eun)         # ear: tip -> underside tangent
-            .threePointArc(um, u1)           # underside, concave r4
-            .lineTo(*v0).close()
-            .extrude(g_root / 2.0, both=True))
+            .moveTo(0.0, 0.0)
+            .lineTo(d2 / 2.0, 0.0)
+            .lineTo(x_end, z_end)
+            .threePointArc(mid, (x_arc, h))
+            .lineTo(d3 / 2.0, m)
+            .lineTo(0.0, m)
+            .close()
+            .extrude(d3 * EAR_THICK_RATIO / 2.0, both=True))
 
 
 def _y_slab(x_c, y_c, z_c, dx, dy, dz):
@@ -317,9 +310,8 @@ def _ring_stack(x_c, z0, z1, pitch, r_root, r_crest, phase, z_min=None):
 def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
           closing_bolt_d=10.0):
     r_i = bore_d / 2.0
-    r_o = r_i + wall_t
     bolt_d, pitch = _hardware(closing_bolt_d)
-    d2, d3, e_span, h_nut, m_boss, g1, g2, r1, r4 = _din315d(bolt_d)
+    d2, m_boss, e_span, h_nut, d3, _hole_d = _din315(bolt_d)
     w_d1, w_d2, w_h = _std_row(_ISO7089, bolt_d)     # plain washer
     n_s, n_m = _std_row(_ISO4032, bolt_d)            # hexagon nut
     pin_d = 0.75 * hang_d                        # ISO 8752 spring pin, Ø9.5 at Ø12.7
@@ -504,44 +496,23 @@ def build(bore_d, wall_t, body_w, base_drop, tang_t, hang_d, lug_h, stud,
     if hex_rings is not None:
         hex_nut = hex_nut.union(hex_rings)
 
-    # ── 8. wing nut — DIN 315-D rounded wing, on the closing bolt ────────────
-    # The datasheet's front view (the one carrying the 107) shows the wings
-    # splayed IN THAT PLANE, with a hex-to-round boss under them; the side view
-    # shows only a narrow rib. So the wings lie in XZ, not along the tube axis.
-    # boss: Ø d2 at the bearing face tapering to Ø d3 at the top
+    # ── 8. wing nut — DIN 315 rounded wing, on the closing bolt ─────────────
+    # Same construction as BenchCAD's own wing_nut family, so this clamp's nut
+    # is the part the corpus draws: a tapered boss (d2 at the bearing face to
+    # d2/3 at the top over m) with two flat ears splayed at 45 deg in XZ. The
+    # datasheet's front view — the one carrying the 107 — shows the wings
+    # splayed in that plane and only a narrow rib in the side view, which is
+    # why the ears lie in XZ and not along the tube axis.
     nut = (cq.Workplane("XY", origin=(0.0, 0.0, z_n0))
-           .circle(d2 / 2.0).workplane(offset=m_boss).circle(d3 / 2.0).loft())
-    wing = _wing(e_span, h_nut, m_boss, d2 / 2.0, g2, r1, r4)
-    # g2 -> g1 wedge: shave both faces from the boss wall out to the ear
-    for face in (1.0, -1.0):
-        wing = wing.cut(
-            cq.Workplane("XZ")
-            .polyline([(d2 / 2.0, g2 / 2.0), (e_span / 2.0, g1 / 2.0),
-                       (e_span / 2.0, g2), (d2 / 2.0, g2)]).close()
-            .extrude(face * 2.0 * h_nut))
-    wing = wing.translate((0.0, 0.0, z_n0))
-
-    # r3 flare: loft the lune along the boss cone (the tangency radius grows
-    # from d3/2 at the boss top to d2/2 at the bearing face) and clip it to the
-    # wing's own silhouette, so the plate meets the boss on a radius instead of
-    # a hard seam.
-    r3 = max(0.06 * d2, 0.6)
-    prism = _wing(e_span, h_nut, m_boss, d2 / 2.0, 2.0 * (g2 / 2.0 + r3 + 1.0),
-                  r1, r4).translate((0.0, 0.0, z_n0))
-    for mir in (False, True):
-        wp = cq.Workplane("XY", origin=(0.0, 0.0, z_n0))
-        wp = _lune(wp, d2 / 2.0, r3, g2 / 2.0)
-        wp = _lune(wp.workplane(offset=m_boss), d3 / 2.0, r3, g2 / 2.0)
-        try:
-            flare = wp.loft().intersect(prism)
-        except Exception:
-            break                                  # degenerate row: skip the flare
-        flare = flare.mirror("XZ") if mir else flare
-        wing = wing.union(flare)
+           .circle(d2 / 2.0).workplane(offset=m_boss)
+           .circle(d2 * HUB_TOP_RATIO).loft())
+    wing = _wing(d2, d3, e_span, h_nut, m_boss).translate((0.0, 0.0, z_n0))
     nut = nut.union(wing).union(wing.mirror("YZ"))
 
     nut = nut.cut(cq.Workplane("XY", origin=(0.0, 0.0, z_n0 - bolt_d))
                   .circle(r_bore).extrude(h_nut + 3.0 * bolt_d))
+    # the family's own finish: round the ear perimeter (edges parallel to Y)
+    nut = nut.edges("|Y").fillet(d3 * EAR_THICK_RATIO * EAR_FILLET_RATIO / 2.0)
     inr = _ring_stack(0.0, z_t0, z_n0 + m_boss - 0.2, pitch,
                       bolt_d / 2.0 - 0.25 * pitch, r_bore + 0.01,
                       phase=0.5 * pitch,         # same grid as the bolt rings,

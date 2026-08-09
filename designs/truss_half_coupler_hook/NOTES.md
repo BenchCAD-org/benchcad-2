@@ -116,9 +116,17 @@ wrong, and they are why it read as a box rather than a clamp:
 
 The drawn wing nut is NOT orthographically consistent (its hex collar centres
 on x ≈ +28.8 while the eyebolt it sits on is at +35.2), so it is treated as a
-pictorial symbol and the nut is taken from DIN 315-D instead. The M10 row's
-49.5 span ends at x = +58.8 on the anchor row, 1.4 mm inside the tab tip — which
-is what makes M10, and not M12, the closure that fits the 107 outline.
+pictorial symbol and the nut is taken from DIN 315 instead.
+
+**The wing nut is built by BenchCAD's own `wing_nut` family construction**
+(Cadance `cad_synth/families/wing_nut.py`), table and geometry, so this clamp's
+nut is the part the corpus draws everywhere else: a tapered boss (d2 at the
+bearing face to d2/3 over m) and two flat ears in XZ, each a 45 deg take-off
+from the boss to `(e/2, e/2 - d2/2)` and a three-point arc to the apex at
+`(e/4 + d2/4, h)`, thickness `d3/4`. An earlier revision of this family carried
+a different table under the same "DIN 315" name — 63.5 span at M12 against 55,
+49.5 at M10 against 45 — and a hand-tuned profile built from arbitrary angles
+(118 deg, -72 deg) that came out as a pair of near-circular blobs. Both are gone.
 
 ## Assembly (8 solids, contact-or-clearance only)
 
@@ -169,13 +177,14 @@ sampled rows (3 difficulties × 8 seeds): 0 interfering pairs.
 
 So the sheet's eyebolt hardware is unambiguously **M12** — three independent
 dimensions land on the M12 row. Its *wing nut*, however, measures only ~42
-across and ~19.6 tall, which is nowhere near DIN 315-D M12 (63.5 / 32.2) and is
-closer to the M8 row. That is the same inconsistency the hex collar's off-centre
+across and ~19.6 tall, which is nowhere near DIN 315 M12 (55 / 28) and sits
+closest to the M8 row (39 / 20 — the height matches to 0.4). That is the same inconsistency the hex collar's off-centre
 position shows: the wing nut on the sheet is a pictorial symbol, the rest of the
 stack is to scale.
 
-This model therefore runs **M8/M10**, because a DIN 315-D M12 wing nut spans
-63.5 and puts the envelope at 112.4 — outside the 107 outline. The consequence
+On the corpus table the M12 nut spans 55 and puts the envelope at 108.2 on the
+widest bore, inside the limit, so **M8/M10/M12** all run. (The earlier table's
+63.5 span gave 112.4 and was why M12 had been dropped.) The consequence
 is recorded rather than hidden: with a standard-conformant stack the anchor row
 stands **116.8 mm** tall against the catalog's **116**. The STEP model settles the
 wing-nut question: its wing nut is **46.5 across x 20.6 tall**, which is not

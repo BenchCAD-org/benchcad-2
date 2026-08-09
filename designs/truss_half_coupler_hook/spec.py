@@ -17,6 +17,8 @@ Sources:
   30-51, bolts M10/M12 -> the bore is a design constant, not a free parameter.
 """
 
+from part import _din315
+
 
 # ── 1. PARAM_SPEC ────────────────────────────────────────────────────────────
 PARAM_SPEC = {
@@ -55,15 +57,18 @@ PARAM_SPEC = {
     "closing_bolt_d": dict(
         desc="swing closing-bolt nominal thread (the eyebolt the wing nut runs on)",
         unit="mm",
-        range={"easy": (10.0, 10.0), "medium": (8.0, 10.0), "hard": (8.0, 10.0)},
-        choices={"easy": [10.0], "medium": [8.0, 10.0], "hard": [8.0, 10.0]},
-        coverage=[8.0, 10.0],
-        # M12 is deliberately absent: a DIN 315-D M12 wing nut spans 63.5 and
-        # measures 114 mm across the clamp, outside the catalog's 107 outline.
-        # check() rejects it, so declaring it would be an unreachable value.
-        source="Doughty T57000 drawing: the wing nut scales to a ~46 mm span, "
-               "which is the DIN 315-D M10 row (e 48-51); the datasheet does not "
-               "tabulate the eyebolt, so the range around it is proportion",
+        range={"easy": (10.0, 10.0), "medium": (8.0, 12.0), "hard": (8.0, 12.0)},
+        choices={"easy": [10.0], "medium": [8.0, 10.0], "hard": [8.0, 10.0, 12.0]},
+        coverage=[8.0, 10.0, 12.0],
+        # M12 was dropped in an earlier revision because a 63.5 wing span put
+        # the clamp 114 across, outside the catalog's 107 outline. That span
+        # came from a DIN 315 table that disagrees with BenchCAD's own
+        # wing_nut family (55 at M12); on the corpus table the M12 nut lands
+        # at 108.2 on the widest bore, so it is reachable again.
+        source="Doughty T57000 drawing: the wing nut scales to a ~42 mm span "
+               "and ~19.6 tall, closest to the DIN 315 M8 row (39 / 20); the "
+               "datasheet does not tabulate the eyebolt, so the range around "
+               "it is proportion",
     ),
     "hang_d": dict(
         desc="fixing bore in the base tang (M10-M12 clearance, with the captive-nut slot)",
@@ -132,8 +137,8 @@ def check(p: dict) -> list[str]:
     x_pin = max(1.337 * r_i, r_i + 0.5 * pin_d + 2.0)   # mirrors part.py
     r_lobe = max(0.490 * r_i, 0.55 * pin_d + 3.0)
     x_tab = 2.36 * r_i
-    wing_span_e = {8.0: 37.5, 10.0: 49.5, 12.0: 63.5}.get(
-        p["closing_bolt_d"], 5.0 * p["closing_bolt_d"])
+    # DIN 315 span, from part.py's table so the two cannot drift
+    wing_span_e = _din315(p["closing_bolt_d"])[2]
     overall_w = (x_pin + r_lobe) + max(x_tab, x_pin + wing_span_e / 2.0)
     if not 96.0 <= overall_w <= 110.0:
         bad.append(f"overall width {overall_w:.1f} outside the catalog clamp "
