@@ -3,6 +3,11 @@
 Guide for AI agents and humans contributing to BenchCAD 2.0. This repository
 targets **150 industrial part families**.
 
+Scope, before you build anything: this is the **data pipeline** for those
+families, not an evaluation or scoring pipeline. A metric may live here only as
+research-phase tooling used on the data — never as a scored component or wired
+into a default. See [Scope](CONTRIBUTING.md#scope).
+
 A family is one `designs/<family>/` directory containing `part.py`, `spec.py`,
 and `family.json`. Read `docs/DESIGN_SPEC.md` before implementing one.
 
