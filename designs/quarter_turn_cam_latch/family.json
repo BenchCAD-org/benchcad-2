@@ -2,13 +2,25 @@
   "family": "quarter_turn_cam_latch",
   "standard": "Southco E5 quarter-turn cam latch",
   "base_plane": "XY",
-  "description": "Southco E5-class quarter-turn cam latch as the five parts it is assembled from: latch housing (domed head, double-D body), the compressed sealing washer under the head, the mounting nut, the one-sided formed cam at the full 45 axis-to-tip reach, and the M6 cam screw.",
-  "source": "Southco E5 literature (head \u00d828x5, double-D cutout 20.1/14.1 A/F, depth behind the head 27.2-68.2, cam 45/33 reach, 23 flat, 19 wide, 4 thick, sealing washer 0.5, panel 1, screw M6); mounting-nut A/F and height scaled off the section",
+  "description": "Southco E5-class quarter-turn cam latch as the mechanism it is: a fixed housing (\u00d828 flange + double-D barrel keyed to the panel cutout) with a rotating plug running in its bore, the internal compression spring and O-ring the datasheet names, the compressed sealing washer, the mounting nut, the one-sided formed cam driven by the plug's square, and the cam screw.",
+  "source": "Southco E5 literature e5.en.pdf: p.154 head \u00d828x5, cutout 20.1 A/F / \u00d822.5, depth behind the head 27.2, cam 45 reach / 23 flat / 19 wide / 4 thick, sealing washer 0.5, panel 1, screw M6, internal O-ring + spring; p.155 long housings 45.5/58.2/68.2; p.156 body thread M22x1.5; p.158 mini; p.170 grip band. Rotating-plug-in-fixed-body architecture per Southco US 6,527,308. Nut/plug/spring proportions scaled off the p.154 section \u2014 see NOTES.md.",
   "contributor": "BenchCAD-org",
-  "solids": 5,
+  "solids": 8,
   "components": [
     {
       "name": "housing",
+      "quantity": 1
+    },
+    {
+      "name": "plug",
+      "quantity": 1
+    },
+    {
+      "name": "spring",
+      "quantity": 1
+    },
+    {
+      "name": "o_ring",
       "quantity": 1
     },
     {

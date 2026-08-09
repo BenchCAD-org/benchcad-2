@@ -1,5 +1,27 @@
 # quarter_turn_cam_latch — sheet dimension → parameter → formula
 
+## What the part is (and what an earlier revision got wrong)
+
+The double-D body is keyed to the panel cutout, so it **cannot rotate**; the
+tool recess obviously must. An earlier revision of this family unioned the
+head and the double-D body into one rigid solid, which is a latch that cannot
+be operated. The E5 is an actuator turning inside a fixed housing:
+
+- the sheet's own detail bubble names an **Internal O-ring** and an
+  **Internal spring**. What looked like thread hatching in the main section at
+  the panel level is that spring — a coil, clearly drawn, in an annular
+  cavity between two parts.
+- **every head-style icon on p.154 is two circles**: an outer flange and an
+  inner raised boss carrying the recess. Cutting the top view through its
+  centre gives Ø28.0 (flange) / Ø18.1 / Ø15.9 (plug) / Ø8.5 (square recess).
+  The Ø18.1 disc is the rotating actuator's face.
+- Southco's patent for this family, **US 6,527,308**, describes exactly this:
+  "a first body rotatably mounted within a second body, and a cam mounted to
+  the first body".
+- the catalog line for the series is "spring-loaded bodies for better **grip
+  tolerance** and vibration resistance" — so the spring is an axial preload
+  that lets one part number cover a grip band, not a rotary detent.
+
 Reference: Southco E5 literature,
 `media.southco.com/media/static/Literature/e5.en.pdf`. Issue #32 carries the
 same table with page numbers. `docs/assets/refs/quarter_turn_cam_latch_drawing.png`
@@ -12,7 +34,10 @@ column is the value as printed.
 
 | On the sheet | Parameter | Value | Notes |
 |---|---|---|---|
-| `Ø 28 (1.10)` | `head_d` | 28 | head above the panel |
+| `Ø 28 (1.10)` | `head_d` | 28 | the fixed flange above the panel |
+| top view Ø18.1 | `PLUG_RATIO` | 0.646 × `head_d` | the rotating plug's face |
+| top view Ø8.5 | (drive) | — | the tool recess; `drive_af` is the cam-side square |
+| detail bubble | `spring`, `o_ring` | — | named, not dimensioned — proportions |
 | `5 (.20)` | `head_h` | 5 | |
 | `Ø 22.5 +0.5/-0` | `body_d` | 22.5 | panel cutout circle |
 | `□ 20.1 +0.1/-0` | `afl` | 20.1 | cutout across-flats |
@@ -115,14 +140,27 @@ An earlier revision of this family read the silhouette as across-flats and
 widened the nut to `body_d + 4.8`. That was wrong on both counts and is
 reverted.
 
+## The internals and view-reconstructability
+
+The spring and O-ring live inside the housing bore and are **not visible from
+any of the four benchmark view angles**. That is in tension with the repo's
+rule against "solid outside, structure inside". They are modelled anyway
+because without them the latch is not the part — the spring is what the
+catalog sells the series on — and because `bench2 preview` emits both a
+cutaway column and a per-component render, which is the escape the rule
+itself allows. Flagging it rather than deciding it quietly.
+
+The plug is a different case: its face **is** externally visible, as the inner
+circle of every head-style icon and of the top view. Splitting housing from
+plug costs nothing in reconstructability and is what makes the latch operable.
+
 ## Not modelled
 
 - **Threads** — the M22×1.5 body/nut pair and the M6. The mating pair is a real
   functional feature; it is left off here as it is across this family's
   siblings. Without it neither the nut nor the screw actually retains anything.
-- **The square drive** between the housing end and the cam bore, which is what
-  transmits the quarter turn. It is hidden at every benchmark view angle.
+- The tool recess is a plain slot (head style 00) or nothing (style 23); the
+  square/triangle/double-bit/key-lock recesses are not modelled.
 - Offset and deep-offset cams — how the catalog reaches grips below the
   mounting nut. `check()` rejects those rather than pretending.
-- Roller cams, the internal O-ring and spring, and the DIN-key head recesses
-  (`slotted` covers head styles 00 Slotted and 23 Blank only).
+- Roller cams, and the detent ramps some E5 variants carry.

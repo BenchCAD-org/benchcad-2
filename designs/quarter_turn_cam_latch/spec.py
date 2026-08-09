@@ -1,6 +1,8 @@
 """quarter_turn_cam_latch — the benchmark generator spec.
 
-A quarter-turn cam latch (Southco E5 class). PARAM_SPEC declares each build()
+A quarter-turn cam latch (Southco E5 class), modelled as the mechanism it is:
+an actuator turning inside a fixed housing, with the internal spring and
+O-ring the sheet names. See part.py and NOTES.md for why. PARAM_SPEC declares each build()
 parameter; check() holds the engineering rules a reviewer audits. `grip` is
 COUPLED to body_l and cam_t (what is left of the catalog depth after the cam
 and its screw becomes the cam's Z-step), so it is filled in refine().
@@ -22,7 +24,8 @@ Sources:
 import math
 
 from bench2 import Resample
-from part import MIN_GRIP, STEP_MAX_SLOPE, cam_offset, cam_step_run
+from part import (MIN_GRIP, STEP_MAX_SLOPE, cam_offset, cam_step_run,
+                  housing_bore_d, plug_face_d)
 
 
 # ── 1. PARAM_SPEC ────────────────────────────────────────────────────────────
@@ -133,7 +136,7 @@ def check(p: dict) -> list[str]:
 
     # what is left of the catalog depth after the cam and its screw is the
     # cam's Z-step; it has to be a formed step, not a tower
-    rise = cam_offset(p["body_l"], p["cam_t"], p["grip"])
+    rise = cam_offset(p["body_l"], p["cam_t"], p["grip"], p["body_d"])
     if rise < 0.8 * p["cam_t"]:
         bad.append("cam step shallower than 0.8*cam_t: at that point it is a "
                    "plain flat cam, not the stepped one drawn (proportion)")
@@ -145,6 +148,14 @@ def check(p: dict) -> list[str]:
     # at 28 against a body_d/2+12 of at most 23.75, and cam_t/cam_w tops out at
     # 0.40. They are kept as the statement of what would be wrong, so widening
     # a range later cannot quietly admit a stub cam or a block one.
+
+    # the plug's face has to overhang the bore it sits in, or the actuator
+    # drops through the housing instead of being held by it
+    if plug_face_d(p["head_d"], p["body_d"]) < housing_bore_d(p["body_d"], p["afl"]) + 1.2:
+        bad.append("plug face does not overhang the housing bore: a Ø"
+                   f"{plug_face_d(p['head_d'], p['body_d']):.1f} actuator face in a Ø"
+                   f"{housing_bore_d(p['body_d'], p['afl']):.1f} bore has "
+                   "nothing to seat on (head too small for this body)")
 
     # the cam tip must reach past the body to catch the frame — cam_l is the
     # FULL axis-to-tip reach (the sheet's 45), not an overall length
@@ -176,7 +187,7 @@ def refine(p: dict, difficulty: str, rng) -> None:
     lo, hi = PARAM_SPEC["grip"]["range"][difficulty]
     lo = max(lo, MIN_GRIP)
     # rise = cam_offset(body_l, cam_t, grip) must fall in [0.8, 4.5] * cam_t
-    span = cam_offset(p["body_l"], p["cam_t"], 0.0)  # the rise at grip = 0
+    span = cam_offset(p["body_l"], p["cam_t"], 0.0, p["body_d"])  # the rise at grip = 0
     lo = max(lo, span - 4.5 * p["cam_t"])
     hi = min(hi, span - 0.8 * p["cam_t"])
     # ...and the step has to climb clear of the housing barrel at <= 60 deg
