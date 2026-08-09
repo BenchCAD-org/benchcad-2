@@ -91,6 +91,14 @@ PARAM_SPEC = {
         "range": {"easy": (32.0, 32.0), "medium": (13.0, 32.0), "hard": (13.0, 32.0)},
         "source": "catalogue dimension E",
     },
+    "bar_deep_F": {
+        "desc": "shackle bar depth through the crown, symbol F — the bow's other "
+                "axis, and the one the overall height A closes on",
+        "unit": "mm",
+        "refine": True,
+        "range": {"easy": (32.0, 32.0), "medium": (13.0, 32.0), "hard": (13.0, 32.0)},
+        "source": "catalogue dimension F",
+    },
     "bow_width_G": {
         "desc": "shackle bow inside width, symbol G",
         "unit": "mm",
@@ -105,15 +113,6 @@ PARAM_SPEC = {
         "refine": True,
         "range": {"easy": (88.0, 88.0), "medium": (40.0, 88.0), "hard": (40.0, 88.0)},
         "source": "catalogue dimension H",
-    },
-    "open_angle": {
-        "desc": "swing of the opening side plate about the centre pin; 0 is closed",
-        "unit": "deg",
-        "range": {"easy": (0.0, 0.0), "medium": (0.0, 30.0), "hard": (0.0, 75.0)},
-        "source": "operating state; the McKissick Snatch Blocks manual p.12 gives the "
-                  "motion (pull the hitch pin, unscrew the upper bolt, the plate "
-                  "rotates on the centre pin) but does not dimension the swing "
-                  "(proportion)",
     },
     "swivel_angle": {
         "desc": "rotation of the shackle fitting about the block axis in the swivel; "
@@ -151,7 +150,7 @@ PARAM_SPEC = {
 }
 
 _ROW_KEYS = ("sheave_d", "head_w_B", "cheek_w_C", "pin_to_throat_D",
-             "bar_thk_E", "bow_width_G", "bow_height_H", "rope_d")
+             "bar_thk_E", "bar_deep_F", "bow_width_G", "bow_height_H", "rope_d")
 
 # Mirrored from part.py so check() constrains what build() actually draws.
 _PLATE_SPAN = 0.549
@@ -231,6 +230,7 @@ def refine(p, difficulty, rng):
     p["cheek_w_C"] = float(c)
     p["pin_to_throat_D"] = float(d)
     p["bar_thk_E"] = float(e)
+    p["bar_deep_F"] = float(_f)
     p["bow_width_G"] = float(g)
     p["bow_height_H"] = float(h)
     # The row gives the rope range the groove may be cut for; pick inside it.
@@ -256,10 +256,12 @@ def check(p):
     # The catalogue is internally consistent: A = B/2 + D + E holds on every row,
     # so the published overall height is not a free number — it falls out of the
     # stack, and a row that violates it would be a transcription error.
-    a_model = p["head_w_B"] / 2.0 + p["pin_to_throat_D"] + p["bar_thk_E"]
-    if abs(a_model - row[4]) > 2.5:
-        bad.append("B/2 + D + E = %.1f but the catalogue prints A = %d "
-                   "(Crosby p.326 rows are consistent to 2 mm)" % (a_model, row[4]))
+    a_model = p["head_w_B"] / 2.0 + p["pin_to_throat_D"] + p["bar_deep_F"]
+    if abs(a_model - row[4]) > 1.5:
+        bad.append("B/2 + D + F = %.1f but the catalogue prints A = %d — the height "
+                   "stack closes on F, the bow's depth through the crown, not on E "
+                   "(Crosby p.326: exact on 9 of 13 rows, the rest B/2 rounding)"
+                   % (a_model, row[4]))
 
     # The plate crown tracks the sheave, but not by covering it: on the 4 t row
     # (sheave 114, B 108) the sheave rim stands proud of the plate, and on the
@@ -271,7 +273,7 @@ def check(p):
                    "catalogue holds on all 13 rows (Crosby p.326)" % ratio)
 
     # The bow needs straight leg between the pin and the crown.
-    if p["bow_height_H"] <= p["bow_width_G"] / 2.0 + p["bar_thk_E"]:
+    if p["bow_height_H"] <= p["bow_width_G"] / 2.0 + p["bar_deep_F"]:
         bad.append("bow_height_H <= G/2 + E: no straight leg left between the shackle "
                    "pin and the bow crown (anchor shackle proportion)")
 
@@ -335,7 +337,7 @@ def check(p):
     sb_d = float(_iso_size(_BOLT_TO_BAR * p["bar_thk_E"]))
     sb_r = 0.5 * sb_d
     tee_r = _TEE_TO_BOLT * 2.0 * sb_r
-    if z_sb - tee_r <= -p["pin_to_throat_D"] + p["bar_thk_E"]:
+    if z_sb - tee_r <= -p["pin_to_throat_D"] + p["bar_deep_F"]:
         bad.append("swivel tee barrel r=%.1f reaches the shackle crown: the throat is "
                    "only H = %.0f mm deep under the bolt (anchor shackle proportion)"
                    % (tee_r, p["bow_height_H"]))
@@ -353,7 +355,7 @@ def check(p):
 
     # 5. the bow's legs are the crown circle's tangents, so the ears have to
     #    stand outside that circle or there is no pear shape to draw.
-    bar_r = 0.5 * p["bar_thk_E"]
+    bar_r = 0.5 * p["bar_deep_F"]
     major_r = 0.5 * p["bow_width_G"] + bar_r
     ear_w = _EAR_W * p["bar_thk_E"]
     ear_x = 0.5 * _EAR_SPAN * p["bow_width_G"] + 0.5 * ear_w

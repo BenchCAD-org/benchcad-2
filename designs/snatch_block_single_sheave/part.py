@@ -34,10 +34,11 @@ through the hook bolt past its nut, and a **cotter** through the shackle bolt.
 The bearing is the catalogue's own choice: a bronze bushing, or a full
 complement of straight rollers running directly on the centre pin.
 
-Opening the block (manual, p.12): pull the hitch pin, unscrew the hook bolt, and
-the near plate rotates on the centre pin and swings clear. `open_angle` models
-that state, and the bolt (with its hitch pin) withdraws from the swing plate
-whenever it is open -- the plate cannot turn while the bolt is through it.
+The block is drawn CLOSED, so the two side plates stay parallel and every
+fastener sits in its seat.  Opening it (manual p.12: pull the hitch pin, unscrew
+the hook bolt, and the near plate rotates on the centre pin) is a disassembly
+step rather than a shape: an earlier revision drew it as an operating state and
+the swung plate only made the hook bolt and its retention nut look misplaced.
 
 Frame: the sheave axis is Y, the block hangs down -Z, the plates lie in XZ, and
 the centre pin is the origin because every catalogue dimension is anchored
@@ -117,6 +118,24 @@ _RACE_BB = 0.12                  # bronze bushing wall / centre pin diameter
 _ROLLER = 0.22                   # straight roller diameter / centre pin diameter
 _ROLL_GAP = 0.6                  # mm between rollers in the full complement
 _WIRE = 0.14                     # retaining-wire diameter / its bolt's diameter
+
+
+def _case_taper(y_top, y_neck, y_collar, z_top, z_waist, z_neck, z_foot, z_bot):
+    """The swivel case's silhouette ACROSS the cheeks, as a prism on X that gets
+    intersected with its in-plane hull.
+
+    The sheet's side view does not draw a slab: the case fills the gap where the
+    hook bolt runs through it, necks down as it leaves the plates, and flares
+    back out into a collar at the foot where the swivel counterbore lives.
+    """
+    return (
+        cq.Workplane("YZ")
+        .moveTo(y_top, z_top).lineTo(y_top, z_waist)
+        .lineTo(y_neck, z_neck).lineTo(y_collar, z_foot).lineTo(y_collar, z_bot)
+        .lineTo(-y_collar, z_bot).lineTo(-y_collar, z_foot)
+        .lineTo(-y_neck, z_neck).lineTo(-y_top, z_waist).lineTo(-y_top, z_top)
+        .close().extrude(8.0 * y_top).translate((-4.0 * y_top, 0.0, 0.0))
+    )
 
 
 def _hull(r_top, z_top, r_bot, z_bot, thick):
@@ -310,19 +329,26 @@ def _split_pin(nominal, shank_r):
             .moveTo(-0.5 * gap, 0.0).circle(w).sweep(path))
 
 
-def _shackle_bow(inside_w, bar_r, bolt_r, ear_r, ear_w, ear_x, crown_c):
-    """Anchor shackle bow, swept along its own centreline: the crown is a circle
-    of radius G/2 + bar_r, and the legs are its outer TANGENTS running up to the
-    ears, which sit closer together than the crown.  That is what makes the bow
-    pear-shaped instead of a plain dee -- measured off the catalogue sheet, the
-    ears stand at about 0.73 of the crown's inside width.
+def _shackle_bow(inside_w, semi_t, semi_r, bolt_r, ear_r, ear_w, ear_x, crown_c):
+    """Anchor shackle bow, swept along its own centreline with an OVAL section.
 
-    The bolt axis is the local origin and `crown_c` is where the bar centreline
-    circle sits below it, so the published G and the D/E stack both fall out:
-    the crown's outside is `crown_c - R - bar_r` and its inside is
-    `crown_c - R + bar_r`, exactly E apart.
+    The bow is a forging, not a round bar, and the catalogue publishes both of
+    its axes: E across the cheeks (side view) and F through the crown (front
+    view).  They differ on the 4 t, 5 t and 6 t rows -- 16 across, 18 deep --
+    and F is the one that closes the height stack: A = B/2 + D + F is exact on
+    those three rows where A = B/2 + D + E is 2 mm short.
+
+    So `semi_t` = E/2 is the local x semi-axis (across the cheeks) and `semi_r`
+    = F/2 the local y one (in the plane of the bow, i.e. radially).  The crown
+    circle then has centreline radius G/2 + F/2, its outside falls at D + F
+    below the pin and its inside at D -- the published G, D and F all at once.
+
+    The legs are the crown circle's outer TANGENTS running up to ears that sit
+    closer together than the crown, which is what makes the bow pear-shaped
+    instead of a plain dee -- measured off the sheet, the ears stand at about
+    0.73 of the crown's inside width.
     """
-    major_r = 0.5 * inside_w + bar_r
+    major_r = 0.5 * inside_w + semi_r
     dz = -crown_c
     span = math.hypot(ear_x, dz)
     phi = math.atan2(dz, ear_x) - math.acos(min(0.999999, major_r / span))
@@ -337,7 +363,7 @@ def _shackle_bow(inside_w, bar_r, bolt_r, ear_r, ear_w, ear_x, crown_c):
     plane = cq.Plane(origin=cq.Vector(-ear_x, 0.0, 0.0),
                      xDir=cq.Vector(0.0, 1.0, 0.0),
                      normal=cq.Vector(-dx / n, 0.0, dzl / n))
-    result = cq.Workplane(plane).circle(bar_r).sweep(path)
+    result = cq.Workplane(plane).ellipse(semi_t, semi_r).sweep(path)
     for side in (-1.0, 1.0):
         # Workplane("YZ") extrudes toward +X, so shift by half the ear to centre
         # it on the leg -- the ear is the boss the bolt runs through.
@@ -349,7 +375,7 @@ def _shackle_bow(inside_w, bar_r, bolt_r, ear_r, ear_w, ear_x, crown_c):
 
 
 def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
-          bow_width_G, bow_height_H, open_angle, swivel_angle, roller_count,
+          bar_deep_F, bow_width_G, bow_height_H, swivel_angle, roller_count,
           roller_bearing=0):
     # ---- the two ladders -------------------------------------------------
     # C, E, G, H are constant inside a capacity group, so everything sized by
@@ -387,9 +413,9 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     sb_d = float(_iso_size(_BOLT_TO_BAR * bar_thk_E))     # shackle bolt
     sb_s, sb_k, sb_m = _ISO_HEX[int(sb_d)]
     sb_r = 0.5 * sb_d
-    bar_r = 0.5 * bar_thk_E
+    bar_r = 0.5 * bar_deep_F        # radial: F closes the A stack
     ear_r = _EAR_TO_BOLT * 2.0 * sb_r
-    ear_w = _EAR_W * bar_thk_E
+    ear_w = _EAR_W * bar_thk_E     # the ear is upset across the cheeks
     ear_x = 0.5 * _EAR_SPAN * bow_width_G + 0.5 * ear_w
     tee_r = _TEE_TO_BOLT * 2.0 * sb_r
     # H is the clear throat under the shackle bolt and D reaches the inside of
@@ -411,10 +437,10 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
 
     y_in = 0.5 * gap                             # inner faces at +/- y_in
     fixed = _plate().translate((0.0, -y_in, 0.0))
-    swing = (
-        _plate().translate((0.0, y_in + plate_t, 0.0))
-        .rotate((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), open_angle)
-    )
+    # Both plates sit in the same plane and stay parallel: the swing plate turns
+    # about the centre pin only while the block is being opened, and the model
+    # draws the closed block.
+    swing = _plate().translate((0.0, y_in + plate_t, 0.0))
 
     # ---- sheave train ----------------------------------------------------
     sheave = _sheave(0.5 * sheave_d, bore_r, sheave_w, rope_d)
@@ -446,7 +472,6 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     # Unscrewing the hook bolt is step 2 of the manual's disassembly: the plate
     # cannot rotate while the bolt is through it, so an open block has the bolt
     # backed out of the swing plate (which is the +Y one, and carries the nut).
-    withdraw = 0.0 if open_angle <= 0.0 else plate_t + 2.0
     bolt_wire = 0.5 * _iso_split(_WIRE * bolt_d)
     nut_len = 0.9 * bolt_r
     hitch_y = y_face + nut_len + 2.6 * bolt_wire
@@ -461,19 +486,20 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
         _disc_z(bolt_wire + 0.3, z_bolt - 4.0 * bolt_r, 8.0 * bolt_r)
         .translate((0.0, hitch_y, 0.0)))
     hitch_pin = _hairpin(bolt_wire, bolt_r).translate((0.0, hitch_y, z_bolt))
-    hook_bolt = hook_bolt.translate((0.0, -withdraw, 0.0))
-    hitch_pin = hitch_pin.translate((0.0, -withdraw, 0.0))
     # the round retention nut lives in the swing plate and turns with it
     retention_nut = (
         cq.Workplane("XZ").circle(2.4 * bolt_r).extrude(nut_len)
         .translate((0.0, y_face + nut_len, z_bolt))
         .cut(_bore_y(bolt_r + 0.3, z_bolt, 4.0 * (y_face + nut_len)))
-        .rotate((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), open_angle)
     )
 
     case_t = gap - 2.0 * _FIT
     case = _hull(eye_r, z_bolt, foot_r, z_foot, case_t).translate(
         (0.0, 0.5 * case_t, 0.0))
+    case = case.intersect(_case_taper(
+        0.5 * case_t, 0.31 * case_t, 0.41 * case_t,
+        z_bolt + eye_r + 1.0, z_bolt - tail_r, z_bolt - tail_r - 0.35 * bolt_d,
+        z_foot, z_case_bot - 1.0))
     case = case.cut(_bore_y(bolt_r + _FIT, z_bolt, 4.0 * case_t))
     cb_floor = z_case_bot + _CASE_WALL * bolt_d
     cb_top = z_bolt - bolt_r - _CASE_WEB * bolt_d
@@ -495,7 +521,8 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
 
     # ---- shackle ---------------------------------------------------------
     crown_z = 0.5 * bow_width_G - bow_height_H - sb_r
-    bow = _shackle_bow(bow_width_G, bar_r, sb_r + _FIT, ear_r, ear_w, ear_x,
+    bow = _shackle_bow(bow_width_G, 0.5 * bar_thk_E, 0.5 * bar_deep_F,
+                       sb_r + _FIT, ear_r, ear_w, ear_x,
                        crown_z).translate((0.0, 0.0, z_sb))
     cot_nom = _iso_split(0.20 * sb_d)
     cot_w = 0.46 * cot_nom
@@ -521,10 +548,13 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     )
     shackle_cotter = _split_pin(cot_nom, sb_r).translate((cot_x, 0.0, z_sb))
 
-    # the swivel is the whole point of the fitting: everything below the case
-    # turns about Z together, and nothing above it moves.
-    def _turn(shape):
-        return shape.rotate((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), swivel_angle)
+    # The swivel is the whole point of the fitting: everything below the case
+    # turns about Z together and nothing above it moves.  It is applied as a
+    # LOCATION, not baked into the shapes -- preview-parts renders each
+    # component's raw local shape, so a baked rotation would make its four
+    # views and its bounding box incomparable with the other components'.
+    turn = cq.Location(cq.Vector(0.0, 0.0, 0.0), cq.Vector(0.0, 0.0, 1.0),
+                       swivel_angle)
 
     result = cq.Assembly(name="snatch_block_single_sheave")
     result.add(fixed, name="side_plate_01")
@@ -536,11 +566,11 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     result.add(retention_nut, name="retention_nut")
     result.add(hitch_pin, name="hitch_pin")
     result.add(case, name="swivel_case")
-    result.add(_turn(tee), name="swivel_tee")
-    result.add(_turn(bow), name="shackle_bow")
-    result.add(_turn(shackle_bolt), name="shackle_bolt")
-    result.add(_turn(shackle_nut), name="shackle_nut")
-    result.add(_turn(shackle_cotter), name="shackle_cotter")
+    result.add(tee, loc=turn, name="swivel_tee")
+    result.add(bow, loc=turn, name="shackle_bow")
+    result.add(shackle_bolt, loc=turn, name="shackle_bolt")
+    result.add(shackle_nut, loc=turn, name="shackle_nut")
+    result.add(shackle_cotter, loc=turn, name="shackle_cotter")
     for k, element in enumerate(elements):
         result.add(element, name="bearing_element_%02d" % (k + 1))
     return result

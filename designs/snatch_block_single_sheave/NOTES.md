@@ -56,9 +56,14 @@ exactly what the probe reported (1410 mm³) on the first attempt at this.
 
 Opening the block, manual p.12 step 2, verbatim: *"Remove hitch pin and unscrew
 the upper bolt allowing the side plate to rotate on the center pin and swing out
-of the way."* So `open_angle` is a rotation about the **centre pin**, and the
-hook bolt is modelled as withdrawn from the swing plate whenever `open_angle > 0`
-— the plate cannot turn while the bolt is through it.
+of the way."* An earlier revision drew that as an operating state, `open_angle`.
+It is gone: **the block is drawn closed**, both side plates parallel, every
+fastener in its seat. Opening is a disassembly step, not a shape, and drawing it
+only made the hook bolt and its retention nut read as misplaced parts.
+
+The **swivel** is applied as a `cq.Location`, not baked into the shapes.
+`preview-parts` renders each component's raw local shape, so a baked rotation
+makes its four views and its bounding box incomparable with the others'.
 
 ## Frame
 
@@ -75,8 +80,8 @@ plane with its bolt along **X**. `base_plane` is `XZ`.
 | B | side plate head width | `head_w_B`, the plate crown diameter; the pin sits `B/2` under the crown |
 | C | **overall** width across the block | `cheek_w_C`; its own extension lines on the sheet stand outside the centre pin's head and nut, so it sets the plate span, the sheave width **and the centre pin size** |
 | D | centre pin to the bottom of the shackle throat | `pin_to_throat_D` |
-| E | shackle bar / fitting thickness | `bar_thk_E`, the bow bar diameter |
-| F | fitting thickness at the bottom of the front view | not modelled separately — equal to E on every row of this table |
+| E | shackle bar width across the cheeks | `bar_thk_E`, the bow section's **transverse** axis |
+| F | shackle bar depth through the crown | `bar_deep_F`, the bow section's **radial** axis — and the one the height stack closes on |
 | G | shackle bow inside width | `bow_width_G` |
 | H | shackle throat: clear opening under the bolt, down to the inside of the crown | `bow_height_H` |
 
@@ -85,13 +90,19 @@ the same extension line at the inside of the bow crown, and H's upper arrow land
 on the underside of the shackle bolt — so the bolt axis is `H + one bolt radius`
 above the throat, not `H` above the crown.
 
-## The A = B/2 + D + E identity
+## The A = B/2 + D + F identity
 
 The catalogue prints A, B, D and E independently, but they are not independent:
 
 ```
-A  =  B/2  +  D  +  E
+A  =  B/2  +  D  +  F
 ```
+
+Not E. The bow is a forging with an oval section — E across the cheeks, F
+through the crown — and they differ on the 4 t, 5 t and 6 t rows (16 across,
+18 deep). Closing the stack on F makes those three rows **exact** where E left
+them 2 mm short, and cuts the total error across all thirteen from 8.5 mm to
+2.5 mm (6 exact rows → 9; the remainder is B/2 landing on a half-millimetre).
 
 The pin sits `B/2` below the plate crown (the crown is a circle centred on the
 pin), the shackle throat bottom is `D` below the pin, and the bow bar is `E`
@@ -100,12 +111,12 @@ thick under the throat.
 Checked against all 13 distinct rows — exact on the large rows, within 2 mm on
 the small ones where the printed values are rounded:
 
-| row | B/2 | D | E | sum | printed A | Δ |
+| row | B/2 | D | F | sum | printed A | Δ |
 |---|---|---|---|---|---|---|
 | 2 t, sheave 76 | 38 | 185 | 13 | 236 | 235 | +1 |
-| 4 t, sheave 114 | 54 | 268 | 16 | 338 | 340 | −2 |
-| 5 t, sheave 102 | 57 | 278 | 16 | 351 | 353 | −2 |
-| 6 t, sheave 127 | 65 | 268 | 16 | 349 | 351 | −2 |
+| 4 t, sheave 114 | 54 | 268 | **18** | 340 | 340 | **0** |
+| 5 t, sheave 102 | 57 | 278 | **18** | 353 | 353 | **0** |
+| 6 t, sheave 127 | 65 | 268 | **18** | 351 | 351 | **0** |
 | 8 t, sheave 152 | 76 | 373 | 32 | 481 | 481 | 0 |
 | 8 t, sheave 203 | 103 | 398 | 32 | 533 | 533 | 0 |
 | 8 t, sheave 254 | 128.5 | 425 | 32 | 585.5 | 586 | −0.5 |
@@ -201,7 +212,7 @@ for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 | hook bolt axis | `max(0.36 D, sheave_r + max(boss, eye) + 4 mm)` below the pin | the first term is read off the sheet, the second is the sheave clearance that governs the big rows |
 | swivel case eye radius | `1.05 d` | lug practice — outside diameter about twice the hole |
 | swivel case foot radius | `1.15 d` | has to house the swivel counterbore |
-| swivel case thickness | plate gap − 1 mm | the case IS the spacer between the plates, so it fills the gap |
+| swivel case thickness | plate gap − 1 mm at the bolt, necked to 0.62 and flared to 0.82 below | the case IS the spacer where the bolt runs through it, but the sheet's side view necks it as it leaves the plates and flares it into a collar at the foot — it is not a slab |
 | swivel end float | 1.0 mm | manual, maintenance item 7: fitting-to-swivel-case clearance .031–.062 in |
 | tee stem diameter | `0.85 d` | carries the same load as the bolt, in tension |
 | tee stem head diameter | `1.35 ×` stem | the shoulder that stands in the counterbore |
@@ -209,6 +220,7 @@ for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 | shackle bolt diameter `p` | `1.13 × E` | anchor-shackle practice: Crosby G-2130 runs the bolt one size over the bow (8.5 t: bow 28.7, bolt 32) |
 | tee barrel radius | `0.95 p` | proportion — the barrel stands proud of the shackle ears, as the product photographs show |
 | shackle ear boss radius | `0.72 p` | ordinary shackle-eye proportion |
+| bow section | ellipse, `E/2` across the cheeks × `F/2` radial | both axes are published; see the identity above |
 | shackle ear inside spacing | `0.73 × G` | measured off the sheet; it is why the bow is a pear and not a dee, and Crosby's own G-2130 anchor-shackle table has the same A < B relation |
 | shackle ear width along the bolt | `1.4 × E` | the ear is upset wider than the bar so the bolt head bears on it **clear of the flaring leg** — see below |
 | bolt head radius | `1.35 ×` shank radius | ordinary headed-bolt proportion |
