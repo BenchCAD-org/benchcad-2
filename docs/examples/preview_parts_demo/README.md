@@ -15,13 +15,14 @@ Committed artifacts, rendered deterministically from hard / seed 0:
 - [`preview_parts.png`](preview_parts.png) — default grouped layout: one
   four-view row per component (with its bounding box in mm), the complete
   assembly, then one red-on-gray highlight row per component
-  (`bolt` highlights both instances together, `quantity=2`);
+  (`bolt` highlights both instances together, `quantity=2`). The
+  non-highlighted components are **ghosted**, so the bushing shaft buried in
+  its bore and the bolt shanks inside their holes stay visible;
 - [`preview_parts_per_instance.png`](preview_parts_per_instance.png) — the
   `--per-instance` variant: `bolt_01` and `bolt_02` each get their own row;
-- [`preview_parts_transparent.png`](preview_parts_transparent.png) — the
-  `--transparent` variant: non-highlighted components are ghosted
-  (see-through), so the bushing shaft buried in its bore and the bolt shanks
-  inside their holes stay visible when highlighted.
+- [`preview_parts_opaque.png`](preview_parts_opaque.png) — the `--opaque`
+  opt-out: neighbours stay solid, which is what the default used to do. Compare
+  the bushing row: its shaft disappears into the block.
 
 Regenerate (from the repo root; the CLI itself only serves `designs/`, so the
 demo calls the library directly):
@@ -29,8 +30,8 @@ demo calls the library directly):
 ```bash
 uv run python -c "from pathlib import Path; from bench2.preview_parts import build_preview_parts; build_preview_parts(Path('docs/examples/preview_parts_demo'), per_instance=True)"
 mv docs/examples/preview_parts_demo/preview_parts.png docs/examples/preview_parts_demo/preview_parts_per_instance.png
-uv run python -c "from pathlib import Path; from bench2.preview_parts import build_preview_parts; build_preview_parts(Path('docs/examples/preview_parts_demo'), transparent=True)"
-mv docs/examples/preview_parts_demo/preview_parts.png docs/examples/preview_parts_demo/preview_parts_transparent.png
+uv run python -c "from pathlib import Path; from bench2.preview_parts import build_preview_parts; build_preview_parts(Path('docs/examples/preview_parts_demo'), transparent=False)"
+mv docs/examples/preview_parts_demo/preview_parts.png docs/examples/preview_parts_demo/preview_parts_opaque.png
 uv run python -c "from pathlib import Path; from bench2.preview_parts import build_preview_parts; build_preview_parts(Path('docs/examples/preview_parts_demo'))"
 ```
 
