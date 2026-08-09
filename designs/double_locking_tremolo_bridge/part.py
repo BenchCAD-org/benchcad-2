@@ -26,7 +26,12 @@ _CLAMP_H = 0.34            # clamp block height / saddle height
 _SCREW_D = 0.30            # clamp screw diameter / string pitch
 _BLOCK_W = 0.55            # sustain block width / plate span
 _BLOCK_D = 0.62            # sustain block depth / plate depth
-_POST_HEAD = 1.5           # post head diameter / post shaft diameter
+_POST_HEAD = 0.85          # post head diameter / post THREAD diameter.
+                           # The sheet's post detail draws the bearing
+                           # head narrower than the M8 body (~6.8 on 8),
+                           # waisted under a small domed tip. A head
+                           # wider than the thread cannot pass through
+                           # the bushing it screws into.
 _ARM_BOSS = 1.25           # arm collet boss diameter / string pitch
 _ARM_TILT = 12.0           # deg, arm collet rake off vertical
 
@@ -244,7 +249,7 @@ def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, string_h,
     # SHAFT and has to stop clear of the head, which is wider than its bore.
     # _post puts its head top at length + 0.40*head_d and its head bottom at
     # length - 0.15*head_d, both measured from the shaft base.
-    post_len = bushing_len * 1.05
+    post_len = bushing_len              # sheet dimensions post and bushing both 30
     post_z = knife_tip - post_len - head_d * 0.40   # head top lands ON the tip
     bush_top = knife_tip - head_d * 0.55 - 0.5      # clear under the head
     for j, side in enumerate((-1.0, 1.0)):
@@ -254,7 +259,7 @@ def build(n_strings, string_pitch, plate_span, plate_depth, plate_t, string_h,
             name="post_%02d" % (j + 1),
         )
         result.add(
-            _bushing(bushing_d, post_shaft_d * 1.12, bushing_len)
+            _bushing(bushing_d, post_shaft_d + 0.4, bushing_len)
             .translate((px, knife_y, bush_top - bushing_len / 2.0)),
             name="insert_bushing_%02d" % (j + 1),
         )

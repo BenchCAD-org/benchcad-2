@@ -42,7 +42,8 @@ Three independent checks agree:
 | plate thickness | 3.2 | 3.2 | shared |
 | knife-edge height | 8.6 | 8.6 | shared |
 | saddle | 10.8 × 32.3 | 10.8 × 32.3 | shared |
-| post shaft / thread | ø5.5 / M8, 30 long | same | shared |
+| post thread / length | M8, 30 long | same | shared |
+| tremolo arm | ø5.5 (side view) | same | not modelled |
 | insert bushing | ø11.3 × 30 | same | shared |
 | sustain block height | 33 / 36 / 40 | 33 / 36 / 40 | `block_height`, independent ladder |
 
@@ -115,3 +116,29 @@ error at the call site:
 The knife-edge ridge is unioned into the plate with a half-thickness overlap
 rather than butted at the plate underside: two coincident faces are the case OCC
 unions least reliably.
+
+## Reference images
+
+Gotoh's dimension sheets are committed alongside the family, so the geometry
+can be checked without leaving the repo:
+
+- `docs/assets/refs/double_locking_tremolo_bridge_drawing.png` — GE1996T
+  (6-string), rendered from `GE1996T-Dim.pdf`
+- `docs/assets/refs/double_locking_tremolo_bridge_drawing_7string.png` —
+  GE1996T-7, rendered from `GE1996T-7-Dim.pdf`
+
+## The post: a mis-attributed callout, and an assembly that could not assemble
+
+`post_shaft_d` was 5.5, sourced to "sheet callout ø5.5". **That callout is in
+the SIDE view and belongs to the tremolo arm.** Blown up, the post detail
+carries only **M8** and **30** — no ø5.5 anywhere near it — and a ø5.5 blank
+cannot carry an M8 thread in the first place.
+
+The consequence was not just a thin post. `_POST_HEAD` was 1.5, so the bearing
+head came out **ø8.25** against a bushing bore of `5.5 × 1.12 =` **ø6.16**: the
+post could not pass through the bushing it screws into. The detail draws the
+head **narrower** than the M8 body — about ø6.8 on ø8, waisted under a small
+domed tip — which is the opposite proportion.
+
+Now: thread ø8 (M8), head 0.85 × thread, length 30 as dimensioned, bushing
+bored `post + 0.4` (wall 1.45, against the real ~1.65 on a ø11.3 bushing).

@@ -106,10 +106,13 @@ PARAM_SPEC = {
         "source": "sheet saddle detail view, 32.3",
     },
     "post_shaft_d": {
-        "desc": "post shaft diameter under the bearing head",
+        "desc": "post thread diameter (M8) where it screws into the insert bushing",
         "unit": "mm",
-        "range": {"easy": (5.5, 5.5), "medium": (5.5, 5.5), "hard": (5.5, 5.5)},
-        "source": "sheet callout o5.5 (the post is M8 where it threads into the body)",
+        "range": {"easy": (8.0, 8.0), "medium": (8.0, 8.0), "hard": (8.0, 8.0)},
+        "source": "sheet post detail view: M8, 30 long. The sheet's o5.5 callout "
+                  "is in the SIDE view and belongs to the tremolo arm - the post "
+                  "detail carries no o5.5, and a o5.5 blank cannot carry an M8 "
+                  "thread",
     },
     "bushing_d": {
         "desc": "insert bushing outside diameter",
