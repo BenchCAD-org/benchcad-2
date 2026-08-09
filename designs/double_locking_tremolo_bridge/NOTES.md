@@ -119,13 +119,16 @@ unions least reliably.
 
 ## Reference images
 
-Gotoh's dimension sheets are committed alongside the family, so the geometry
-can be checked without leaving the repo:
+`docs/assets/refs/double_locking_tremolo_bridge_drawing.png` — the GE1996T
+(6-string) dimension sheet — is on main and is what the numbers below are
+measured against.
 
-- `docs/assets/refs/double_locking_tremolo_bridge_drawing.png` — GE1996T
-  (6-string), rendered from `GE1996T-Dim.pdf`
-- `docs/assets/refs/double_locking_tremolo_bridge_drawing_7string.png` —
-  GE1996T-7, rendered from `GE1996T-7-Dim.pdf`
+The **GE1996T-7** sheet (`GE1996T-7-Dim.pdf`) is the source for the 7-string
+row and is **not yet in the repo**. It cannot be added here: a family PR is
+scoped to its own `designs/` directory, and reference assets land on main via
+the family issue. Until it does, the 7-string figures (`plate_span` 102.3,
+`plate_depth` 39, `post_spacing` 84.8, `saddle_radius` 430) are checkable only
+against <https://g-gotoh.com/images/pdf/GE1996T-7-Dim.pdf>.
 
 ## The post: a mis-attributed callout, and an assembly that could not assemble
 
