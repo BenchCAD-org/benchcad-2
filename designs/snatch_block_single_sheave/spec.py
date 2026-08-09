@@ -154,10 +154,12 @@ _ROW_KEYS = ("sheave_d", "head_w_B", "cheek_w_C", "pin_to_throat_D",
              "bar_thk_E", "bow_width_G", "bow_height_H", "rope_d")
 
 # Mirrored from part.py so check() constrains what build() actually draws.
-_PLATE_T = 0.10
+_PLATE_SPAN = 0.549
+_PLATE_T = 0.065
 _SIDE_CLR = 2.0
 _GROOVE_DEPTH_FACTOR = 1.5
-_PIN_TO_CHEEK = 0.30
+_GROOVE_R_FACTOR = 0.53
+_FLANK_ANGLE = 12.0
 _BOLT_TO_CHEEK = 0.26
 _BOSS_TO_BOLT = 0.95
 _EYE_TO_BOLT = 1.05
@@ -183,6 +185,12 @@ _ISO_HEX = {
 def _iso_size(target):
     fits = [d for d in sorted(_ISO_HEX) if d <= target]
     return fits[-1] if fits else min(_ISO_HEX)
+
+
+def _iso_fits_width(plate_span, overall):
+    fits = [d for d in sorted(_ISO_HEX)
+            if plate_span + _ISO_HEX[d][1] + _ISO_HEX[d][2] <= overall]
+    return fits[-1] if fits else min(_ISO_HEX)
 _RACE_BB = 0.12
 _ROLLER = 0.22
 _ROLL_GAP = 0.6
@@ -191,7 +199,7 @@ _FIT = 0.5
 
 def _bearing(p):
     """Pin, race depth and roller pitch circle -- mirrored from part.py."""
-    pin_d = float(_iso_size(_PIN_TO_CHEEK * p["cheek_w_C"]))
+    pin_d = float(_iso_fits_width(_PLATE_SPAN * p["cheek_w_C"], p["cheek_w_C"]))
     race_t = max(2.0, (_ROLLER if p["roller_bearing"] else _RACE_BB) * pin_d)
     return pin_d, race_t, 0.5 * pin_d + _FIT + 0.5 * race_t
 
@@ -268,7 +276,7 @@ def check(p):
 
     # Metal has to remain under the groove, over the bore.  The bore is set by
     # the centre pin, which is a load-sized part and so scales with C.
-    pin_d = float(_iso_size(_PIN_TO_CHEEK * p["cheek_w_C"]))
+    pin_d = float(_iso_fits_width(_PLATE_SPAN * p["cheek_w_C"], p["cheek_w_C"]))
     bore_d = pin_d + 2.0 * max(2.0, _RACE_BB * pin_d)
     tread_d = p["sheave_d"] - 2.0 * _GROOVE_DEPTH_FACTOR * p["rope_d"]
     if tread_d <= bore_d + 12.0:
@@ -278,10 +286,23 @@ def check(p):
 
     # Two plates plus running clearance have to fit inside C, leaving a sheave
     # wide enough to hold the groove.
-    sheave_w = p["cheek_w_C"] * (1.0 - 2.0 * _PLATE_T) - 2.0 * _SIDE_CLR
-    if sheave_w <= 2.0 * p["rope_d"]:
-        bad.append("sheave width %.1f is under two rope diameters: the groove will not "
-                   "fit inside cheek width C (sheave practice)" % sheave_w)
+    sheave_w = p["cheek_w_C"] * (_PLATE_SPAN - 2.0 * _PLATE_T) - 2.0 * _SIDE_CLR
+    if sheave_w <= 1.7 * p["rope_d"]:
+        bad.append("sheave width %.1f is under 1.7 rope diameters: the groove will not "
+                   "fit inside the plate span C sets (sheave practice)" % sheave_w)
+    # and the groove itself has to leave a flange: solve the flared flank the way
+    # part.py draws it and require real rim on both sides.  This is the check the
+    # C correction actually needed -- at the old 20 deg flare the 22 mm rope
+    # opened the groove across the whole 40.4 mm face.
+    gr = _GROOVE_R_FACTOR * p["rope_d"]
+    tread_r = 0.5 * p["sheave_d"] - _GROOVE_DEPTH_FACTOR * p["rope_d"]
+    arc_end_r = tread_r + gr - gr * math.cos(math.radians(60.0))
+    lip = (gr * math.sin(math.radians(60.0))
+           + math.tan(math.radians(_FLANK_ANGLE)) * (0.5 * p["sheave_d"] - arc_end_r))
+    if sheave_w - 2.0 * lip < 2.0:
+        bad.append("the groove opens to %.1f mm across a %.1f mm face: under 1 mm of "
+                   "flange each side, the rope would not stay in (sheave practice)"
+                   % (2.0 * lip, sheave_w))
 
     # ---- the fitting stack has to close -------------------------------------
     # These three are what an assembly family owes the reader: every joint in
@@ -359,8 +380,15 @@ def check(p):
     # 7. every pin is snapped DOWN to an ISO size, so a row whose load-derived
     #    diameter lands just above a step would otherwise get a pin much smaller
     #    than the load asks for.  Reject anything that loses more than a fifth.
+    span = _PLATE_SPAN * p["cheek_w_C"]
+    _s, k, m = _ISO_HEX[int(pin_d)]
+    across = span + k + m + 0.10 * pin_d          # head face to thread end
+    if across > p["cheek_w_C"] + 1e-6:
+        bad.append("plate span %.1f + head %.1f + nut %.1f + thread = %.1f exceeds the "
+                   "printed C = %.0f: C is the OVERALL width, measured over the centre "
+                   "pin's head and nut (Crosby p.326 side view)"
+                   % (span, k, m, across, p["cheek_w_C"]))
     for label, target, chosen in (
-            ("centre pin", _PIN_TO_CHEEK * p["cheek_w_C"], pin_d),
             ("hook bolt", _BOLT_TO_CHEEK * p["cheek_w_C"], bolt_d),
             ("shackle bolt", _BOLT_TO_BAR * p["bar_thk_E"], sb_d)):
         if chosen < 0.80 * target:

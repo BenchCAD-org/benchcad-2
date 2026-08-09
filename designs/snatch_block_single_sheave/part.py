@@ -52,15 +52,25 @@ import math
 # the rope so it beds without pinching, and deep enough to hold the rope in.
 _GROOVE_R_FACTOR = 0.53          # groove bottom radius / rope diameter
 _GROOVE_DEPTH_FACTOR = 1.5       # groove depth / rope diameter
-_FLANK_ANGLE = 20.0              # deg, groove flank flare off radial
+_FLANK_ANGLE = 12.0              # deg, groove flank flare off radial -- 20
+                                 # deg opened the groove across the WHOLE
+                                 # face once C was read correctly, leaving
+                                 # the flanges 0.2 mm wide on the 22 mm rope
 
 # Proportions the catalogue does not publish (all documented in NOTES.md).
-_PLATE_T = 0.10                  # plate thickness / cheek width C
+# C is the OVERALL width of the block, not the width over the plates: on the
+# catalogue sheet its own extension lines stand outside the centre pin's head and
+# nut.  Measured off the side view at full resolution, in units of C:
+#   plate outer face to outer face  0.549    one plate  0.065    sheave  0.344
+# Reading C as the plate span makes the block 1.8x too fat -- a 152 mm sheave
+# comes out 81 mm wide (4.6 rope diameters) against the sheet's 36 (2.1) -- and
+# then every pin head and nut stands proud of the published C.
+_PLATE_SPAN = 0.549              # plate outer to outer / C
+_PLATE_T = 0.065                 # one plate thickness / C
 _SIDE_CLR = 2.0                  # mm running clearance each side of the sheave
 _FIT = 0.5                       # mm radial clearance, every pin-in-bore joint
 _SWIVEL_CLR = 1.0                # mm end float in the swivel -- the manual sets
                                  # fitting-to-case clearance at .031-.062 in
-_PIN_TO_CHEEK = 0.30             # centre pin diameter / C
 _BOLT_TO_CHEEK = 0.26            # hook bolt diameter / C
 _BOSS_TO_BOLT = 0.95             # plate tail boss radius / hook bolt diameter
 _EYE_TO_BOLT = 1.05              # swivel case eye radius / hook bolt diameter
@@ -194,6 +204,17 @@ def _sleeve(outer_r, inner_r, width):
 def _iso_size(target):
     """Largest ISO 261 first-choice coarse size at or below `target`."""
     fits = [d for d in sorted(_ISO_HEX) if d <= target]
+    return fits[-1] if fits else min(_ISO_HEX)
+
+
+def _iso_fits_width(plate_span, overall):
+    """Largest ISO size whose head and nut still fit inside the published
+    overall width: plate span + head height + nut height <= C.
+
+    The centre pin is not a free proportion -- C is measured over its head and
+    its nut, so the catalogue is telling you how big the pin is."""
+    fits = [d for d in sorted(_ISO_HEX)
+            if plate_span + _ISO_HEX[d][1] + _ISO_HEX[d][2] <= overall]
     return fits[-1] if fits else min(_ISO_HEX)
 
 
@@ -333,11 +354,13 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     # working load limit is scaled off C; everything sized by rope is scaled off
     # the sheave.  The centre pin and the hook bolt are load-sized parts.
     plate_t = _PLATE_T * cheek_w_C
-    gap = cheek_w_C - 2.0 * plate_t              # inner face to inner face
+    plate_span = _PLATE_SPAN * cheek_w_C         # outer face to outer face
+    gap = plate_span - 2.0 * plate_t             # inner face to inner face
     sheave_w = gap - 2.0 * _SIDE_CLR
-    # Load-derived diameters, snapped to the ISO 261 first-choice ladder; the
-    # head and nut then come out of ISO 4014 / ISO 4032 rather than a ratio.
-    pin_d = float(_iso_size(_PIN_TO_CHEEK * cheek_w_C))
+    # The centre pin is the largest ISO 261 size whose ISO 4014 head and ISO
+    # 4032 nut still fit inside the published C, because C is measured over
+    # exactly those two faces.  The hook bolt stays load-derived off C.
+    pin_d = float(_iso_fits_width(plate_span, cheek_w_C))
     pin_s, pin_k, pin_m = _ISO_HEX[int(pin_d)]
     pin_r = 0.5 * pin_d
     bolt_d = float(_iso_size(_BOLT_TO_CHEEK * cheek_w_C))
@@ -396,8 +419,8 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     # The centre pin is retained by a lock nut and a roll pin driven into it
     # (manual p.12), not by a visible clip -- so it gets no cotter, and the nut
     # is its own body like every other nut here.
-    y_face = 0.5 * cheek_w_C                     # the plates' outer faces
-    centre_pin = _hex_bolt_y(pin_r, -y_face, y_face + pin_m + 0.35 * pin_d,
+    y_face = 0.5 * plate_span                    # the plates' outer faces
+    centre_pin = _hex_bolt_y(pin_r, -y_face, y_face + pin_m + 0.10 * pin_d,
                              0.0, pin_s, pin_k)
     centre_pin_nut = _hex_nut_y(pin_r, y_face, 0.0, pin_s, pin_m)
 

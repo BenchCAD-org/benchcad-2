@@ -73,7 +73,7 @@ plane with its bolt along **X**. `base_plane` is `XZ`.
 |---|---|---|
 | A | overall height | not a parameter — see the identity below |
 | B | side plate head width | `head_w_B`, the plate crown diameter; the pin sits `B/2` under the crown |
-| C | width across the cheeks | `cheek_w_C`; sets plate thickness, sheave width, **and every load-carrying pin** |
+| C | **overall** width across the block | `cheek_w_C`; its own extension lines on the sheet stand outside the centre pin's head and nut, so it sets the plate span, the sheave width **and the centre pin size** |
 | D | centre pin to the bottom of the shackle throat | `pin_to_throat_D` |
 | E | shackle bar / fitting thickness | `bar_thk_E`, the bow bar diameter |
 | F | fitting thickness at the bottom of the front view | not modelled separately — equal to E on every row of this table |
@@ -190,11 +190,12 @@ for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 |---|---|---|
 | groove bottom radius | `0.53 × rope_d` | wire-rope sheave practice: cut a little over half the rope diameter so the rope beds without pinching |
 | groove depth | `1.5 × rope_d` | sheave practice: deep enough to hold the rope in the groove |
-| groove flank flare | 20° off radial | shop practice, so the rope enters without catching the lip |
-| plate thickness | `0.10 × C` | proportion — splits C into two plates, the sheave, and running clearance |
+| groove flank flare | 12° off radial | shop practice. It was 20° while C was misread; on the corrected 40.4 mm face a 22 mm rope opened the groove to 40.0 mm and left 0.2 mm of flange. `check()` now solves the flare and demands real rim on both sides |
+| plate outer face to outer face | `0.549 × C` | measured off the sheet's side view at full resolution — **C is not the plate span**; see below |
+| plate thickness | `0.065 × C` | measured off the same view (the paired lines at each cheek) |
 | running clearance | 2 mm each side of the sheave | proportion |
 | sheave width | `C(1 − 2×0.10) − 4` | falls out of the two above |
-| centre pin diameter | `0.30 × C` | load-sized part, so it scales with the WLL ladder; calibrated on the 8 t block (31.8 mm vs a real 1¼ in pin) |
+| centre pin diameter | largest ISO size with `plate span + k + m + thread ≤ C` | not a proportion at all: C is measured over the pin's head and nut, so the catalogue is telling you how big the pin is. 8 t lands on M30 (58.2 + 18.7 + 25.6 + 3.0 = 105.5 ≤ 106) |
 | hook bolt diameter `d` | `0.26 × C` | same reasoning; 27.6 mm vs a real 1⅛ in bolt |
 | plate tail boss radius | `0.95 d` | lug practice — edge distance about one bolt diameter |
 | hook bolt axis | `max(0.36 D, sheave_r + max(boss, eye) + 4 mm)` below the pin | the first term is read off the sheet, the second is the sheave clearance that governs the big rows |
@@ -217,6 +218,26 @@ for review. `d` below is the hook bolt diameter, `p` the shackle bolt diameter.
 | hook bolt head radius | `1.35 ×` shank radius | the one non-standard head: Crosby's hook bolt is a special forging |
 | bushing wall / roller race depth | `0.12 ×` pin (BB) or `0.22 ×` pin (RB), min 2 mm | proportion; the catalogue gives only the BB/RB code, not race dimensions |
 | every pin-in-bore clearance | 0.5 mm radial | proportion |
+
+### What C actually measures — and what reading it wrong did
+
+The sheet's **C dimension lines stand outside the centre pin's head and nut**, not
+on the plate faces. Measured at full resolution, in units of C: plate outer to
+outer **0.549**, one plate **0.065**, sheave face **0.344**.
+
+Reading C as the plate span — which an earlier revision did — makes the block
+**1.8× too fat**, and then every fastener stands proud of the published overall
+width:
+
+| row | sheet: sheave face | ×rope | wrong reading | ×rope |
+|---|---|---|---|---|
+| 2 t / 76, rope 9 | 23.1 | 2.6 | 49.6 | 5.5 |
+| 8 t / 152, rope 17.5 | 36.5 | 2.1 | 80.8 | 4.6 |
+
+Measured on the built 8 t block, the old reading came out **161 mm across the
+cheeks against a printed C of 106**, with `centre_pin`, `centre_pin_nut`,
+`hook_bolt`, `retention_nut` and `hitch_pin` all outside it. It now measures
+**105.5 ≤ 106**, and `check()` asserts that overall width row by row.
 
 ### The bearing changes the body count
 
