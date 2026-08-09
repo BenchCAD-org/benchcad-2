@@ -280,6 +280,21 @@ its shank size is standard here and its head stays a proportion.
 Every nut is a **separate body**. That is not cosmetic: it is the only way the
 hook bolt can be unscrewed (see above), and it is how the parts list sells them.
 
+### The shackle bolt is asymmetric, and how much of that is real
+
+A bolt-type anchor shackle cannot be symmetric: an ISO 4014 head on one side
+(`k` = 22.5 for M36), an ISO 4032 nut on the other (`m` = 31) plus the split pin
+that locks it. What is *not* real is dead thread. An earlier revision ran the
+bolt 2.2 nominal past the split pin, putting 22 mm of bolt outboard of everything
+it fastens; on the 8 t block that made the shackle assembly sit **15.2 mm**
+off-centre against a 145 mm bow, which reads as the whole fitting being crooked.
+
+Trimming the thread to just past the pin, and closing the pin's tail at 30°
+instead of 45° so its tip stays beside the bolt end, brings the bolt from 220.4
+to 213.5 mm and the assembly offset to **13.2 mm**. The rest is the head-versus-
+nut difference and is what the hardware is. `check()` now rejects any row whose
+bolt runs more than `2.2 × split-pin nominal + 2 mm` past the nut face.
+
 ### Retaining wire
 
 The hitch pin and the shackle cotter are Crosby's own line items (LS5/SS3

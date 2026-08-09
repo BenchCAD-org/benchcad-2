@@ -194,6 +194,7 @@ def _iso_fits_width(plate_span, overall):
 _RACE_BB = 0.12
 _ROLLER = 0.22
 _ROLL_GAP = 0.6
+_ISO_SPLIT = (2.0, 2.5, 3.2, 4.0, 5.0, 6.3, 8.0, 10.0, 13.0, 16.0, 20.0)
 _FIT = 0.5
 
 
@@ -395,5 +396,24 @@ def check(p):
             bad.append("%s: the load-derived %.1f mm snaps down to M%d, losing %.0f%% "
                        "of the section (ISO 261 first-choice ladder, NOTES.md)"
                        % (label, target, int(chosen), 100.0 * (1.0 - chosen / target)))
+
+    # 8. no dead thread: the shackle bolt ends just past the split pin that locks
+    #    its nut.  A long tail is not merely ugly -- it throws the whole fitting
+    #    off-centre against the bow, which is how this was caught.
+    cot_nom = 0.0
+    for nom in _ISO_SPLIT:
+        if nom <= 0.20 * sb_d:
+            cot_nom = nom
+    ear_w2 = _EAR_W * p["bar_thk_E"]
+    x_nut2 = 0.5 * _EAR_SPAN * p["bow_width_G"] + ear_w2
+    nut_face = x_nut2 + _ISO_HEX[int(sb_d)][2]
+    bolt_end = x_nut2 + _ISO_HEX[int(sb_d)][2] + 1.03 * cot_nom + 1.5 + 1.1 * cot_nom
+    if bolt_end - nut_face > 2.2 * cot_nom + 2.0:
+        bad.append("the shackle bolt runs %.1f mm past its nut face for a %.1f mm "
+                   "split pin: that is dead thread, and it throws the fitting "
+                   "off-centre against the bow (shackle practice): the pin needs "
+                   "%.1f mm to clear the nut and %.1f mm of bolt behind it"
+                   % (bolt_end - nut_face, cot_nom, 1.03 * cot_nom + 1.5,
+                      1.1 * cot_nom))
 
     return bad

@@ -290,8 +290,10 @@ def _split_pin(nominal, shank_r):
     z_short = -(shank_r + 1.0 * w)
     z_long = -(shank_r + 3.2 * w)
     bend_r = 2.2 * w
-    half = math.radians(22.5)
-    full = math.radians(45.0)
+    # 45 deg of splay threw the tip 12.7 mm outboard, past the end of the bolt
+    # it locks; 30 deg keeps it inside, which is also how a split pin is closed.
+    half = math.radians(15.0)
+    full = math.radians(30.0)
     cx = 0.5 * gap + bend_r
     mid = (cx - bend_r * math.cos(half), z_long - bend_r * math.sin(half))
     end = (cx - bend_r * math.cos(full), z_long - bend_r * math.sin(full))
@@ -500,8 +502,11 @@ def build(sheave_d, rope_d, head_w_B, cheek_w_C, pin_to_throat_D, bar_thk_E,
     x_nut = ear_x + 0.5 * ear_w                  # the ears' outer faces
     # the split pin stands clear of the nut it locks, or the eye fouls the nut
     cot_x = x_nut + sb_m + 1.03 * cot_nom + 1.5
+    # The thread stops just past the split pin: 2.2 nominal of dead thread
+    # beyond it put 22 mm of bolt outboard of everything it fastens, which is
+    # what made the whole shackle read off-centre against the bow.
     shackle_bolt = (
-        cq.Workplane("YZ").circle(sb_r).extrude(x_nut + cot_x + 2.2 * cot_nom)
+        cq.Workplane("YZ").circle(sb_r).extrude(x_nut + cot_x + 1.1 * cot_nom)
         .translate((-x_nut, 0.0, z_sb))
         .union(_hex_prism(sb_s, sb_k, "YZ")
                .translate((-x_nut - sb_k, 0.0, z_sb)))
