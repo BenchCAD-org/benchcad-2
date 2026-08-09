@@ -15,6 +15,20 @@ import numpy as np
 ISO_FRONT = (-1.0, -1.0, -1.0)  # classic above-front iso octant
 # the benchmark's four diagonal cameras (matches BenchCAD-main scoring/views.py)
 BENCH_FRONTS = [(1.0, 1.0, 1.0), (-1.0, -1.0, -1.0), (-1.0, 1.0, -1.0), (1.0, -1.0, 1.0)]
+
+# The four scored fronts above are TWO ANTIPODAL PAIRS on two body diagonals
+# (f1/f2 and f3/f4 are 180 deg apart), and under a y -> -y mirror each maps onto
+# another member of the same list. A part that is mirror-symmetric about its own
+# XZ plane -- most hardware is -- therefore shows only TWO distinct aspects
+# across all four, which is why a preview sheet built from them reads as two
+# images printed twice. They stay exactly as they are, because they are what the
+# benchmark scores and they match benchcad-main's CAMERA_FRONTS byte for byte.
+#
+# The preview-parts SHEET is documentation, not the scored view, so it uses four
+# directions that no symmetry maps onto each other: four different octants, four
+# different elevations, nothing antipodal.
+CATALOG_FRONTS = [(1.0, 0.55, 0.75), (-0.45, 1.0, 0.5),
+                  (-1.0, -0.6, 0.85), (0.5, -1.0, 0.35)]
 LOOKAT = np.array([0.5, 0.5, 0.5], dtype=np.float64)
 CAMERA_DISTANCE = -0.9
 TEAL01 = (110 / 255, 195 / 255, 192 / 255)
@@ -244,6 +258,11 @@ def compose_grid(rows: list[list], row_labels: list[str], out_png: Path,
     out_png.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_png)
     return out_png
+
+
+def render_catalog_views(verts, tris, img_size: int = 320):
+    """Four genuinely distinct views for the preview-parts sheet."""
+    return [render_iso(verts, tris, img_size, front=f) for f in CATALOG_FRONTS]
 
 
 def render_bench_views(verts, tris, img_size: int = 320):

@@ -242,6 +242,14 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    with `quantity=N` by default; `--per-instance` renders one row per instance
    (`bolt_01`, `bolt_02`, …) instead.
 
+The sheet's four view directions are **not** the benchmark's four. The scored
+`BENCH_FRONTS` are two antipodal pairs on two body diagonals, and a y-mirror maps
+each onto another member of the list — so a part that is mirror-symmetric about
+its own XZ plane, which most hardware is, shows only two distinct aspects across
+all four. Those stay exactly as they are, because they are what the benchmark
+scores. The preview-parts sheet is documentation, so it uses `CATALOG_FRONTS`:
+four octants, four elevations, nothing antipodal and nothing mirror-related.
+
 The cutaway is a **fixed** half-section: the +Y half of the shape is removed at
 that shape's own bounding-box centre, the same plane `preview_hard_zoom.png`
 uses. A concavity the plane misses — an off-centre pocket, a bore parallel to Y
