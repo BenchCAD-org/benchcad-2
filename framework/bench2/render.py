@@ -16,19 +16,28 @@ ISO_FRONT = (-1.0, -1.0, -1.0)  # classic above-front iso octant
 # the benchmark's four diagonal cameras (matches BenchCAD-main scoring/views.py)
 BENCH_FRONTS = [(1.0, 1.0, 1.0), (-1.0, -1.0, -1.0), (-1.0, 1.0, -1.0), (1.0, -1.0, 1.0)]
 
-# The four scored fronts above are TWO ANTIPODAL PAIRS on two body diagonals
-# (f1/f2 and f3/f4 are 180 deg apart), and under a y -> -y mirror each maps onto
-# another member of the same list. A part that is mirror-symmetric about its own
-# XZ plane -- most hardware is -- therefore shows only TWO distinct aspects
-# across all four, which is why a preview sheet built from them reads as two
-# images printed twice. They stay exactly as they are, because they are what the
-# benchmark scores and they match benchcad-main's CAMERA_FRONTS byte for byte.
+# CAMERA_DISTANCE below is NEGATIVE, so `front` is the direction the camera is
+# negated FROM: eye = focal + front * -0.9. A "front" of (1,1,1) is a camera in
+# the (-1,-1,-1) octant. Getting this backwards is what put benchcad-main's
+# CodeGen prompt labels 180 deg out of step with its own renderer
+# (BenchCAD/BenchCAD-main PR #1), so every view set here is written as the
+# CAMERA position and negated once, at the definition.
+#
+# The four scored cameras are (-1,-1,-1), (1,1,1), (1,-1,1), (-1,1,-1). They are
+# two antipodal pairs AND all four satisfy x == z: the set has rank 2, so the
+# four "diagonal" views are four points on a single great circle, not four
+# viewpoints spread over the sphere. A y-mirror maps each onto another member,
+# so a part that is mirror-symmetric about its own XZ plane -- most hardware --
+# shows only TWO distinct aspects across all four. They stay exactly as they
+# are: they are what the benchmark scores and they match benchcad-main's
+# CAMERA_FRONTS.
 #
 # The preview-parts SHEET is documentation, not the scored view, so it uses four
-# directions that no symmetry maps onto each other: four different octants, four
-# different elevations, nothing antipodal.
-CATALOG_FRONTS = [(1.0, 0.55, 0.75), (-0.45, 1.0, 0.5),
-                  (-1.0, -0.6, 0.85), (0.5, -1.0, 0.35)]
+# cameras that actually span space (rank 3), all ABOVE the part, none antipodal
+# and none mirror-related.
+CATALOG_CAMERAS = [(1.0, 0.60, 0.80), (-0.50, 1.00, 0.55),
+                   (-1.00, -0.55, 0.90), (0.55, -1.00, 0.40)]
+CATALOG_FRONTS = [tuple(-c for c in cam) for cam in CATALOG_CAMERAS]
 LOOKAT = np.array([0.5, 0.5, 0.5], dtype=np.float64)
 CAMERA_DISTANCE = -0.9
 TEAL01 = (110 / 255, 195 / 255, 192 / 255)
@@ -270,10 +279,14 @@ def render_bench_views(verts, tris, img_size: int = 320):
     return [render_iso(verts, tris, img_size, front=f) for f in BENCH_FRONTS]
 
 
-# front / side / top / iso for a human three-view. `up` is hard-coded (0,0,1), so
-# a pure top front=(0,0,1) collapses the camera basis; the top view uses a small
-# forward tilt instead (a near-plan view).
-THREE_VIEW_FRONTS = [(0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (0.0, -0.12, 1.0), (1.0, -1.0, 1.0)]
+# front / side / top / iso for a human three-view, again written as CAMERA
+# positions. Written as fronts they were negated on the way to the camera, which
+# put the panel labelled "top" at z = -1 -- a BOTTOM view under a top label, and
+# the iso below the part too. `up` is hard-coded (0,0,1), so a camera straight
+# overhead collapses the basis; the top view keeps a small tilt (a near-plan).
+THREE_VIEW_CAMERAS = [(0.0, -1.0, 0.0), (1.0, 0.0, 0.0),
+                      (0.0, -0.12, 1.0), (1.0, -1.0, 1.0)]
+THREE_VIEW_FRONTS = [tuple(-c for c in cam) for cam in THREE_VIEW_CAMERAS]
 
 
 def step_cutaway_mesh(step_path: Path):

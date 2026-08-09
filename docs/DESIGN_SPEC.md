@@ -242,13 +242,24 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    with `quantity=N` by default; `--per-instance` renders one row per instance
    (`bolt_01`, `bolt_02`, …) instead.
 
-The sheet's four view directions are **not** the benchmark's four. The scored
-`BENCH_FRONTS` are two antipodal pairs on two body diagonals, and a y-mirror maps
-each onto another member of the list — so a part that is mirror-symmetric about
-its own XZ plane, which most hardware is, shows only two distinct aspects across
-all four. Those stay exactly as they are, because they are what the benchmark
-scores. The preview-parts sheet is documentation, so it uses `CATALOG_FRONTS`:
-four octants, four elevations, nothing antipodal and nothing mirror-related.
+**`front` is not where the camera is.** `CAMERA_DISTANCE` is negative, so
+`eye = focal + front × −0.9`: a `front` of `(1,1,1)` is a camera in the
+`(−1,−1,−1)` octant. Reading it the other way is what put benchcad-main's
+CodeGen prompt labels 180° out of step with its own renderer
+([BenchCAD-main #1](https://github.com/BenchCAD/BenchCAD-main/pull/1)), so every
+view set here is written as the **camera position** and negated once, at the
+definition.
+
+The four *scored* cameras are `(−1,−1,−1)`, `(1,1,1)`, `(1,−1,1)`, `(−1,1,−1)`.
+They are two antipodal pairs, and all four satisfy `x = z` — the set has rank 2,
+so the four "diagonal" views are four points on one great circle rather than
+four viewpoints spread over the sphere. A y-mirror maps each onto another
+member, so a part that is mirror-symmetric about its own XZ plane (most
+hardware) shows only **two** distinct aspects across all four. They stay exactly
+as they are, because they are what the benchmark scores and they match
+benchcad-main. The preview-parts sheet is documentation, so it uses
+`CATALOG_CAMERAS`: rank 3, all four above the part, none antipodal, none
+mirror-related.
 
 The cutaway is a **fixed** half-section: the +Y half of the shape is removed at
 that shape's own bounding-box centre, the same plane `preview_hard_zoom.png`
