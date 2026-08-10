@@ -37,6 +37,7 @@ Start with:
 uv sync
 uv run bench2 new my_family
 # edit designs/my_family/{part.py,spec.py,family.json}
+uv run bench2 edit my_family      # optional: live 3D editing in CQ-editor (F5 to re-render)
 uv run bench2 validate my_family
 uv run bench2 preview my_family   # inspect the renders before submitting
 ```

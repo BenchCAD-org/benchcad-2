@@ -1,6 +1,7 @@
 """bench2 — the BenchCAD 2.0 contributor CLI.
 
     bench2 new <family>            scaffold designs/<family>/ from the template
+    bench2 edit <family>           open part.py in CQ-editor (live 3D; F5 renders)
     bench2 validate <family>       run every machine gate locally (same as CI)
     bench2 preview <family>        render a difficulty x seed grid PNG
     bench2 preview-parts <family>  render assembly components + highlight rows
@@ -210,6 +211,16 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p_new = sub.add_parser("new", help="scaffold a new family")
     p_new.add_argument("family")
+    p_edit = sub.add_parser("edit", help="open a family's part.py in CQ-editor (live 3D)")
+    p_edit.add_argument("family", nargs="?", help="family name (designs/<family>/part.py)")
+    p_edit.add_argument("set", nargs="*", metavar="k=v",
+                        help="override sampled parameters, e.g. outer_d=80")
+    p_edit.add_argument("--file", help="open this part.py instead of a family name")
+    p_edit.add_argument("--diff", default="medium", choices=["easy", "medium", "hard"],
+                        help="difficulty tier to sample the preview instance from")
+    p_edit.add_argument("--seed", type=int, default=0, help="sampling seed (default 0)")
+    p_edit.add_argument("--strip", action="store_true",
+                        help="only remove a leftover scratch block, don't open the editor")
     p_val = sub.add_parser("validate", help="run all machine gates")
     p_val.add_argument("family")
     p_val.add_argument("--seeds", type=int, default=4, help="seeds per difficulty (default 4)")
@@ -243,6 +254,10 @@ def main() -> None:
     a = ap.parse_args()
     if a.cmd == "new":
         sys.exit(cmd_new(a.family))
+    if a.cmd == "edit":
+        from .edit import cmd_edit
+
+        sys.exit(cmd_edit(a.family, a.file, a.diff, a.seed, a.set, a.strip))
     if a.cmd == "validate":
         sys.exit(cmd_validate(a.family, a.seeds, a.fast))
     if a.cmd == "preview":
