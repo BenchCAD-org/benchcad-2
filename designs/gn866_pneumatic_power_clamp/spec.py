@@ -2,9 +2,9 @@
 
 PARAM_DESC = {
     "size": "main cylinder diameter / catalog size row",
-    "max_moment": "maximum moment rating",
-    "fs": "clamping force",
-    "fh": "holding force",
+    "max_moment": "maximum clamping moment at 6 bar",
+    "fs": "clamping force at r and 6 bar",
+    "fh": "holding capacity at r and 6 bar",
     "a": "clamp arm width reference",
     "b": "jaw gap / opening reference",
     "d1": "main slot / hole diameter",
@@ -28,7 +28,8 @@ PARAM_DESC = {
     "s1": "body thickness",
     "s2": "overall depth",
     "t": "bridge / plate thickness",
-    "w": "auxiliary width reference",
+    "w": "clamping-arm angle",
+    "length_tolerance": "shared catalog tolerance applied to l1 and l2",
 }
 
 OFFICIAL_20 = {
@@ -60,6 +61,29 @@ OFFICIAL_20 = {
     "s2": 38.0,
     "t": 13.0,
     "w": 66.0,
+    "length_tolerance": 0.0,
+}
+
+OFFICIAL_ROWS = {
+    20.0: OFFICIAL_20,
+    32.0: {
+        "size": 32.0, "max_moment": 150.0, "fs": 1110.0, "fh": 1520.0,
+        "a": 31.0, "b": 12.0, "d1": 40.0, "d2": 6.0, "d3": 9.0,
+        "d4": 5.0, "d5_major": 8.0, "l1": 206.0, "l2": 237.0,
+        "l3": 91.0, "l4": 31.0, "l5": 6.0, "l6": 72.5, "m1": 18.0,
+        "m2": 10.0, "m3": 25.0, "m4": 51.0, "m5": 30.0, "m6": 22.0,
+        "r": 67.5, "s1": 42.0, "s2": 42.0, "t": 15.0, "w": 14.0,
+        "length_tolerance": 0.0,
+    },
+    40.0: {
+        "size": 40.0, "max_moment": 300.0, "fs": 1800.0, "fh": 2000.0,
+        "a": 37.0, "b": 16.0, "d1": 50.0, "d2": 8.0, "d3": 11.0,
+        "d4": 6.8, "d5_major": 8.0, "l1": 244.0, "l2": 282.0,
+        "l3": 104.0, "l4": 38.0, "l5": 7.5, "l6": 89.5, "m1": 22.0,
+        "m2": 13.0, "m3": 30.0, "m4": 62.0, "m5": 37.0, "m6": 25.0,
+        "r": 82.5, "s1": 52.0, "s2": 52.0, "t": 18.0, "w": 14.0,
+        "length_tolerance": 0.0,
+    },
 }
 
 
@@ -71,40 +95,51 @@ def _scaled(value, lo, hi):
     }
 
 
+_UNITS = {"max_moment": "N·m", "fs": "N", "fh": "N", "w": "deg"}
+_ROW_RANGES = {name: (min(row[name] for row in OFFICIAL_ROWS.values()), max(row[name] for row in OFFICIAL_ROWS.values())) for name in OFFICIAL_20}
+
 PARAM_SPEC = {
     name: dict(
         desc=f"{PARAM_DESC[name]} ({name} in the GN 866 drawing/table)",
-        unit="mm",
-        range=_scaled(value, 0.90, 1.12),
-        source="Ganter / JW Winco GN 866 catalog drawing and STEP reference; proportional ranges around the official 20 row",
-        refine=name not in {"size", "max_moment", "fs", "fh"},
-        askable=name in {"size"},
-        feature=name in {"d1", "d2", "d3", "d4", "d5_major", "m1", "m2", "m3", "m4", "m5", "m6"},
+        unit=_UNITS.get(name, "mm"),
+        range={"easy": _ROW_RANGES[name], "medium": _ROW_RANGES[name], "hard": _ROW_RANGES[name]},
+        source="Ganter GN 866 official size-20, size-32, and size-40 catalog rows",
+        refine=name != "size",
+        askable=name == "size",
+        **({"choices": {"easy": [20.0], "medium": [20.0, 32.0], "hard": [20.0, 32.0, 40.0]}} if name == "size" else {}),
     )
-    for name, value in OFFICIAL_20.items()
+    for name in OFFICIAL_20
 }
+
+PARAM_SPEC["size"]["refine"] = False
+PARAM_SPEC["size"]["coverage"] = [20.0, 32.0, 40.0]
+PARAM_SPEC["length_tolerance"].update(
+    refine=False,
+    unit="mm",
+    range={"easy": (0.0, 0.0), "medium": (-0.25, 0.0), "hard": (-0.5, 0.0)},
+    source="Ganter GN 866 drawing: l1 and l2 are specified with -0.5 mm tolerance",
+)
 
 
 def refine(p: dict, difficulty: str, rng) -> None:
-    scale = p["size"] / OFFICIAL_20["size"]
-    for name, value in OFFICIAL_20.items():
-        if name == "size":
-            continue
-        if name in {"max_moment", "fs", "fh"}:
-            continue
-        p[name] = round(value * scale, 2)
+    row = OFFICIAL_ROWS[float(p["size"])]
+    for name, value in row.items():
+        if name not in {"size", "length_tolerance"}:
+            p[name] = value
 
 
 def check(p: dict) -> list[str]:
     bad = []
     if p["d2"] >= p["d1"]:
-        bad.append("d2 must remain smaller than d1")
+        bad.append("d2 must remain smaller than d1 (Ganter GN 866 catalog rows)")
     if p["m3"] <= 0 or p["m4"] < 0:
-        bad.append("bore pitches must be non-negative")
+        bad.append("bore pitches must be non-negative (catalog drawing; m4 is blank for size 20)")
     if p["l2"] < p["l1"]:
-        bad.append("l2 should not be smaller than l1 for the full envelope")
+        bad.append("l2 should not be smaller than l1 for the full envelope (catalog table)")
     if p["s2"] <= p["s1"] * 0.8:
-        bad.append("s2 should stay comparable to the body depth")
+        bad.append("s2 should stay comparable to s1 (proportion of the catalog section)")
     if p["l3"] <= p["d1"]:
-        bad.append("l3 too small for the upper clamp arms")
+        bad.append("l3 too small for the upper clamp arms (catalog table)")
+    if not -0.5 <= p["length_tolerance"] <= 0.0:
+        bad.append("length_tolerance must stay within the catalog l1/l2 -0.5 mm tolerance")
     return bad

@@ -5,5 +5,10 @@
   "description": "Pneumatic power clamp with a vertical cylinder body and paired side grippers.",
   "source": "Ganter / JW Winco GN 866 catalog drawing and STEP reference",
   "contributor": "JiusongZhou7",
-  "solids": 3
+  "solids": 3,
+  "components": [
+    {"name": "body", "quantity": 1},
+    {"name": "left_gripper", "quantity": 1},
+    {"name": "right_gripper", "quantity": 1}
+  ]
 }
