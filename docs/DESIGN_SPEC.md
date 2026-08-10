@@ -232,7 +232,9 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    invisible in every opaque exterior view), labeled with the component's
    bounding box in mm;
 2. the complete assembly in its true pose, labeled with the instance's
-   parameters;
+   parameters — **see-through by default**, like the highlight rows: opaque, the
+   overview of anything with a housing is a featureless can, and the one row
+   whose job is to show the assembly shows the least of any row on the sheet;
 3. one red-on-gray highlight row per component. The rest of the assembly stays
    in place and is **ghosted (see-through) by default**, so a component that
    lives inside the assembly still reads — a bushing pressed into its bore, a
