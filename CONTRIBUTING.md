@@ -8,6 +8,30 @@ Questions → [Discord](https://discord.gg/be9AtvrDyK). New to GitHub? Use the
 step-by-step guides: [English](docs/GETTING_STARTED.md) ·
 [Chinese](docs/GETTING_STARTED.zh.md).
 
+## Scope
+
+**This repository is the AI-plus-expert data pipeline that produces the
+family dataset**: proposing a family from a real source, implementing it as an
+auditable parametric design, reviewing it against its drawing, and recording
+provenance. Everything here serves getting correct, sourced data in.
+
+**It is not an evaluation or scoring pipeline.** No model output is graded
+here, no score is computed here, and no leaderboard number is produced here.
+`frontier_iou` in `docs/STATUS.md` is a value reported from elsewhere, not
+something this repository calculates. A feature request to add or extend
+scoring — a similarity metric wired into a default, a leaderboard path, a
+grading harness — is out of scope no matter how well built; it belongs
+wherever the scoring pipeline actually lives, and the maintainers will point
+you there.
+
+Metrics can still appear here, on one condition: **a metric is research-phase
+tooling, used as a tool on the data.** Inspecting a step-wise case, checking a
+generated instance against its reference, triaging a family that looks wrong —
+that is data work and it is welcome. The line is what the metric is *for*: a
+tool you run to decide whether the data is right belongs here; a component
+that scores a model does not. Such a tool stays opt-in and wired into no
+default, and it is not a benchmark metric just because it produces a number.
+
 ## The contributor loop
 
 ```bash

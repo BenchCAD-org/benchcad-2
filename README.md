@@ -11,6 +11,11 @@ BenchCAD 2.0 is the successor to
 by explicit engineering knowledge: named parameters, sourced ranges,
 inter-parameter constraints, and deterministic CadQuery geometry.
 
+This repository is the **data pipeline** that produces those families — propose,
+implement, review, record provenance. It is not an evaluation or scoring
+pipeline: nothing here grades a model or computes a leaderboard number. See
+[Scope](CONTRIBUTING.md#scope) before opening a feature request.
+
 ## Contributing a family
 
 A family is one auditable parametric design:
