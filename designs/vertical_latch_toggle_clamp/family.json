@@ -2,8 +2,8 @@
   "family": "vertical_latch_toggle_clamp",
   "standard": "GN 851.1",
   "base_plane": "XY",
-  "description": "Vertical latch-type toggle clamp with horizontal mounting base, catalog-size-driven base, handle, latch fork, U-bolt/catch variant, and mounting holes.",
-  "source": "JW Winco / Ganter GN 851.1 catalog drawing and metric dimension table; proportion for simplified handle grip, pins, and sheet-metal detail not separately dimensioned",
+  "description": "Static GN 851.1-T3 vertical latch-type toggle clamp assembly with horizontal mounting base and catalog-driven dimensions.",
+  "source": "JW Winco / Ganter GN 851.1 standard sheet and metric-converted table; supplied 851.1-160-T3 STEP used only as proportional reconstruction evidence",
   "contributor": "Kakino7",
   "solids": 5,
   "components": [

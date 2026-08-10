@@ -18,17 +18,31 @@ import cadquery as cq
 
 
 REF = {
+    "a1": 5.1,
+    "a2": 24.9,
+    "b1": 25.9,
     "l1": 68.1,
     "h1": 37.1,
     "b2": 35.1,
+    "b3": 21.1,
+    "b4": 25.4,
+    "b5": 14.0,
     "d1": 4.0,
+    "d2": 4.3,
+    "h2": 9.9,
+    "l2": 4.6,
+    "m1": 22.1,
+    "m2": 6.6,
+    "m3": 13.0,
+    "m4": 6.6,
+    "m5": 14.2,
+    "s": 2.0,
 }
 
 
 def _params(
     clamp_size,
-    with_u_bolt,
-    handle_angle,
+    fit_clearance,
     a1,
     a2,
     b1,
@@ -47,10 +61,7 @@ def _params(
     m3,
     m4,
     m5,
-    r,
     s,
-    w1,
-    w2,
 ):
     return locals()
 
@@ -71,6 +82,21 @@ def _pt(p, x, y, z):
 def _min_scale(p):
     sx, sy, sz, _ = _ref_scale(p)
     return min(sx, sy, sz)
+
+
+def _ratio(p, name):
+    return float(p[name]) / REF[name]
+
+
+def _u_leg_z(p):
+    rod = float(p["d1"])
+    return (float(p["b5"]) + rod * 1.65) / 2.0
+
+
+def _fork_y_bounds(p):
+    _, sy, _, _ = _ref_scale(p)
+    y1 = -8.7 * sy
+    return y1 - (float(p["b4"]) + 0.1 * sy), y1
 
 
 def _box(x, y, z, center, fillet=0.0):
@@ -94,16 +120,15 @@ def _plate_xy(points, thickness_z, z_center=0.0):
     )
 
 
-def _oval_plate_xy(x_radius, y_radius, thickness_z, center, segments=32):
+def _oval_plate_xy(x_radius, y_radius, thickness_z, center):
     cx, cy, cz = center
-    pts = [
-        (
-            cx + math.cos(2.0 * math.pi * i / segments) * x_radius,
-            cy + math.sin(2.0 * math.pi * i / segments) * y_radius,
-        )
-        for i in range(segments)
-    ]
-    return _plate_xy(pts, thickness_z, cz)
+    return (
+        cq.Workplane("XY")
+        .center(cx, cy)
+        .ellipse(x_radius, y_radius)
+        .extrude(thickness_z / 2.0, both=True)
+        .translate((0.0, 0.0, cz))
+    )
 
 
 def _cyl_x(diameter, length, center):
@@ -164,15 +189,6 @@ def _rounded_rect_xz(width_x, height_z, thickness_y, center, radius):
     return solid
 
 
-def _rotate_handle(p, solid):
-    angle = float(p["handle_angle"])
-    if abs(angle) < 1e-6:
-        return solid
-    sx, sy, _, _ = _ref_scale(p)
-    pivot = (1.7 * sx, 16.0 * sy, 0.0)
-    return solid.rotate(pivot, (pivot[0], pivot[1], 1.0), angle)
-
-
 def solid_0_base_frame(p):
     """Folded mounting frame, base plate, triangular web, and upper pin boss."""
 
@@ -180,7 +196,7 @@ def solid_0_base_frame(p):
     scale = _min_scale(p)
     hole = float(p["d2"])
 
-    sheet_t = max(float(p["s"]) * sz, 4.0 * sz)
+    sheet_t = max(float(p["s"]), 0.8)
 
     web = (
         cq.Workplane("XY")
@@ -206,23 +222,30 @@ def solid_0_base_frame(p):
     cap_crown = _cyl_z(cap_d * 0.86, 1.0 * sz, _pt(p, 0.0, 0.0, 5.0)).union(
         _cyl_z(cap_d * 0.86, 1.0 * sz, _pt(p, 0.0, 0.0, -5.0))
     )
-    part = web.union(outer_cap).union(inner_cap).union(cap_crown)
+    neck_length = max(1.3 * sz, 3.6 * sz / 2.0 - sheet_t / 2.0 + 0.2 * scale)
+    neck_offset = sheet_t / 2.0 + neck_length / 2.0 - 0.1 * scale
+    cap_necks = _cyl_z(cap_d * 0.72, neck_length, (0.0, 0.0, neck_offset)).union(
+        _cyl_z(cap_d * 0.72, neck_length, (0.0, 0.0, -neck_offset))
+    )
+    part = web.union(outer_cap).union(inner_cap).union(cap_crown).union(cap_necks)
 
-    fold_band = _box(36.0 * sx, 1.0 * sy, 4.8 * sz, _pt(p, 14.6, -6.45, 0.0), 0.12 * scale)
+    fold_band = _box(36.0 * sx, 1.0 * sy, 5.0 * sz, _pt(p, 14.6, -6.45, 0.0), 0.12 * scale)
     part = part.union(fold_band)
 
-    rail_len = 26.0 * sx
+    rail_len = 26.0 * _ratio(p, "b1")
     rail_y = 2.2 * sy
     rail_z = 15.1 * sz
     for zc in (-9.95 * sz, 9.95 * sz):
         rail = _rounded_rect_xz(rail_len, rail_z, rail_y, (19.6 * sx, -7.3 * sy, zc), 2.35 * scale)
-        lip_z = 0.8 * sz
-        lip_center_z = math.copysign(sheet_t / 2.0 + lip_z * 0.25, zc)
+        rail_inner_z = abs(zc) - rail_z / 2.0
+        lip_z = max(0.8 * sz, rail_inner_z - sheet_t / 2.0 + 0.2 * scale)
+        lip_center_z = math.copysign((sheet_t / 2.0 + rail_inner_z) / 2.0, zc)
         fold_lip = _box(rail_len, 0.5 * sy, lip_z, (19.6 * sx, -6.15 * sy, lip_center_z), 0.10 * scale)
         part = part.union(rail).union(fold_lip)
 
-    hole_xs = (13.1 * sx, 26.1 * sx)
-    hole_zs = (-11.0 * sz, 11.0 * sz)
+    first_hole_x = float(p["b1"]) - float(p["m2"]) - float(p["m3"]) / 2.0 + 0.3 * sx
+    hole_xs = (first_hole_x, first_hole_x + float(p["m3"]))
+    hole_zs = (-float(p["m1"]) / 2.0, float(p["m1"]) / 2.0)
     for hx in hole_xs:
         for hz in hole_zs:
             part = part.cut(_cyl_y(hole, 4.8 * sy, (hx, -7.4 * sy, hz)))
@@ -234,27 +257,53 @@ def solid_0_base_frame(p):
 
 
 def solid_1_u_bolt(p):
-    """U-bolt latch rod for the T3 variant."""
+    """Continuous round U-bolt latch rod for the T3 variant."""
 
     sx, sy, sz, _ = _ref_scale(p)
     rod = float(p["d1"])
-    x = 1.7 * sx
-    z_sep = max(25.0 * sz, float(p["b5"]) + rod * 2.0)
-    y0 = -35.7 * sy
-    y1 = 34.7 * sy
+    x = 1.7 * _ratio(p, "a1")
+    z_half = _u_leg_z(p)
+    z_sep = 2.0 * z_half
+    fork_y0, _ = _fork_y_bounds(p)
+    bend_bottom = fork_y0 - rod / 2.0 - 0.20 * _min_scale(p)
+    free_end = 34.7 * sy
+    corner_radius = min(max(rod * 1.05, z_sep * 0.18), z_sep * 0.28)
+    tangent_y = bend_bottom + corner_radius
 
-    part = None
-    for z in (-z_sep / 2.0, z_sep / 2.0):
-        leg = _cyl_y(rod, y1 - y0, (x, (y0 + y1) / 2.0, z))
-        part = leg if part is None else part.union(leg)
+    # The catalog U-bolt is one bent round rod. Keep the two straight legs
+    # tangent to two compact quarter-circle bends and a straight bottom span.
+    # This follows the drawing's rounded-rectangle U profile rather than a
+    # broad semicircle or a square three-cylinder junction.
+    leg_length = free_end - tangent_y
+    part = _cyl_y(rod, leg_length, (x, (free_end + tangent_y) / 2.0, -z_half)).union(
+        _cyl_y(rod, leg_length, (x, (free_end + tangent_y) / 2.0, z_half))
+    )
 
-        thread_start = y0 + 2.4 * sy
-        for i in range(6):
-            ring = _cyl_y(rod * 1.05, 0.35 * sy, (x, thread_start + i * 0.95 * sy, z))
-            part = part.union(ring)
+    bottom_span = z_sep - 2.0 * corner_radius
+    part = part.union(_cyl_z(rod, bottom_span, (x, bend_bottom, 0.0)))
 
-    top_bridge = _cyl_z(rod, z_sep, (x, y0, 0.0))
-    return part.union(top_bridge)
+    corner_centers = (
+        (x, tangent_y, -z_half + corner_radius, -1.0),
+        (x, tangent_y, z_half - corner_radius, 1.0),
+    )
+    quadrant_size = corner_radius + rod
+    for cx, cy, cz, side in corner_centers:
+        bend = cq.Workplane("XY").newObject(
+            [cq.Solid.makeTorus(corner_radius, rod / 2.0, (cx, cy, cz), (1.0, 0.0, 0.0))]
+        )
+        quadrant = _box(
+            rod * 1.25,
+            quadrant_size,
+            quadrant_size,
+            (
+                cx,
+                cy - quadrant_size / 2.0,
+                cz + side * quadrant_size / 2.0,
+            ),
+        )
+        part = part.union(bend.intersect(quadrant))
+
+    return part
 
 
 def solid_2_front_fork_block(p):
@@ -264,8 +313,8 @@ def solid_2_front_fork_block(p):
     scale = _min_scale(p)
     hole = float(p["d2"])
     x0, x1 = -3.5 * sx, 6.5 * sx
-    y0, y1 = -34.2 * sy, -8.7 * sy
-    z_half = 7.0 * sz
+    y0, y1 = _fork_y_bounds(p)
+    z_half = 7.0 * _ratio(p, "b3")
 
     height = y1 - y0
     width = x1 - x0
@@ -275,7 +324,7 @@ def solid_2_front_fork_block(p):
     bottom_arm = _box(width * 0.92, height, arm_t, (x0 + width * 0.54, (y0 + y1) / 2.0, -z_half + arm_t / 2.0), 0.25 * scale)
     block = left_web.union(top_arm).union(bottom_arm)
 
-    for y in (y0 + (y1 - y0) * 0.27, y0 + (y1 - y0) * 0.72):
+    for y in (y0 + float(p["m4"]), y0 + float(p["m4"]) + float(p["m5"])):
         block = block.cut(_cyl_x(hole, width * 0.70, (x0 + width * 0.26, y, 0.0)))
 
     rib = _plate_xy(
@@ -297,8 +346,9 @@ def solid_3_adjuster_block(p):
     scale = _min_scale(p)
     rod = float(p["d1"])
     hole = float(p["d2"])
-    x = 1.7 * sx
-    y0, y1 = 9.6 * sy, 24.0 * sy
+    x = 1.7 * _ratio(p, "a1")
+    y0 = float(p["h2"]) - 0.3 * sy
+    y1 = float(p["a2"]) - 0.9 * sy
     z_half = 15.0 * sz
     y_mid = (y0 + y1) / 2.0
 
@@ -306,7 +356,8 @@ def solid_3_adjuster_block(p):
     web = _capsule_z(27.0 * sz, 4.8 * sx, y1 - y0, (x, y_mid, 0.0))
     part = tube.union(web)
 
-    for z in (-10.3 * sz, 10.3 * sz):
+    u_leg_z = _u_leg_z(p)
+    for z in (-u_leg_z, u_leg_z):
         part = part.union(_box(4.8 * sx, y1 - y0, 2.3 * sz, (x, y_mid, z), 0.15 * scale))
         part = part.union(_cyl_y(max(hole * 1.45, rod * 1.55), 3.4 * sy, (x, y_mid, z)))
         part = part.union(_hex_y(max(hole * 1.65, rod * 1.65), 2.3 * sy, (x, y_mid, z)))
@@ -360,8 +411,8 @@ def solid_4_handle_linkage(p):
     part = None
     for z in zc:
         side = _plate_xy(outer_pts, plate_t, z)
-        side = side.union(_oval_plate_xy(7.0 * sx, 8.0 * sy, plate_t, (0.0 * sx, 0.2 * sy, z), 44))
-        side = side.union(_oval_plate_xy(7.4 * sx, 6.8 * sy, plate_t, (1.0 * sx, 18.2 * sy, z), 44))
+        side = side.union(_oval_plate_xy(7.0 * sx, 8.0 * sy, plate_t, (0.0 * sx, 0.2 * sy, z)))
+        side = side.union(_oval_plate_xy(7.4 * sx, 6.8 * sy, plate_t, (1.0 * sx, 18.2 * sy, z)))
         side = side.union(_capsule_x(4.0 * sx, 1.8 * sz, 2.0 * sy, (60.0 * sx, 25.4 * sy, z)))
         for x, y, d in (
             (0.0, 0.0, 9.3 * scale),
@@ -401,7 +452,7 @@ def solid_4_handle_linkage(p):
         _box(23.0 * sx, 6.2 * sy, 7.8 * sz, (41.0 * sx, 24.0 * sy, 0.0), 0.20 * scale)
         .union(_box(13.0 * sx, 5.4 * sy, 8.0 * sz, (51.3 * sx, 24.4 * sy, 0.0), 0.18 * scale))
         .union(_box(6.2 * sx, 4.2 * sy, 8.0 * sz, (57.6 * sx, 24.8 * sy, 0.0), 0.12 * scale))
-        .union(_capsule_x(4.2 * sx, 6.7 * sz, 6.8 * sy, (59.6 * sx, 25.0 * sy, 0.0)))
+        .union(_capsule_x(float(p["l2"]) * (4.2 / REF["l2"]), 6.7 * sz, 6.8 * sy, (59.6 * sx, 25.0 * sy, 0.0)))
         .union(_box(28.0 * sx, 1.35 * sy, 13.6 * sz, (44.6 * sx, 28.0 * sy, 0.0), 0.16 * scale))
         .union(_capsule_x(5.4 * sx, 13.2 * sz, 1.55 * sy, (59.2 * sx, 27.6 * sy, 0.0)))
     )
@@ -412,8 +463,6 @@ def solid_4_handle_linkage(p):
     )
     right_shell = right_shell.cut(_box(12.0 * sx, 2.4 * sy, 8.4 * sz, (47.8 * sx, 21.7 * sy, 0.0), 0.08 * scale))
     yoke_web = _box(2.0 * sx, 1.3 * sy, bridge_z, (29.8 * sx, 27.0 * sy, 0.0), 0.15 * scale)
-    lower_pin = _cyl_z(max(rod * 0.88, 3.5 * scale), bridge_z, (0.0, 0.0, 0.0))
-    upper_pin = _cyl_z(max(rod * 0.82, 3.3 * scale), bridge_z, (1.0 * sx, 18.2 * sy, 0.0))
     rear_pin = _cyl_z(max(rod * 0.76, 3.1 * scale), bridge_z, (43.8 * sx, 24.0 * sy, 0.0))
     part = (
         part.union(upper_lip)
@@ -422,8 +471,6 @@ def solid_4_handle_linkage(p):
         .union(right_shell)
         .union(nose_tip)
         .union(yoke_web)
-        .union(lower_pin)
-        .union(upper_pin)
         .union(rear_pin)
     )
 
@@ -446,13 +493,12 @@ def solid_4_handle_linkage(p):
     )
     part = part.cut(lower_relief)
 
-    return _rotate_handle(p, part)
+    return part
 
 
 def build(
     clamp_size,
-    with_u_bolt,
-    handle_angle,
+    fit_clearance,
     a1,
     a2,
     b1,
@@ -471,15 +517,11 @@ def build(
     m3,
     m4,
     m5,
-    r,
     s,
-    w1,
-    w2,
 ):
     p = _params(
         clamp_size,
-        with_u_bolt,
-        handle_angle,
+        fit_clearance,
         a1,
         a2,
         b1,
@@ -498,19 +540,30 @@ def build(
         m3,
         m4,
         m5,
-        r,
         s,
-        w1,
-        w2,
     )
+    base_frame = solid_0_base_frame(p)
+    u_bolt_latch = solid_1_u_bolt(p)
+    front_fork_block = solid_2_front_fork_block(p)
+    adjuster_block = solid_3_adjuster_block(p)
+    handle_linkage = solid_4_handle_linkage(p).cut(base_frame).cut(adjuster_block)
+    clearance = float(p["fit_clearance"])
+    sx, sy, _, _ = _ref_scale(p)
+    base_relief = _box(
+        4.0 * sx + 2.0 * clearance,
+        7.8 * sy + 2.0 * clearance,
+        4.0 + 2.0 * clearance,
+        (11.8 * sx, 15.0 * sy, 0.0),
+    )
+    handle_linkage = handle_linkage.cut(base_relief)
+
     components = [
-        ("base_frame", solid_0_base_frame(p)),
-        ("front_fork_block", solid_2_front_fork_block(p)),
-        ("adjuster_block", solid_3_adjuster_block(p)),
-        ("handle_linkage", solid_4_handle_linkage(p)),
+        ("base_frame", base_frame),
+        ("u_bolt_latch", u_bolt_latch),
+        ("front_fork_block", front_fork_block),
+        ("adjuster_block", adjuster_block),
+        ("handle_linkage", handle_linkage),
     ]
-    if int(round(float(with_u_bolt))):
-        components.insert(1, ("u_bolt_latch", solid_1_u_bolt(p)))
 
     result = cq.Assembly(name="vertical_latch_toggle_clamp")
     for name, solid in components:
@@ -521,8 +574,7 @@ def build(
 if "show_object" in globals():
     result = build(
         clamp_size=160,
-        with_u_bolt=1,
-        handle_angle=0.0,
+        fit_clearance=0.10,
         a1=5.1,
         a2=24.9,
         b1=25.9,
@@ -541,9 +593,6 @@ if "show_object" in globals():
         m3=13.0,
         m4=6.6,
         m5=14.2,
-        r=52.1,
         s=2.0,
-        w1=32.0,
-        w2=9.9,
     )
     show_object(result, name="vertical_latch_toggle_clamp_assembly")
