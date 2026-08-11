@@ -121,51 +121,44 @@ def _build_output_yoke(d1, d2, square_s, l3, shaft_depth, bore_code,
     )
 
 
-# ── the real DIN 808 EG friction-bearing centre (teardown reference on the
-# PR): a rounded pivot BLOCK with two orthogonal bores, a thick PIVOT PIN
-# (axis Z, cross-drilled at its middle), a thin CROSS PIN (axis Y) passing
-# through the block AND through the pivot pin's cross hole, and a split
-# retaining RING on the pivot pin's lower end. All proportions of d1.
+# ── DIN 808 EG friction-bearing centre (teardown reference on the PR):
+# a low rounded-square pivot BLOCK with two orthogonal bores, a thick PIVOT
+# PIN (axis Z, cross-drilled at its middle), and a thin CROSS PIN (axis Y)
+# passing through the block and through the pivot pin's cross hole.  The
+# teardown does not dimension the centre parts, so all values are documented
+# proportions of d1.
 PIVOT_PIN_D = 0.26      # thick pin diameter / d1
 CROSS_PIN_D = 0.14      # thin pin diameter / d1
 PIN_FIT = 0.015         # radial running clearance / d1 (both pins, all bores)
 
 
 def _build_pivot_block(d1):
-    """Centre block: a turned DRUM (the teardown photo shows a cylinder, not
-    a cube) with two milled flats where the cross-pin bores break out, bored
-    Z for the pivot pin and Y for the cross pin, and counterbored at both
-    ends around the pivot bore."""
-    # Sized from wall thickness, not from the photo: the earlier 0.25*d1
-    # radius left 0.82 x the pivot-bore radius as wall, which is far heavier
-    # than a friction-bearing block needs and read as an oversized centre.
-    # 0.21*d1 puts the wall at 0.53 x the bore radius, and the block is
-    # square in section: height = diameter.
-    r_o = 0.21 * d1
-    half_h = r_o          # height : diameter = 1 : 1
+    """Low rounded-square centre block with orthogonal pin bores.
+
+    The teardown shows a square plan with generously radiused corners and a
+    height clearly smaller than its width, rather than the previous 1:1 drum.
+    The 0.42*d1 plan still clears both fork pairs; the 0.30*d1 height leaves
+    running clearance between the input-yoke ears.
+    """
+    block_side = 0.42 * d1
+    block_h = 0.30 * d1
+    half_h = block_h / 2.0
     blk = (
         cq.Workplane("XY")
-        .circle(r_o)
-        .extrude(2.0 * half_h)
-        .translate((0.0, 0.0, -half_h))
-        .edges("%CIRCLE").chamfer(0.045 * d1)   # generous break on both ends
+        .box(block_side, block_side, block_h)
+        .edges("|Z")
+        .fillet(0.075 * d1)
+        .edges("#Z")
+        .chamfer(0.025 * d1)
     )
-    # two milled FLATS on the cross-pin axis, the faces its bores break out
-    # of (the teardown shows a drum with flats, not a plain cylinder)
-    flat_at = 0.168 * d1
-    for sy in (1.0, -1.0):
-        blk = blk.cut(
-            cq.Workplane("XY")
-            .box(2.2 * r_o, 2.0 * r_o, 2.4 * half_h)
-            .translate((0.0, sy * (flat_at + r_o), 0.0))
-        )
     # counterbored recess around the pivot bore on both end faces
+    counterbore_depth = 0.035 * d1
     for sz in (1.0, -1.0):
         blk = blk.cut(
             cq.Workplane("XY")
             .circle((PIVOT_PIN_D + PIN_FIT) * d1 / 2.0 + 0.015 * d1)
-            .extrude(sz * 0.035 * d1)
-            .translate((0.0, 0.0, sz * half_h - (0.035 * d1 if sz < 0 else 0.0)))
+            .extrude(-sz * counterbore_depth)
+            .translate((0.0, 0.0, sz * half_h))
         )
     blk = blk.cut(_centered_cylinder((PIVOT_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Z").val())
     blk = blk.cut(_centered_cylinder((CROSS_PIN_D + PIN_FIT) * d1, 0.60 * d1, "Y").val())
@@ -218,9 +211,7 @@ def build(
     keyway_width,
     keyway_depth,
 ):
-    """Build the DIN 808 EG joint as its real six-part construction: two
-    yokes, the friction pivot block, the cross-drilled pivot pin, the cross
-    pin through it, and the split retaining ring."""
+    """Build the five-part DIN 808 EG friction-bearing construction."""
     del catalog_row, l1
     input_yoke = _build_input_yoke(
         d1, d2, square_s, l3, shaft_depth, bore_code, keyway_width,
