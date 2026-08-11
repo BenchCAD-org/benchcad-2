@@ -70,7 +70,6 @@ PARAM_SPEC = {
         coverage=list(range(7)),
         integer=True,
         source="JW Winco GN 920.1 metric table; one index selects one complete row",
-        askable=True,
     ),
     "jaw_type": dict(
         desc="catalog type: 0=GL smooth, 1=GA M4 attachment holes, 2=RF serrated",
@@ -88,7 +87,6 @@ PARAM_SPEC = {
         range=_row_range("d"),
         source="JW Winco GN 920.1 metric table, selected row d",
         refine=True,
-        askable=True,
     ),
     "b": dict(
         desc="catalog clamp width perpendicular to jaw travel",
@@ -96,7 +94,6 @@ PARAM_SPEC = {
         range=_row_range("b"),
         source="JW Winco GN 920.1 metric table, selected row b",
         refine=True,
-        askable=True,
     ),
     "jaw_span": dict(
         desc="overall span a across the opposed outer clamping faces",
@@ -104,7 +101,6 @@ PARAM_SPEC = {
         range={"easy": (39.5, 44.5), "medium": (39.5, 44.5), "hard": (34.5, 45.5)},
         source="JW Winco GN 920.1 metric table, selected row and jaw type a min/max",
         refine=True,
-        askable=True,
     ),
     "h1": dict(
         desc="maximum jaw body height",
@@ -112,7 +108,6 @@ PARAM_SPEC = {
         range=_row_range("h1"),
         source="JW Winco GN 920.1 metric table, selected row h1 max",
         refine=True,
-        askable=True,
     ),
     "h2": dict(
         desc="center wedge height above the jaw top plane",
@@ -120,7 +115,6 @@ PARAM_SPEC = {
         range=_row_range("h2"),
         source="JW Winco GN 920.1 metric table, selected row h2",
         refine=True,
-        askable=True,
     ),
     "h3": dict(
         desc="GA M4-hole center height; 0 sentinel when the field is inapplicable",
@@ -128,7 +122,6 @@ PARAM_SPEC = {
         range={"easy": (0.0, 0.0), "medium": (0.0, 7.5), "hard": (0.0, 11.0)},
         source="JW Winco GN 920.1 type GA drawing/table h3; not sampled for GL/RF",
         refine=True,
-        askable=True,
     ),
     "screw_projection": dict(
         desc="published maximum screw projection l below the clamp base",
@@ -136,7 +129,6 @@ PARAM_SPEC = {
         range=_row_range("screw_projection"),
         source="JW Winco GN 920.1 metric table, selected row length l max",
         refine=True,
-        askable=True,
     ),
     "m": dict(
         desc="GA spacing between the two M4 holes per jaw; 0 when inapplicable",
@@ -144,7 +136,6 @@ PARAM_SPEC = {
         range={"easy": (0.0, 0.0), "medium": (0.0, 30.0), "hard": (0.0, 30.0)},
         source="JW Winco GN 920.1 type GA drawing/table m; not sampled for GL/RF",
         refine=True,
-        askable=True,
     ),
     "force_kn": dict(
         desc="catalog clamping force per jaw, metadata only",
@@ -231,7 +222,7 @@ def check(p):
     head_d = 1.35 * p["d"]
 
     if jaw_width <= 5.0 + 0.20 * p["d"]:
-        bad.append("jaw wall behind each 5 mm GA blind hole is not positive (geometry)")
+        bad.append("jaw wall behind each 5 mm GA blind hole must remain positive (proportion)")
     if wedge_top_width <= head_d + 2.0 * clearance:
         bad.append("center wedge is too narrow for the screw-head recess and side clearance (proportion)")
     if wedge_top_width <= wedge_bottom_width + 2.0 * clearance:
@@ -239,7 +230,7 @@ def check(p):
     if p["b"] - 2.0 * clearance <= head_d + 2.0 * clearance:
         bad.append("center wedge depth is too small for screw-head edge material (proportion)")
     if p["h1"] <= p["h2"] + 0.45 * p["d"]:
-        bad.append("jaw height must exceed raised wedge height plus low-head screw height (geometry)")
+        bad.append("jaw height must exceed raised wedge height plus low-head screw height (proportion)")
 
     contact_dx = (wedge_top_width - wedge_bottom_width) / 2.0
     contact_dz = p["h1"] - lower_z
@@ -257,7 +248,7 @@ def check(p):
     if int(p["jaw_type"]) == 1:
         hole_r = 2.0
         if p["m"] / 2.0 + hole_r >= p["b"] / 2.0:
-            bad.append("GA M4 holes must retain positive side edge material within b (catalog geometry)")
+            bad.append("GA M4 holes must retain positive side edge material within b (proportion)")
         if p["h3"] - hole_r <= 0.0 or p["h3"] + hole_r >= p["h1"]:
-            bad.append("GA M4 holes must retain positive top/bottom material within h1 (catalog geometry)")
+            bad.append("GA M4 holes must retain positive top/bottom material within h1 (proportion)")
     return bad

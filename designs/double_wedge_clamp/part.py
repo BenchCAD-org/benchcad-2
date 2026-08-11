@@ -193,34 +193,89 @@ def _build_center_wedge(
     wedge = wedge.cut(through_hole)
 
     head_h = 0.45 * d
+    head_protrusion = 0.35 * head_h
+    recess_depth = head_h - head_protrusion
+    bearing_z = top_z - recess_depth
     head_recess = (
         cq.Workplane("XY")
-        .workplane(offset=top_z - head_h - 0.2)
+        .workplane(offset=bearing_z)
         .circle((head_d + 2.0 * clearance) / 2.0)
-        .extrude(head_h + 0.3)
+        .extrude(recess_depth + 0.1)
     )
     return wedge.cut(head_recess)
+
+
+def _coarse_thread_pitch(d):
+    """ISO 261 preferred coarse pitch for the two catalog screw sizes."""
+    if abs(d - 8.0) < 1e-9:
+        return 1.25
+    if abs(d - 12.0) < 1e-9:
+        return 1.75
+    raise ValueError("double_wedge_clamp supports only catalog M8 and M12 screws")
+
+
+def _external_thread(d, pitch, z0, z1):
+    """Visible 60-degree external thread ridge on the projecting screw end."""
+    major_r = d / 2.0
+    root_r = major_r - 0.54 * pitch
+    radial_embed = min(0.08, 0.05 * pitch)
+    half_width = 0.30 * pitch
+    path_r = (major_r + root_r) / 2.0
+    path_height = z1 - z0 - 2.0 * half_width
+    path = cq.Wire.makeHelix(pitch, path_height, path_r)
+    profile = (
+        cq.Workplane("XZ")
+        .polyline(
+            [
+                (root_r - radial_embed, -half_width),
+                (major_r, 0.0),
+                (root_r - radial_embed, half_width),
+            ]
+        )
+        .close()
+    )
+    result = profile.sweep(path, isFrenet=True).translate(
+        (0.0, 0.0, z0 + half_width)
+    )
+    return result
 
 
 def _build_screw(d, h1, h2, screw_projection):
     top_z = h1 + h2
     head_d = 1.35 * d
     head_h = 0.45 * d
-    shank_top = top_z - head_h + 0.2
+    head_protrusion = 0.35 * head_h
+    recess_depth = head_h - head_protrusion
+    bearing_z = top_z - recess_depth
+    shank_top = bearing_z + 0.2
+    pitch = _coarse_thread_pitch(d)
+    root_r = d / 2.0 - 0.54 * pitch
 
-    shank = (
+    thread_core = (
         cq.Workplane("XY")
         .workplane(offset=-screw_projection)
+        .circle(root_r)
+        .extrude(screw_projection + 0.05)
+    )
+    thread_ridge = _external_thread(
+        d,
+        pitch,
+        -screw_projection,
+        0.0,
+    )
+    smooth_shank = (
+        cq.Workplane("XY")
+        .workplane(offset=-0.05)
         .circle(d / 2.0)
-        .extrude(shank_top + screw_projection)
+        .extrude(shank_top + 0.05)
     )
     head = (
         cq.Workplane("XY")
-        .workplane(offset=top_z - head_h)
+        .workplane(offset=bearing_z)
         .circle(head_d / 2.0)
         .extrude(head_h)
     )
-    screw = shank.union(head)
+    screw = thread_core.union(thread_ridge).union(smooth_shank).union(head)
 
     # DIN 7984 is the catalog callout; exact socket dimensions are not printed
     # there, so this hex recess is an explicit visual proportion.

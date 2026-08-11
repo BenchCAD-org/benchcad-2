@@ -8,7 +8,9 @@
 - The model is a static four-solid assembly: `jaw_left`, `jaw_right`,
   `center_wedge`, and `screw`.
 - Workpieces, base plate/end stop, GN 920.2 pull-down plates, user-made
-  attachment jaws, the hidden return spring, and thread helices are excluded.
+  attachment jaws, the hidden return spring, and GA-hole internal thread
+  helices are excluded. The central screw's projecting external thread is
+  modeled explicitly.
 
 ## Catalog symbol mapping
 
@@ -70,8 +72,15 @@ modeled by the following `proportion` rules:
   center's horizontal lower and upper planes. Each jaw has one matching T slot
   enlarged by 0.15 mm; its cutter extends beyond both jaw limits so the slot is
   visibly open through both the horizontal top and bottom boundaries.
-- Simplified low head: diameter `1.35 d`, height `0.45 d`.
+- Simplified low head: diameter `1.35 d`, height `0.45 d`. A `0.35` share of
+  the head height protrudes above the wedge; the remaining `0.65` share sits
+  in the recess, with the two bearing faces coincident and zero overlap.
 - Simplified hex recess: diameter `0.62 d`, depth `0.22 d`.
+- Central screw external pitch uses the ISO 261 preferred coarse series:
+  M8 = 1.25 mm and M12 = 1.75 mm. The visible projecting thread uses a
+  deterministic 60-degree triangular ridge whose major diameter is `d`, whose
+  root radius is `d/2 - 0.54*pitch`, and whose axial ridge half-width is
+  `0.30*pitch`. The simplified root truncation is an explicit `proportion`.
 - RF surface: crossed 0.32 mm shallow grooves at fixed 2.4/2.8 mm pitches.
 
 These formulas preserve positive material and deterministic, symmetric motion
@@ -85,7 +94,9 @@ dimensions.
   positive guide clearance separates the base planes, while the wedge rail
   enters the jaw's larger complementary slot without solid intersection.
 - The center wedge contains a `1.15 d` shank clearance and a larger head
-  recess, so the screw remains a separate non-intersecting solid.
+  recess, so the screw remains a separate non-intersecting solid. The screw
+  head's lower bearing face is coincident with the recess floor: zero gap and
+  zero positive-volume intersection.
 - Each GA jaw has two nominal-diameter M4 blind cylinders, exactly 5 mm deep,
   at `y=+/-m/2`, `z=h3`; edge and wall material are checked in `spec.py`.
 - `family.json` declares four solids and four stable Assembly child names, each
@@ -111,8 +122,10 @@ dimensions.
 
 ## Deliberate deviations
 
-- Thread helices are omitted. GA holes are represented as smooth nominal M4
-  blind cylinders; the central screw is a smooth shank.
+- GA holes are represented as smooth nominal M4 blind cylinders. The central
+  screw now carries a visible ISO 261 coarse-pitch external helix on its full
+  published projection below the clamp base; its simplified crest/root
+  truncation is documented above.
 - The DIN 7984 callout is retained, but uncataloged head and hex details use
   the declared proportions above.
 - RF uses a simplified crossed-groove texture rather than claiming an
