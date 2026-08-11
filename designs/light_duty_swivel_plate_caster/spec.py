@@ -9,7 +9,7 @@ _CATALOG_ROWS = {
     40: {
         "wheel_d": 40.0,
         "wheel_width": 18.0,
-        "axle_d": 5.0,
+        "mount_slot_w": 5.0,
         "overall_h": 59.0,
         "plate_l": 42.0,
         "plate_w": 42.0,
@@ -20,7 +20,7 @@ _CATALOG_ROWS = {
     50: {
         "wheel_d": 50.0,
         "wheel_width": 18.0,
-        "axle_d": 6.0,
+        "mount_slot_w": 6.0,
         "overall_h": 66.0,
         "plate_l": 55.0,
         "plate_w": 55.0,
@@ -31,7 +31,7 @@ _CATALOG_ROWS = {
     60: {
         "wheel_d": 60.0,
         "wheel_width": 24.0,
-        "axle_d": 6.0,
+        "mount_slot_w": 6.0,
         "overall_h": 83.0,
         "plate_l": 60.0,
         "plate_w": 60.0,
@@ -42,7 +42,7 @@ _CATALOG_ROWS = {
     80: {
         "wheel_d": 80.0,
         "wheel_width": 24.0,
-        "axle_d": 6.0,
+        "mount_slot_w": 6.0,
         "overall_h": 104.0,
         "plate_l": 60.0,
         "plate_w": 60.0,
@@ -102,7 +102,19 @@ PARAM_SPEC = {
         askable=True,
     ),
     "axle_d": dict(
-        desc="Wheel axle diameter d2",
+        desc="Proportioned wheel axle and fastener nominal diameter",
+        unit="mm",
+        range={
+            "easy": (4.5, 6.0),
+            "medium": (4.5, 6.0),
+            "hard": (4.5, 6.0),
+        },
+        refine=True,
+        source="proportion; max(4.0 mm, 0.25 * catalog wheel width b)",
+        askable=True,
+    ),
+    "mount_slot_w": dict(
+        desc="Form L diagonal mounting-slot width d2",
         unit="mm",
         range={
             "easy": (6.0, 6.0),
@@ -208,14 +220,14 @@ PARAM_SPEC = {
         askable=True,
     ),
     "slot_scale": dict(
-        desc="Scale factor for unpublished mounting-slot length and width",
+        desc="Scale factor for unpublished mounting-slot length",
         unit="",
         range={
             "easy": (1.0, 1.0),
             "medium": (0.95, 1.05),
             "hard": (0.90, 1.10),
         },
-        source="proportion; benchmark perturbation of unpublished slot size",
+        source="proportion; benchmark perturbation of unpublished slot length",
         askable=True,
     ),
 }
@@ -227,6 +239,7 @@ def refine(p, difficulty, rng):
     row = _CATALOG_ROWS[int(p["catalog_size"])]
     for name, value in row.items():
         p[name] = value
+    p["axle_d"] = max(4.0, 0.25 * row["wheel_width"])
 
 
 def check(p: dict) -> list[str]:
@@ -246,8 +259,14 @@ def check(p: dict) -> list[str]:
         bad.append("m1 must lie inside plate length l1 (EN 22870 geometry)")
     if not 0.0 < p["mount_pitch_y"] < p["plate_w"]:
         bad.append("m2 must lie inside plate width l2 (EN 22870 geometry)")
+    expected_axle_d = max(4.0, 0.25 * row["wheel_width"])
+    if abs(float(p["axle_d"]) - expected_axle_d) > 1e-9:
+        bad.append(
+            "axle_d must follow max(4.0 mm, 0.25*b) "
+            "(proportion; axle size is not published)"
+        )
     if not 0.0 < p["axle_d"] < p["wheel_width"] < p["wheel_d"]:
-        bad.append("d2 < b < d1 is required by the EN 22870 wheel geometry")
+        bad.append("proportioned axle diameter must remain below b and d1")
     if p["overall_h"] <= p["wheel_d"] / 2.0:
         bad.append("overall height h must exceed the wheel radius (geometry)")
 
@@ -258,18 +277,18 @@ def check(p: dict) -> list[str]:
         p["overall_h"],
         p["plate_l"],
         p["plate_w"],
+        p["mount_slot_w"],
         p["sheet_scale"],
         p["race_scale"],
         p["slot_scale"],
     )
     angle = math.atan2(p["mount_pitch_y"], p["mount_pitch_x"])
+    capsule_half_straight = (g["slot_l"] - g["slot_w"]) / 2.0
     slot_extent_x = (
-        abs(math.cos(angle)) * g["slot_l"] / 2.0
-        + abs(math.sin(angle)) * g["slot_w"] / 2.0
+        abs(math.cos(angle)) * capsule_half_straight + g["slot_w"] / 2.0
     )
     slot_extent_y = (
-        abs(math.sin(angle)) * g["slot_l"] / 2.0
-        + abs(math.cos(angle)) * g["slot_w"] / 2.0
+        abs(math.sin(angle)) * capsule_half_straight + g["slot_w"] / 2.0
     )
     slot_margin_x = (
         p["plate_l"] / 2.0
@@ -289,6 +308,7 @@ def check(p: dict) -> list[str]:
 
     lower_race_bottom = (
         p["overall_h"]
+        - g["sink_depth"]
         - g["plate_t"]
         - g["upper_race_h"]
         - 0.25

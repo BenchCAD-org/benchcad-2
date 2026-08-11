@@ -7,7 +7,7 @@
     {
       "name": "mounting_plate",
       "quantity": 1,
-      "role": "Mounting plate, drawn swivel seat and upper race envelope"
+      "role": "Drawn thin-sheet mounting plate and upper race envelope"
     },
     {
       "name": "swivel_fork",
@@ -22,15 +22,15 @@
     {
       "name": "axle_bolt",
       "quantity": 1,
-      "role": "ISO 4014 hex-head axle bolt, threaded end"
+      "role": "Proportioned hex-head axle-bolt envelope"
     },
     {
       "name": "axle_nut",
       "quantity": 1,
-      "role": "ISO 4032 hex nut on the axle bolt"
+      "role": "Proportioned hex nut on the axle bolt"
     }
   ],
-  "description": "Five-component unbraked Form L light-duty swivel plate caster with complete EN 22870 catalog-row coupling and a standard ISO 4014/4032 axle fastener pair.",
+  "description": "Five-component unbraked Form L light-duty swivel plate caster with complete EN 22870 catalog-row coupling and proportioned unpublished axle hardware.",
   "source": "JW Winco EN 22870 product page, metric dimension PDF, engineering drawing, product photograph, and documented proportion rules for unpublished construction details",
   "contributor": "sunzhenchuan007"
 }
