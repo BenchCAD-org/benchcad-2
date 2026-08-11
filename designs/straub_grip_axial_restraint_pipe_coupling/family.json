@@ -1,0 +1,23 @@
+{
+  "family": "straub_grip_axial_restraint_pipe_coupling",
+  "standard": "DIN 86128",
+  "base_plane": "XY",
+  "description": "STRAUB-GRIP-L two-lock-bolt axial-restraint pipe coupling with a hollow rolled casing, EPDM sealing sleeve, two anchoring rings, two hollow D-section closure bars, two tangent return strips, and two transverse socket-head lock bolts.",
+  "source": "Dixon DPL424 catalogue p.965 (https://dixonvalve.com/sites/default/files/catalog/dixonvalve_com/2024_14/DPL%202024%20catalog%20fixed/DPL424%20page%20965.pdf); STRAUB-GRIP-L datasheet (https://www.straub.ch/fileadmin/Straub/Downloads/EN/Produkte/Grip-L/Datenblaetter/STRAUB-GRIP-L_Stufenkupplung_Datenblatt_072015_en.pdf); STRAUB fitting instruction ST00152_0820 (https://www.straub.ch/fileadmin/AUI/user_upload/ST00152_0820_Montageanleitung_STRAUB-METAL-GRIP_STRAUB-GRIP__inkl._GRIP-L_.pdf)",
+  "contributor": "jiashunwu1030-oss",
+  "solids": 8,
+  "catalog_mapping": {
+    "0": "STR20650 | 3 in | O.D. 3.50 in | range 3.46-3.54 in | 377 PSI | B 3.9 in | C 1.5 in | DV 4.4 in | R 0.2 in",
+    "1": "STR20900 | 4 in | O.D. 4.50 in | range 4.46-4.54 in | 319 PSI | B 3.9 in | C 1.5 in | DV 5.5 in | R 0.4 in",
+    "2": "STR21350 | 6 in | O.D. 6.63 in | range 6.56-6.69 in | 232 PSI | B 4.5 in | C 2.1 in | DV 7.6 in | R 0.4 in",
+    "3": "STR21400 | 8 in | O.D. 8.63 in | range 8.54-8.71 in | 232 PSI | B 5.6 in | C 3.1 in | DV 9.8 in | R 0.4 in"
+  },
+  "modeling_notes": [
+    "The four catalog rows use the fixed two-lock-bolt construction. One-lock-bolt sizes and the contradictory STR21150 row are excluded.",
+    "fitted_pipe_od is an installation state constrained by the selected Dixon row's published min/max pipe O.D. range; it adjusts only the modeled sleeve and grip-ring bore. Connected pipe geometry is not included.",
+    "The product model contains no connected pipe. The centre is a genuine continuous bore through the coupling components.",
+    "The casing is one continuous circumferential outer sheet: its two full-width tangent runs continue into rolled edges around the hollow D-section bars. The D bars, anchoring rings, EPDM sleeve, and two transverse lock bolts are separate modeled bodies based on the published STRAUB side/end views and supplied reference images.",
+    "Published B, C, DV, R, pipe O.D. and range values are used exactly for each Dixon catalog row. Individual sheet thicknesses, seal-lip profile, stamped-tooth pitch, D-bar cross-section, bolt-head detail, local pressed bolt-clearance windows, and thread forms are honest proportions because they are not dimensioned in the sources.",
+    "Optional strip insert is not modeled because it is not part of the standard EPDM configuration."
+  ]
+}
