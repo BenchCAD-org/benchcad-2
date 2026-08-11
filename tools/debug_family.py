@@ -1,30 +1,20 @@
-"""bench2 debug — open a part.py in a 3D GUI (CQ-editor) to edit it live.
+"""bench2 debug — build one sampled instance and inspect it (numbers + optional 3D).
 
-Two ways to launch, pick one:
+    uv run python tools/debug_family.py <family> [--diff easy|medium|hard] [--seed N] [k=v ...]
 
-    # 1) point straight at a part.py file — opens it in CQ-editor, F5 to re-render
-    uv run python tools/debug_family.py --config designs/my_family/part.py
-
-    # 2) give a family name — samples a valid instance, then opens its part.py
-    uv run python tools/debug_family.py my_family --gui
-
-`--config <path>` is the simple entry: it launches the stand-alone CQ-editor on the
-file you name. If that file is a clean family `part.py` (no `show_object`) sitting
-next to a `spec.py`, it first appends a small DEBUG block (a sampled `PARAMS` +
-`show_object`) so CQ-editor has something to draw; otherwise it opens the file as-is
-(e.g. a scratch copy you already gave a debug block). Edit `build()` / `PARAMS`,
-press **F5**. Remove the block again with `--strip`:
-
-    uv run python tools/debug_family.py --config designs/my_family/part.py --strip
-
-CQ-editor is a stand-alone app in its own env (`uv tool install cq-editor`, one-time);
-it brings cadquery 2.8, which can't share the repo's pinned 2.3, so it is NOT a repo
-dependency — this script just launches it. A family that imports from `bench2` may
-not resolve in CQ-editor's env; for those use ocp-vscode (below).
-
-Without a GUI: `debug_family.py <family> [--diff easy|medium|hard] [--seed N] [k=v ...]`
 builds a sample and prints params/check/solids/bbox, showing it via ocp-vscode if
-installed (`uv add --dev ocp-vscode`, works for every family), else writing a STEP.
+installed (`uv add --dev ocp-vscode`), else writing a STEP you can open in FreeCAD.
+
+**To edit geometry live in CQ-editor, use `bench2 edit` instead:**
+
+    uv run bench2 edit <family>            # installs the editor on first run,
+                                           # F5 to re-render, cleans up on close
+
+`bench2 edit` runs CQ-editor inside this project's env, so it uses the pinned
+cadquery 2.3.0 and can import `bench2` (geomlib helpers resolve). The `--config`
+/ `--gui` paths below predate it: they shell out to a stand-alone
+`uv tool install cq-editor`, which brings cadquery 2.8 and cannot import `bench2`.
+Prefer `bench2 edit`; see docs/DEBUGGING.md.
 """
 import importlib.util
 import os

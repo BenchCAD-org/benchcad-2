@@ -1,6 +1,6 @@
-"""Parametric RÖHM DURO-M three-jaw geared scroll chuck assembly.
+"""Parametric ROHM DURO-M three-jaw geared scroll chuck assembly.
 
-Mechanism (RÖHM catalogue p.3035 cutaway, "Geared scroll chucks"): the chuck
+Mechanism (ROHM catalogue p.3035 cutaway, "Geared scroll chucks"): the chuck
 key turns a radially arranged bevel PINION; its teeth mesh a bevel CROWN RING
 on the back of the SCROLL PLATE; the scroll's front face carries a flat
 Archimedean SPIRAL THREAD which engages arc teeth on the underside of the
@@ -90,15 +90,27 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     sleeve_od = max(bore_E + 0.06 * A, 0.20 * A)     # body central sleeve OD
     L["sleeve_od"] = sleeve_od
     L["scroll_id"] = sleeve_od + 2.0 * max(0.3, 0.0025 * A)
-    L["scroll_od"] = 0.72 * A
+    # The published A1 maximums place the jaws well beyond the nominal face
+    # radius.  This retained 0.84 A plate leaves a real body wall while
+    # carrying the spiral under the full catalogued jaw-travel window.
+    L["scroll_od"] = 0.84 * A
     L["cavity_od"] = L["scroll_od"] + 2.0 * max(0.3, 0.0025 * A)
     L["r_spiral_start"] = L["scroll_id"] / 2.0 + 0.55 * L["ridge_w"] + 0.3
-    L["r_spiral_outer"] = L["scroll_od"] / 2.0 - 0.015 * A
+    L["r_spiral_outer"] = L["scroll_od"] / 2.0 - 0.02 * A
+    # The teardown shows a stepped annular land on the scroll back.  It is
+    # part of the scroll itself and remains clear of the body centre sleeve.
+    L["scroll_hub_od"] = L["scroll_id"] + 0.06 * A
+    L["scroll_hub_t"] = max(0.8, 0.32 * plate_t)
+    L["scroll_pilot_od"] = L["scroll_id"] + 0.030 * A
+    L["scroll_shoulder_t"] = max(0.5, 0.55 * L["scroll_hub_t"])
 
     # --- bevel crown ring (scroll back) + pinion, shared apex on chuck axis ---
-    ring_band = 0.10 * A                      # radial face width of the ring
+    # The teardown's exposed reverse face is a broad dished crown wheel, not
+    # a narrow decorative tooth band.  Keep a small outer rim while carrying
+    # the radial teeth from the central land almost to the scroll OD.
+    ring_band = 0.14 * A
     L["ring_band"] = ring_band
-    r_mean = min(max(0.29 * A, L["scroll_id"] / 2.0 + 0.60 * ring_band),
+    r_mean = min(max(0.33 * A, L["scroll_id"] / 2.0 + 0.60 * ring_band),
                  L["scroll_od"] / 2.0 - 0.55 * ring_band)
     L["ring_r_mean"] = r_mean
     L["ring_r_in"] = r_mean - ring_band / 2.0
@@ -132,6 +144,15 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     z_tip_in = (L["z_pinion_axis"] + L["ring_r_in"] / L["tan_dw"]
                 - 0.75 * m * (L["ring_r_in"] / r_mean))
     L["z_cavity_bot"] = z_tip_in - clr - 0.3
+    # The removable rear cover opens directly into the crown/pinion chamber.
+    # The visible toothed bowl is the scroll plate reverse face, not a false
+    # fixed floor in the body.
+    # The housing in the teardown has a retained lower flange and a relieved
+    # middle band, rather than one uninterrupted cylindrical outside wall.
+    # A remains the catalogued maximum outside diameter.
+    L["waist_z0"] = -D + max(1.2 * cover_t, 0.18 * D)
+    L["waist_h"] = min(0.16 * D, 0.40 * (D - cover_t))
+    L["waist_id"] = 0.92 * A
 
     # pinion journal / socket
     L["journal_d"] = max(1.7 * key_square_K, 0.9 * 2.0 * L["r_pinion_pitch"])
@@ -140,6 +161,19 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     L["pocket_r"] = r_tip_out + head_clr
     L["pocket_x0"] = L["ring_r_in"] - head_clr - 0.5
     L["pocket_x1"] = L["ring_r_out"] + head_clr + 0.5
+    # Integrated collar and stepped body bore retain each key pinion axially;
+    # they do not create invented loose washer or bearing bodies.
+    L["thrust_len"] = max(0.7, 0.014 * A)
+    L["thrust_d"] = min(
+        1.45 * L["journal_d"], 2.0 * (L["pocket_r"] - 0.5 * head_clr)
+    )
+    # The video shows each radial key drive in a substantial body boss, not a
+    # bare hole through a thin rim.  Keep the boss clear of the rear cover.
+    L["pinion_boss_r"] = min(
+        L["pocket_r"] + 0.35 * head_clr,
+        0.94 * (L["z_pinion_axis"] - (-D + cover_t + 0.5)),
+    )
+    L["pinion_boss_len"] = 0.5 * A - L["pocket_x1"] + 0.02
 
     # guideways (radial), open at the OD
     L["guide_inner"] = max(bore_E / 2.0 + 0.04 * A, 0.11 * A, sleeve_od / 2.0)
@@ -147,27 +181,39 @@ def _layout(outer_dia_A, height_D, bore_E, register_depth_C,
     return L
 
 
+def _engaged_tooth_window(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A):
+    """Return the actual retained-foot window and active scroll tooth range."""
+    x0 = clamp_d / 2.0
+    x_f0 = max(x0 + 0.02 * jaw_length_A,
+               L["guide_inner"] + 2.0 * L["slot_gap"])
+    x_f1 = x0 + 0.98 * jaw_length_A
+    pitch = L["pitch"]
+    phase = ((JAW_ANGLES[jaw_idx] - phase_alpha) % 360.0) / 360.0
+    r_base = L["r_spiral_start"] + pitch * phase
+    lo = max(x_f0 + 0.6 * L["jaw_tooth_w"], L["r_spiral_start"])
+    hi = min(x_f1 - 0.6 * L["jaw_tooth_w"],
+             L["r_spiral_outer"] - 0.5 * L["ridge_w"])
+    k_min = int(math.ceil((lo - r_base) / pitch - 0.5))
+    k_max = int(math.floor((hi - r_base) / pitch - 0.5))
+    return x_f0, x_f1, k_min, k_max
+
+
 def _scroll_phase(L, clamp_d, jaw_length_A):
     """Rotate the scroll by a WHOLE number of crown pitches (k*360/Z_w), which
     leaves the bevel mesh untouched, choosing the position that seats the most
-    arc teeth on the worst-off jaw — the operator's key position, made
+    arc teeth on the worst-off jaw - the operator's key position, made
     deterministic.  Mirrored in spec.check()."""
-    p_ = L["pitch"]
-    w_t = L["jaw_tooth_w"]
-    x0 = clamp_d / 2.0
-    x_f0 = max(x0 + 0.02 * jaw_length_A, L["guide_inner"] + 2.0 * L["slot_gap"])
-    x_f1 = x0 + 0.98 * jaw_length_A
-    lo = max(x_f0 + 0.6 * w_t, L["r_spiral_start"])
-    hi = min(x_f1 - 0.6 * w_t, L["r_spiral_outer"] - 0.5 * L["ridge_w"])
     best = None
     for k in range(L["z_wheel"]):
         alpha = k * 360.0 / L["z_wheel"]
-        counts = []
-        for ang in JAW_ANGLES:
-            r_base = L["r_spiral_start"] + p_ * (((ang - alpha) % 360.0) / 360.0)
-            k_lo = int(math.ceil((lo - r_base) / p_ - 0.5))
-            k_hi = int(math.floor((hi - r_base) / p_ - 0.5))
-            counts.append(k_hi - k_lo + 1)
+        counts = [
+            k_hi - k_lo + 1
+            for jaw_idx in range(3)
+            for _, _, k_lo, k_hi in [
+                _engaged_tooth_window(L, jaw_idx, alpha, clamp_d,
+                                      jaw_length_A)
+            ]
+        ]
         key = (min(counts), sum(counts), -k)
         if best is None or key > best[0]:
             best = (key, alpha)
@@ -292,7 +338,10 @@ def _bevel_pinion(L):
     journal = cq.Solid.makeCylinder(
         L["journal_d"] / 2.0, L["r_journal_out"] - (x_o - 1.0),
         cq.Vector(x_o - 1.0, 0.0, 0.0), cq.Vector(1.0, 0.0, 0.0))
-    pinion = parts[0].fuse(*(parts[1:] + [journal]))
+    thrust_collar = cq.Solid.makeCylinder(
+        L["thrust_d"] / 2.0, L["thrust_len"],
+        cq.Vector(L["pocket_x1"], 0.0, 0.0), cq.Vector(1.0, 0.0, 0.0))
+    pinion = parts[0].fuse(*(parts[1:] + [journal, thrust_collar]))
 
     # square socket for the chuck key K, cut into the recessed outer face
     K = L["socket_K"]
@@ -312,9 +361,10 @@ def _jaw(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
     """Stepped jaw + T-foot + underside arc teeth, built on the +X meridian."""
     x0 = clamp_d / 2.0
     z_top = L["z_foot"] + jaw_height_C       # catalog C spans foot to top
-    # the BB drawing labels EACH step height H (two H callouts, one per step)
-    mid_drop = min(jaw_step_H, 0.22 * jaw_height_C)
-    low_drop = min(2.0 * jaw_step_H, 0.38 * jaw_height_C)
+    # The BB drawing labels H on each riser.  Every table row has C > 2H, so
+    # clipping either drop would quietly violate the supplied jaw drawing.
+    mid_drop = jaw_step_H
+    low_drop = 2.0 * jaw_step_H
 
     body = (
         cq.Workplane("XZ")
@@ -377,7 +427,7 @@ def _jaw(L, jaw_idx, phase_alpha, clamp_d, jaw_length_A, jaw_width_B,
     # (phase-rotated) spiral at this jaw's meridian gives the real 1/3-pitch
     # stagger between jaws
     # serrations run the WHOLE underside (per the BB drawing); only the ones
-    # inside the spiral band engage — the slot floor is relieved for the rest
+    # inside the spiral band engage - the slot floor is relieved for the rest
     p, w_t = L["pitch"], L["jaw_tooth_w"]
     theta_frac = ((JAW_ANGLES[jaw_idx] - phase_alpha) % 360.0) / 360.0
     r_base = L["r_spiral_start"] + p * theta_frac
@@ -444,11 +494,25 @@ def build(
     # ---------------- one-piece body ----------------
     body = _annulus(-D, D, A, bore_E)
 
+    # Mid-height outside relief: lower mounting flange and upper front rim
+    # remain at A while this machined band steps inward.
+    body = body.cut(
+        _annulus(L["waist_z0"], L["waist_h"], A + 1.0, L["waist_id"]))
+
     cover_od = max(0.84 * A, register_dia_B + 0.03 * A)
     cc = max(0.15, 0.002 * A)
     cover_t = L["cover_t"]
     body = body.cut(
         _annulus(-D - 0.02, cover_t + 0.04, cover_od + 2.0 * cc, bore_E))
+
+    # Rear service chamber: with the cover removed, the dished crown wheel
+    # and all three key pinions are exposed as in the teardown.  Retain the
+    # central sleeve and the outer structural wall.
+    rear_cavity_z0 = -D + cover_t - cc
+    body = body.cut(
+        _annulus(rear_cavity_z0,
+                 L["z_cavity_bot"] - rear_cavity_z0 + 0.02,
+                 L["cavity_od"], L["sleeve_od"]))
 
     # T-guideways, open at the OD (tier 1 narrow, tier 2 wide)
     g = L["slot_gap"]
@@ -474,9 +538,13 @@ def build(
     body = body.cut(
         _annulus(L["z_cavity_bot"], L["z_floor"] - L["z_cavity_bot"] + 0.02,
                  L["cavity_od"], L["sleeve_od"]))
-
     # stepped radial pinion bores: head pocket + journal bore
     for angd in PINION_ANGLES:
+        pinion_boss = cq.Solid.makeCylinder(
+            L["pinion_boss_r"], L["pinion_boss_len"],
+            cq.Vector(L["pocket_x1"] - 0.02, 0.0,
+                      L["z_pinion_axis"]), cq.Vector(1.0, 0.0, 0.0),
+        ).rotate(cq.Vector(0, 0, 0), cq.Vector(0, 0, 1), angd)
         pocket = (
             cq.Workplane("YZ", origin=(L["pocket_x0"], 0.0, L["z_pinion_axis"]))
             .circle(L["pocket_r"])
@@ -488,7 +556,13 @@ def build(
             .circle(L["journal_d"] / 2.0 + 0.15)
             .extrude(0.5 * A - L["pocket_x1"] + 2.0)
             .rotate((0, 0, 0), (0, 0, 1), angd))
-        body = body.cut(pocket).cut(journal)
+        thrust_recess = (
+            cq.Workplane("YZ", origin=(L["pocket_x1"] - 0.02, 0.0,
+                                       L["z_pinion_axis"]))
+            .circle(L["thrust_d"] / 2.0 + 0.15)
+            .extrude(L["thrust_len"] + 0.04)
+            .rotate((0, 0, 0), (0, 0, 1), angd))
+        body = body.union(pinion_boss).cut(pocket).cut(journal).cut(thrust_recess)
 
     # rear mounting: F bolt circle, catalog hole count, blind depth. The BODY
     # is tapped (hole at the thread minor diameter ~0.85*G, no false helix);
@@ -514,11 +588,6 @@ def build(
                 .circle(notch_d / 2.0)
                 .extrude(D + 1.0))
 
-    # shallow concentric front-face ring (visible on the product)
-    body = body.cut(
-        _annulus(-0.018 * D, 0.02 * D, 0.78 * A,
-                 max(0.70 * A, bore_E + 0.06 * A)))
-
     # ---------------- rear cover ----------------
     cover = _annulus(-D + cc, cover_t - 2.0 * cc, cover_od, bore_E + 2.0 * cc)
     # DIN 6350 rear centering RECESS: diameter B, depth C, cut into the back
@@ -538,9 +607,19 @@ def build(
     plate = _annulus(L["z_scroll_back"],
                      L["z_scroll_front"] - L["z_scroll_back"],
                      L["scroll_od"], L["scroll_id"])
+    scroll_pilot = _annulus(
+        L["z_scroll_back"] - L["scroll_hub_t"], L["scroll_hub_t"] + 0.03,
+        L["scroll_pilot_od"], L["scroll_id"],
+    )
+    scroll_shoulder = _annulus(
+        L["z_scroll_back"] - L["scroll_shoulder_t"],
+        L["scroll_shoulder_t"] + 0.03, L["scroll_hub_od"], L["scroll_id"],
+    )
     boss, crown_teeth = _crown_ring(L)
     spiral = _spiral_thread(L)
-    scroll = plate.val().fuse(*([boss, spiral] + crown_teeth))
+    scroll = plate.val().fuse(*([
+        scroll_pilot.val(), scroll_shoulder.val(), boss, spiral,
+    ] + crown_teeth))
     # operator's key position: whole crown pitches, bevel mesh unaffected
     phase_alpha = _scroll_phase(L, clamp_d, jaw_length_A)
 
