@@ -19,13 +19,21 @@
 
 - The printed chain is reproduced exactly: `h2 = h3 + h4`.
 - The load-ring opening spans `k3` by `h3`, from elevation `h4` to `h2`.
-- The ring outer width is `k2`, upright top is `h1`, and depth is `k1`.
+- The ring outer width is `k2`, upright top is exactly `h1`, and depth is
+  `k1`; no post-build Z translation is applied.
 - The visible front-section width is `(k2 - k3) / 2`.
 - `d2`, `l1`, and `l2` control the bracket footprint and supplied bolt
   projection shown in the fixed upright pose.
 - `k4`, `k5`, and `r` describe the catalog swivel envelope. They remain coupled
-  to the selected row and are checked as metadata; no swept body, angle, mate,
-  or fictitious motion range is generated.
+  to the selected row and are checked as metadata, but are intentionally not
+  `build()` inputs; no swept body, angle, mate, or fictitious motion range is
+  generated.
+- The printed inch designation supplies both nominal major diameter and TPI.
+  The modeled external thread uses `P = 25.4 / TPI`, a 60-degree Unified
+  profile and basic external radial depth `0.61343*P`. The visible triangular
+  ridge uses an axial half-width of `0.30*P` and a small radial embed into the
+  root cylinder; those two robust-boolean details are explicit `proportion`
+  choices rather than tolerance-grade crest/root geometry.
 
 ## Honest proportion choices
 
@@ -34,23 +42,24 @@ transitions, bracket-ear thickness and distribution, bushing wall and height,
 bolt-head proportions, thread runout, retainers, grooves, RFID pocket, coating
 thickness, or hidden contact surfaces. The model therefore uses:
 
-- a filleted closed load ring built identically in all difficulties, with
-  catalog `k1`, `k2`, `k3`, `h1`, `h2`, and `h4` controlling its depth and
-  envelope; only after that closed solid is complete, hard subtracts a bottom
-  gap whose width is exactly `k2 / 2` (`proportion`);
-- the load ring passes through the clear space between the two clevis ears;
-  its outer bottom is placed one quarter of the total clevis height above the
-  clevis bottom (`proportion`, user-reviewed assembly placement);
+- a closed load ring built identically in all difficulties, with catalog
+  `k1`, `k2`, `k3`, `h1`, `h2`, and `h4` controlling its depth and envelope;
+  its inner and outer U crowns use 0.49 times the limiting sourced
+  width/height so the profile is fully rounded without a degenerate
+  half-width fillet;
+- the load ring passes through the clear space between the two bracket ears;
+  the bracket pocket is centered on the sourced `h4` lower-opening datum and
+  its remote plan corners are rounded by a documented proportion;
 - an elliptical swivel base and vertical annular bracket axis, without the
   rejected four prismatic ear bars;
-- a separate obround-ended thin-steel clevis made as one continuous solid:
+- a separate obround-ended U-shaped bracket made as one continuous solid:
   the strip is folded 180 degrees into two horizontal parallel ears, their
   holes are coaxial with the vertical bracket axis, and only the negative-X
   return side is closed;
 - no separate pin: the bracket annular axis passes through both clevis holes;
 - a plain annular bushing around the nominal bolt cylinder;
-- a simplified cylindrical thread envelope and enlarged hex head placed above
-  the bracket post; its across-flats dimension exceeds the clevis-hole diameter;
+- a catalog-pitch helical external thread and enlarged hex head placed above
+  the bracket post; its across-flats dimension exceeds the bracket-hole diameter;
 - an optional fused RFID pad whose presence is source-backed but whose size is
   explicitly `proportion` (easy omits it, medium mixes it, hard shows it).
 
@@ -62,9 +71,11 @@ certification.
 ## Assembly contract
 
 `build()` returns a deterministic `cq.Assembly` with five stable child names:
-`load_ring`, `bracket`, `bushing`, `bolt`, and `clevis`. Each physical
-component has its own builder. `family.json` declares five solids and five
-one-off components.
+`load_ring`, `swivel_base`, `bearing_bushing`, `mounting_bolt`, and `bracket`.
+The source-labeled U-shaped body is therefore named `bracket`; names of the
+remaining construction pieces describe their role instead of fighting the
+drawing. Each physical component has its own builder. `family.json` declares
+five solids and five one-off components.
 
 The family output remains one fixed upright pose. No numeric fold or swivel
 angle is a family parameter or a GN 586 claim. A development-only sweep used
@@ -73,14 +84,11 @@ closed easy/medium rings; it is therefore not reported as final verification.
 
 ## Verification record
 
-- All five catalog rows were built with both RFID states and both ring-gap
-  states: twenty fixed assemblies, five non-degenerate solids each, and zero
-  pairwise volumetric intersections. Easy/medium select the closed state;
-  hard selects the post-build `k2 / 2` bottom subtraction.
+- The prior hard-only `k2/2` ring subtraction was unsupported and has been
+  removed. All tiers now preserve the same closed load-ring topology.
 - `preview_parts.png` gives four standard views for each of the five distinct
   physical components, one assembly overview, and five further rows that keep
   the complete assembly in place while sequentially highlighting each stable
   component across the same four views.
-- Formal `bench2 validate` passed easy, medium, and hard at 4/4 seeds,
-  covered all five declared catalog rows, produced 7/12 unique sampled
-  geometries, and confirmed five non-degenerate solids per instance.
+- Validation and preview evidence below must be regenerated after changes; no
+  earlier pass or interference number is carried forward as current evidence.

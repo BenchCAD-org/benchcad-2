@@ -1,6 +1,6 @@
 """Catalog coupling and engineering checks for JW Winco GN 586."""
 
-from math import cos, pi, sqrt
+from math import cos, pi
 
 from part import _assembly_dimensions
 
@@ -104,7 +104,10 @@ PARAM_SPEC = {
         source="GN 586 printed d1 designation; exact 25.4 mm per inch conversion",
     ),
     "thread_tpi": _entry(
-        "thread_tpi", "threads per inch retained as catalog metadata", unit="1/in"
+        "thread_tpi",
+        "catalog threads per inch controlling the modeled 60-degree helix",
+        unit="1/in",
+        askable=True,
     ),
     "d2": _entry("d2", "catalog dimension d2", askable=True),
     "h1": _entry("h1", "overall upright height h1", askable=True),
@@ -148,21 +151,6 @@ PARAM_SPEC = {
         integer=True,
         feature=True,
         source="JW Winco GN 586 specification confirms RFID; pocket size is proportion",
-    ),
-    "has_ring_gap": dict(
-        desc=(
-            "difficulty feature: hard subtracts a bottom gap of width k2/2 "
-            "from the otherwise identical closed ring"
-        ),
-        unit="",
-        range={"easy": (0, 0), "medium": (0, 0), "hard": (1, 1)},
-        choices={"easy": [0], "medium": [0], "hard": [1]},
-        integer=True,
-        feature=True,
-        source=(
-            "proportion; user-reviewed difficulty feature, applied only "
-            "after the complete closed ring is built"
-        ),
     ),
 }
 
@@ -222,8 +210,12 @@ def check(p):
         bad.append("supplied bolt projection is non-physical for this model (proportion)")
     if p["has_rfid"] not in (0, 1):
         bad.append("has_rfid must be a binary documented feature (proportion)")
-    if p["has_ring_gap"] not in (0, 1):
-        bad.append("has_ring_gap must be a binary difficulty feature")
+    pitch = 25.4 / p["thread_tpi"]
+    thread_root_d = p["thread_major_d"] - 2.0 * 0.61343 * pitch
+    if thread_root_d <= 0.0:
+        bad.append("Unified 60-degree thread profile leaves no positive root diameter")
+    if p["l1"] < 2.0 * pitch:
+        bad.append("threaded projection must contain at least two catalog-pitch turns")
 
     dims = _assembly_dimensions(
         p["thread_major_d"],
@@ -236,7 +228,6 @@ def check(p):
         p["k2"],
         p["k3"],
     )
-    side_section = (p["k2"] - p["k3"]) / 2.0
     plate_wall = (dims["plate_width"] - dims["hole_d"]) / 2.0
     if plate_wall < 1.0:
         bad.append("clevis hole leaves less than 1 mm plate wall (proportion)")
@@ -244,13 +235,13 @@ def check(p):
         bad.append("bracket annular post has no positive wall (proportion)")
     if dims["hole_d"] <= dims["axis_d"]:
         bad.append("clevis hole needs positive bracket running clearance")
-    swept_half = sqrt(p["k1"] ** 2 + side_section**2) / 2.0
-    if dims["inside_gap"] <= 2.0 * swept_half:
-        bad.append("clevis gap does not clear the swept ring section (proportion)")
-    actual_ring_bottom = p["h4"] - side_section + dims["ring_z"]
-    expected_ring_bottom = dims["clevis_bottom"] + 0.25 * dims["clevis_height"]
-    if abs(actual_ring_bottom - expected_ring_bottom) > 1e-9:
-        bad.append("ring bottom must sit at the lower quarter of the clevis height")
+    # The ring is now a true circular section of diameter k1, so the clevis
+    # opening only needs to exceed that diameter rather than the diagonal of
+    # the former rectangular extrusion.
+    if dims["inside_gap"] <= p["k1"]:
+        bad.append("clevis gap does not clear the circular ring section")
+    if dims["clevis_z"] != p["h4"]:
+        bad.append("rounded bracket pocket must use catalog h4 as its vertical datum")
     open_side_clearance = (
         -dims["axis_d"] / 2.0
         - (dims["ring_x"] + p["k1"] / 2.0)
