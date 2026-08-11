@@ -114,9 +114,9 @@ def build_upper_clamp_body(
 
 
 def _type_a_actuator(body_l1, thread_d):
-    """DIN 912-like socket-head screw, separate from the DIN 934 nut."""
+    """Review-requested external-hex screw, separate from the DIN 934 nut."""
     head_h = 0.85 * thread_d
-    head_r = 0.80 * thread_d
+    head_circum_d = 1.60 * thread_d
     shaft_r = 0.50 * thread_d
     nut_h = 0.80 * thread_d
     shaft_bottom = -body_l1 / 2.0 - nut_h + 0.08 * thread_d
@@ -127,7 +127,12 @@ def _type_a_actuator(body_l1, thread_d):
         head_bottom + 0.12 * head_h - shaft_bottom,
         shaft_bottom,
     )
-    head = _cylinder(head_r, head_h, head_bottom)
+    head = (
+        cq.Workplane("XY")
+        .polygon(6, head_circum_d)
+        .extrude(head_h)
+        .translate((0.0, 0.0, head_bottom))
+    )
     socket = (
         cq.Workplane("XY")
         .polygon(6, 0.55 * thread_d)

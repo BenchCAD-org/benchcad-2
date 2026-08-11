@@ -117,7 +117,7 @@ The following values are not published GN 490 dimensions:
 | V-groove depth | `(0.50 + 1/sqrt(2))*d1 + 0.02*d1` | 90-degree V tangent geometry plus proportional clearance |
 | V-groove mouth | `2*groove_depth` | Contain the full nominal rod proxy at the inner face |
 | Body end fillet | `min(0.035*d4, 0.18*l4)` | Approximate the rounded casting edge |
-| Type A shaft/head | radii `0.50*d3`, `0.80*d3`; head height `0.85*d3` | Simplified DIN 912 envelope |
+| Type A shaft/head | shaft radius `0.50*d3`; external-hex circumdiameter `1.60*d3`; head height `0.85*d3` | Review-requested visible hex head; undocumented envelope is `proportion` |
 | Type A socket | hex circumdiameter `0.55*d3`; depth `0.45*head_h` | Visible socket only |
 | Nut | height `0.80*d3`; circumdiameter `1.80*d3`; bore radius `0.54*d3` | Simplified separate DIN 934 envelope |
 | Distance bushing | radius `0.46*d4`; height `0.24*l5` | Single visible circular middle separator |
@@ -167,6 +167,9 @@ therefore included in the local acceptance report.
   dimensioned; the model records them as `proportion`.
 - Threads, thread runout, exact DIN fastener tolerances, lever ratchet internals,
   and surface finishes are omitted.
+- Type A retains the catalog's central fastener role and hex socket, but its
+  outer head is deliberately modeled as the requested six-sided review shape
+  rather than claiming an exact DIN 912 cylindrical-head reproduction.
 - The single circular middle separator is a visual/proportional interpretation
   of the catalog image and the listed insert/distance-bushing item; its local
   profile is not dimensioned. It has no eccentric opening.
