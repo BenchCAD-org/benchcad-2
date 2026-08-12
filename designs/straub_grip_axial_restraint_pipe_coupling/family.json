@@ -17,7 +17,7 @@
     "fitted_pipe_od is an installation state constrained by the selected Dixon row's published min/max pipe O.D. range; it adjusts only the modeled sleeve and grip-ring bore. Connected pipe geometry is not included.",
     "The product model contains no connected pipe. The centre is a genuine continuous bore through the coupling components.",
     "The casing is one continuous circumferential outer sheet: its two full-width tangent runs continue into rolled edges around the hollow D-section bars. The D bars, anchoring rings, EPDM sleeve, and two transverse lock bolts are separate modeled bodies based on the published STRAUB side/end views and supplied reference images.",
-    "Published B, C, DV, R, pipe O.D. and range values are used exactly for each Dixon catalog row. Individual sheet thicknesses, seal-lip profile, stamped-tooth pitch, D-bar cross-section, bolt-head detail, local pressed bolt-clearance windows, and thread forms are honest proportions because they are not dimensioned in the sources.",
+    "Published B, C, DV, R, pipe O.D. and range values are used exactly for each Dixon catalog row. Individual sheet thicknesses, seal-lip profile, stamped-tooth pitch, D-bar cross-section, bolt-head detail, local pressed bolt-clearance windows, the six side-sheet perforation diameters/stations, and thread forms are honest proportions because they are not dimensioned in the sources.",
     "Optional strip insert is not modeled because it is not part of the standard EPDM configuration."
   ]
 }

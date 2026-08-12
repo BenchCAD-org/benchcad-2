@@ -365,6 +365,32 @@ def build(catalog_index, fitted_pipe_od):
                                    d_bar_center_z
                                    + 0.50 * upper_clear_height)).val())
         casing = casing.cut(upper_clear)
+
+    # The supplied product/reference side view shows one horizontal row of six
+    # small perforations in the visible overlap sheet below the lock bolts.
+    # Their exact diameter and stations are not dimensioned, so both remain an
+    # honest proportion detail.  Cut only the near (+Y) casing wall: a cutter
+    # through the full coupling would incorrectly perforate the opposite wall,
+    # EPDM sleeve and anchoring rings as well.
+    side_hole_r = max(1.15, 0.014 * pipe_od)
+    # Place the row in the broad side-sheet region shown by the reviewer, well
+    # below the two lock bolts.  A higher row falls onto the sloping closure
+    # cover and reads only as tiny grazing marks in a true side view.
+    side_hole_z = 0.30 * casing_outer
+    side_surface_y = math.sqrt(
+        max(0.0, casing_outer * casing_outer - side_hole_z * side_hole_z)
+    )
+    casing_wall = casing_outer - casing_inner
+    side_hole_y0 = side_surface_y - casing_wall - 1.2
+    side_hole_depth = casing_wall + 2.4
+    for hole_i in range(6):
+        hole_x = b * (0.22 + 0.56 * hole_i / 5.0)
+        side_hole = _cylinder_y(
+            hole_x, side_hole_y0, side_hole_z,
+            side_hole_r, side_hole_depth,
+        )
+        casing = casing.cut(side_hole)
+
     bolt_left = _transverse_lock_bolt(
         bolt_xs[0], d_bar_center_z, bolt_span, shank_r, head_r
     )
