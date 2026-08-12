@@ -28,7 +28,7 @@ def _assembly_dimensions(
     k3,
 ):
     """Undimensioned assembly details, all explicitly proportion based."""
-    clearance = max(0.60, 0.045 * k1)
+    clearance = max(0.75, 0.045 * k1)
     side_section = (k2 - k3) / 2.0
     ring_section_r = k1 / 2.0
     plate_t = max(1.60, 0.18 * k1)
@@ -38,22 +38,28 @@ def _assembly_dimensions(
     # The clevis captures the swept circular ring section with only assembly
     # clearance; the former diagonal-envelope rule left a visibly loose gap.
     inside_gap = 2.0 * ring_section_r + 2.0 * clearance
-    # h4 is the catalog elevation of the ring opening's lower edge and is the
-    # only sourced vertical datum for the rounded U-shaped bracket pocket.
-    # Keeping the pocket centered on h4 also lets the load-ring top remain at
-    # the published h1 instead of translating the whole ring upward.
-    clevis_z = h4
-    plate_width = max(hole_d + 8.0, 0.55 * k2)
+    base_h = 0.24 * h4
     clevis_height = inside_gap + 2.0 * plate_t
-    clevis_bottom = clevis_z - clevis_height / 2.0
+    # The bracket lower face sits on the lower swivel-base boss; its upper face
+    # meets the underside of the mounting-bolt hex head.
+    clevis_bottom = base_h
+    clevis_z = clevis_bottom + clevis_height / 2.0
+    ring_path_z = h4 - side_section + ring_section_r
+    ring_z = clevis_z - ring_path_z
+    ring_inner_width = k2 - 2.0 * k1
+    max_plate_width = ring_inner_width - 2.0 * clearance
+    plate_width = min(
+        max(hole_d + 2.0, 0.55 * k2),
+        max_plate_width,
+    )
     # Capture the circular ring section between the bracket axis and the
     # closed return with equal clearance on both X sides.
     ring_x = -(axis_d / 2.0 + clearance + ring_section_r)
     straight_tangent_x = ring_x - ring_section_r - clearance
 
     bore_d = 1.25 * thread_major_d + 2.0 * clearance
-    post_top = clevis_z + inside_gap / 2.0 + plate_t + 1.0
-    bolt_head_base = post_top + 0.80
+    bolt_head_base = clevis_bottom + clevis_height
+    post_top = bolt_head_base
     bolt_head_corner_d = 1.18 * hole_d
     bolt_head_across_flats = bolt_head_corner_d * math.cos(math.pi / 6.0)
 
@@ -65,11 +71,13 @@ def _assembly_dimensions(
         "axis_d": axis_d,
         "hole_d": hole_d,
         "inside_gap": inside_gap,
+        "base_h": base_h,
         "clevis_z": clevis_z,
         "clevis_height": clevis_height,
         "clevis_bottom": clevis_bottom,
         "plate_width": plate_width,
         "ring_x": ring_x,
+        "ring_z": ring_z,
         "straight_tangent_x": straight_tangent_x,
         "bore_d": bore_d,
         "post_top": post_top,
@@ -87,6 +95,7 @@ def build_load_ring(
     k2,
     k3,
     ring_x,
+    ring_z,
 ):
     """Sweep a circular section around the earlier squared U-shaped path."""
     side_section = (k2 - k3) / 2.0
@@ -101,36 +110,76 @@ def build_load_ring(
     # radii.  Only the material section changes from a cut extrusion to a
     # genuine circle swept along the closed centerline.
     path_radius = min(
-        0.82 * side_section,
+        0.25 * side_section,
         path_width / 2.0 - 0.1,
         path_height / 2.0 - 0.1,
     )
     half_w = path_width / 2.0
     half_h = path_height / 2.0
-    path = cq.Wire.makePolygon(
-        [
-            (0.0, -half_w, path_center_z - half_h),
-            (0.0, half_w, path_center_z - half_h),
-            (0.0, half_w, path_center_z + half_h),
-            (0.0, -half_w, path_center_z + half_h),
-        ],
-        close=True,
+    arc_mid = path_radius / math.sqrt(2.0)
+    shoulder_radius = min(
+        max(1.10 * section_r, 0.50 * side_section),
+        half_w - 0.1,
+        half_h - 0.1,
     )
-    path = path.fillet2D(path_radius, path.Vertices())
+    shoulder_mid = shoulder_radius / math.sqrt(2.0)
+    crown_rise = min(0.45 * k1, 0.15 * path_width)
 
-    path_start = path.startPoint()
-    path_tangent = path.tangentAt(0.0)
-    profile_plane = cq.Plane(
-        origin=path_start.toTuple(),
-        xDir=(1.0, 0.0, 0.0),
-        normal=path_tangent.toTuple(),
+    # Draw the complete guide line explicitly on YZ.  Starting on the lower
+    # horizontal segment makes its tangent parallel to Y, so an XZ circle is
+    # exactly normal to the path at the sweep start.
+    start_y = -half_w + path_radius
+    start_z = -half_h
+    path = (
+        cq.Workplane("YZ")
+        .center(0.0, path_center_z)
+        .moveTo(start_y, start_z)
+        .hLineTo(half_w - path_radius)
+        .threePointArc(
+            (
+                half_w - path_radius + arc_mid,
+                -half_h + path_radius - arc_mid,
+            ),
+            (half_w, -half_h + path_radius),
+        )
+        .vLineTo(half_h - shoulder_radius)
+        .threePointArc(
+            (
+                half_w - shoulder_radius + shoulder_mid,
+                half_h - shoulder_radius + shoulder_mid,
+            ),
+            (half_w - shoulder_radius, half_h),
+        )
+        .spline(
+            [(0.0, half_h + crown_rise), (-half_w + shoulder_radius, half_h)],
+            tangents=[(-1.0, 0.0), (-1.0, 0.0)],
+            includeCurrent=True,
+        )
+        .threePointArc(
+            (
+                -half_w + shoulder_radius - shoulder_mid,
+                half_h - shoulder_radius + shoulder_mid,
+            ),
+            (-half_w, half_h - shoulder_radius),
+        )
+        .vLineTo(-half_h + path_radius)
+        .threePointArc(
+            (
+                -half_w + path_radius - arc_mid,
+                -half_h + path_radius - arc_mid,
+            ),
+            (start_y, start_z),
+        )
+        .close()
     )
+
+    profile_origin = (0.0, start_y, path_center_z + start_z)
     ring = (
-        cq.Workplane(profile_plane)
+        cq.Workplane("XZ", origin=profile_origin)
         .circle(section_r)
-        .sweep(path, isFrenet=True)
+        .sweep(path, isFrenet=False)
     )
-    return ring.translate((ring_x, 0.0, 0.0))
+    return ring.translate((ring_x, 0.0, ring_z))
 
 
 def build_bracket(
@@ -144,7 +193,7 @@ def build_bracket(
     dims,
 ):
     """Elliptical base plus the vertical annular bracket axis."""
-    base_h = 0.24 * h4
+    base_h = dims["base_h"]
     bore_d = dims["bore_d"]
     base = (
         cq.Workplane("XY")
@@ -358,6 +407,7 @@ def build(
         k2,
         k3,
         dims["ring_x"],
+        dims["ring_z"],
     )
     bracket = build_bracket(
         thread_major_d,

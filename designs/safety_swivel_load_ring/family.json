@@ -2,7 +2,7 @@
   "family": "safety_swivel_load_ring",
   "standard": "JW Winco GN 586",
   "base_plane": "XY",
-  "description": "A five-body GN 586 safety swivel load ring assembly in one fixed upright pose, with a rounded closed load ring, a rounded U-shaped bracket pocket, and catalog-pitch Unified external thread geometry.",
+  "description": "A five-body GN 586 safety swivel load ring assembly in one fixed upright pose, with a circular section swept around a closed YZ guide path, a captured bracket pocket, and catalog-pitch Unified external thread geometry.",
   "source": "JW Winco GN 586 official product page and PDF; undimensioned forging and clearance details use documented proportions",
   "contributor": "sunzhenchuan007",
   "solids": 5,

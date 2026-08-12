@@ -42,14 +42,15 @@ transitions, bracket-ear thickness and distribution, bushing wall and height,
 bolt-head proportions, thread runout, retainers, grooves, RFID pocket, coating
 thickness, or hidden contact surfaces. The model therefore uses:
 
-- a closed load ring built identically in all difficulties, with catalog
-  `k1`, `k2`, `k3`, `h1`, `h2`, and `h4` controlling its depth and envelope;
-  its inner and outer U crowns use 0.49 times the limiting sourced
-  width/height so the profile is fully rounded without a degenerate
-  half-width fillet;
+- a closed load ring built identically in all difficulties by drawing a YZ
+  guide with long straight sides, large-radius shoulders, and a low single-peak
+  tangent-continuous spline crown,
+  drawing a circular `k1` section on XZ at the guide start, and sweeping that
+  circle around the guide with a fixed planar normal;
 - the load ring passes through the clear space between the two bracket ears;
-  the bracket pocket is centered on the sourced `h4` lower-opening datum and
-  its remote plan corners are rounded by a documented proportion;
+  the bracket pocket is centered on the swept ring's lower path, derived from
+  `h4`, `(k2-k3)/2`, and the circular `k1/2` section radius, and captures that
+  section with only documented assembly clearance;
 - an elliptical swivel base and vertical annular bracket axis, without the
   rejected four prismatic ear bars;
 - a separate obround-ended U-shaped bracket made as one continuous solid:
@@ -86,7 +87,7 @@ closed easy/medium rings; it is therefore not reported as final verification.
 
 - The prior hard-only `k2/2` ring subtraction was unsupported and has been
   removed. All tiers now preserve the same closed load-ring topology.
-- `preview_parts.png` gives four standard views for each of the five distinct
+- `preview_parts.png` must give four standard views for each of the five distinct
   physical components, one assembly overview, and five further rows that keep
   the complete assembly in place while sequentially highlighting each stable
   component across the same four views.

@@ -197,7 +197,7 @@ def check(p):
         bad.append("h1 must exceed h2: GN 586 load ring needs positive crown")
 
     # Undimensioned geometry is checked only against declared proportions.
-    assembly_clearance = max(0.6, 0.045 * p["k1"])
+    assembly_clearance = max(0.75, 0.045 * p["k1"])
     if p["d2"] <= 1.25 * p["thread_major_d"] + 2.0 * assembly_clearance:
         bad.append("d2 leaves no positive bracket/bushing clearance (proportion)")
     if p["l2"] <= p["k1"] + 2.0 * assembly_clearance:
@@ -240,8 +240,8 @@ def check(p):
     # the former rectangular extrusion.
     if dims["inside_gap"] <= p["k1"]:
         bad.append("clevis gap does not clear the circular ring section")
-    if dims["clevis_z"] != p["h4"]:
-        bad.append("rounded bracket pocket must use catalog h4 as its vertical datum")
+    if abs(dims["clevis_bottom"] - dims["base_h"]) > 1e-9:
+        bad.append("bracket lower face must contact the swivel-base boss")
     open_side_clearance = (
         -dims["axis_d"] / 2.0
         - (dims["ring_x"] + p["k1"] / 2.0)
@@ -255,8 +255,9 @@ def check(p):
     )
     if closed_side_clearance <= 0.0:
         bad.append("load ring does not clear the closed clevis return")
-    if dims["bolt_head_base"] <= dims["post_top"]:
-        bad.append("bolt head must sit above the bracket post")
+    expected_bracket_top = dims["clevis_bottom"] + dims["clevis_height"]
+    if abs(dims["bolt_head_base"] - expected_bracket_top) > 1e-9:
+        bad.append("bolt-head underside must contact the bracket upper face")
     expected_across_flats = (
         dims["bolt_head_corner_d"] * cos(pi / 6.0)
     )
