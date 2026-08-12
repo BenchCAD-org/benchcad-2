@@ -60,7 +60,8 @@ thickness, or hidden contact surfaces. The model therefore uses:
 - no separate pin: the bracket annular axis passes through both clevis holes;
 - a plain annular bushing around the nominal bolt cylinder;
 - a catalog-pitch helical external thread and enlarged hex head placed above
-  the bracket post; its across-flats dimension exceeds the bracket-hole diameter;
+  the bracket post; its across-flats dimension exceeds the bracket-hole diameter,
+  and its undimensioned blind hex socket uses documented proportions;
 - an optional fused RFID pad whose presence is source-backed but whose size is
   explicitly `proportion` (easy omits it, medium mixes it, hard shows it).
 

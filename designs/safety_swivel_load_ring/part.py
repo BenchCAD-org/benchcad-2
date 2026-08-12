@@ -287,8 +287,11 @@ def _external_unified_thread(thread_major_d, thread_tpi, length):
 
 
 def build_bolt(thread_major_d, thread_tpi, l1, dims):
-    """Bolt with a catalog-pitch Unified external thread and hex head."""
+    """Bolt with a catalog-pitch thread, hex head, and hex socket."""
     head_h = 0.38 * thread_major_d
+    socket_across_flats = 0.42 * dims["bolt_head_across_flats"]
+    socket_corner_d = socket_across_flats / math.cos(math.pi / 6.0)
+    socket_depth = 0.52 * head_h
     threaded_end = _external_unified_thread(
         thread_major_d, thread_tpi, l1
     ).translate((0.0, 0.0, -l1))
@@ -304,7 +307,19 @@ def build_bolt(thread_major_d, thread_tpi, l1, dims):
         .extrude(head_h)
         .translate((0.0, 0.0, dims["bolt_head_base"]))
     )
-    return threaded_end.union(plain_shank).union(head)
+    socket = (
+        cq.Workplane("XY")
+        .polygon(6, socket_corner_d)
+        .extrude(socket_depth + 0.05)
+        .translate(
+            (
+                0.0,
+                0.0,
+                dims["bolt_head_base"] + head_h - socket_depth,
+            )
+        )
+    )
+    return threaded_end.union(plain_shank).union(head).cut(socket)
 
 
 def build_clevis(dims):
