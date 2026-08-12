@@ -6,7 +6,31 @@ parameter ranges, constraints, reference evidence, and provenance.
 
 Questions → [Discord](https://discord.gg/be9AtvrDyK). New to GitHub? Use the
 step-by-step guides: [English](docs/GETTING_STARTED.md) ·
-[中文](docs/GETTING_STARTED.zh.md).
+[Chinese](docs/GETTING_STARTED.zh.md).
+
+## Scope
+
+**This repository is the AI-plus-expert data pipeline that produces the
+family dataset**: proposing a family from a real source, implementing it as an
+auditable parametric design, reviewing it against its drawing, and recording
+provenance. Everything here serves getting correct, sourced data in.
+
+**It is not an evaluation or scoring pipeline.** No model output is graded
+here, no score is computed here, and no leaderboard number is produced here.
+`frontier_iou` in `docs/STATUS.md` is a value reported from elsewhere, not
+something this repository calculates. A feature request to add or extend
+scoring — a similarity metric wired into a default, a leaderboard path, a
+grading harness — is out of scope no matter how well built; it belongs
+wherever the scoring pipeline actually lives, and the maintainers will point
+you there.
+
+Metrics can still appear here, on one condition: **a metric is research-phase
+tooling, used as a tool on the data.** Inspecting a step-wise case, checking a
+generated instance against its reference, triaging a family that looks wrong —
+that is data work and it is welcome. The line is what the metric is *for*: a
+tool you run to decide whether the data is right belongs here; a component
+that scores a model does not. Such a tool stays opt-in and wired into no
+default, and it is not a benchmark metric just because it produces a number.
 
 ## The contributor loop
 
@@ -14,8 +38,11 @@ step-by-step guides: [English](docs/GETTING_STARTED.md) ·
 uv sync
 uv run bench2 new <family>
 # fill designs/<family>/{part.py,spec.py,family.json}
+uv run bench2 edit <family>        # optional: live 3D editing (CQ-editor, F5) — docs/DEBUGGING.md
 uv run bench2 validate <family>
 uv run bench2 preview <family>     # inspect every generated view yourself
+# assembly family: preview also renders preview_parts.png
+# (or run it alone: uv run bench2 preview-parts <family>)
 # submit one PR with `Closes #<family-issue>`
 ```
 
@@ -24,7 +51,7 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 1. **One family = one issue = one PR.** A family PR touches only
    `designs/<family>/` and includes `Closes #N`.
 2. **`bench2 validate` must pass locally.** CI reruns the same gates.
-3. **A non-author reviews the family** using [`REVIEWING.md`](REVIEWING.md).
+3. **A non-author reviews the family** using [`REVIEWING.md`](docs/REVIEWING.md).
 4. **Merged is not automatically released.** Qualification and versioned
    manifests are produced in batches.
 5. **Do not duplicate a known proposal.** Check [`registry.json`](registry.json)
@@ -56,8 +83,13 @@ uv run bench2 preview <family>     # inspect every generated view yourself
 The implementer is the first verifier. Confirm:
 
 1. A real standard, catalog, datasheet, handbook, or honest proportion basis.
-2. A dimensioned drawing or equivalent source that maps symbols to geometry.
-3. A table or documented range containing minimum and maximum examples.
+2. A true 2D orthographic dimensioned drawing that maps symbols to geometry —
+   ideally the standard's parametric letter drawing paired with its size table
+   (dimension arrows drawn over a product photo/render do not qualify).
+3. A table or documented range containing minimum and maximum examples,
+   its columns named physical-quantity + drawing symbol (`height_G`,
+   `bore_E`, `pitch_P`) — a bare letter is ambiguous once it leaves the
+   drawing, and carries into the `PARAM_SPEC` names.
 4. At least two source values spot-checked manually.
 5. At least four meaningful parameters and enough geometric variation.
 6. No duplicate or near-duplicate in `registry.json` or active issues.
@@ -78,6 +110,10 @@ licensing permits, with the original source linked in the issue.
 - Difficulty levels and feature coverage are meaningful.
 - Preview views and extremes match the reference evidence.
 - `family.json` labels and contributor information are accurate.
+- An assembly family names every component instance stably, matches its
+  declared `components`/`solids`, and ships an inspected `preview_parts.png`
+  (component four-views, assembly overview, ordered highlight rows — see
+  `docs/DESIGN_SPEC.md`).
 
 **Hard gates (red ✗ = cannot merge)** — so review spends its time on *truth*, not
 structure. A family PR must pass all three:
@@ -85,8 +121,8 @@ structure. A family PR must pass all three:
 | Gate | Enforces |
 |---|---|
 | `validate.yml` | `bench2 validate` — samples, constraints, execution, determinism, coverage, and that **every body is non-degenerate** (multi-body: matches `family.json` `"solids"`) |
-| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open) |
-| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one); the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`; **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; and the dir name matches the linked issue's family name |
+| `require-issue-link.yml` | the PR body links its family issue (`Closes #N`, still open); **and every image url in the body resolves**, with anything under `designs/` pinned to a **commit sha** — a branch name is not a pin: your fork branch is deleted when this PR merges and every preview pinned to it dies with it, leaving the merged family unreviewable. Copy the sha off the branch and use `blob/<sha>/<path>?raw=true`. Both `![alt](…)` and `<img src="…">` are checked, so the width-setting form is covered too |
+| `family-pr-checks.yml` | **one family per PR** (only `designs/<family>/`, plus a `geomlib` helper if you add one) — the sole exception is a **metadata-only sweep**, a diff whose `designs/` side is `spec.py` files only, which may span families because it can move no geometry and no committed render; the family ships all six files: `part.py`, `spec.py`, `family.json`, `preview.png`, `preview_views.png`, `preview_extremes.png`, plus `preview_hard_zoom.png` (the fourth render — CI *warns* while PRs opened before it existed backfill it, then it becomes required); **nothing else** goes in the family dir (reference drawings/photos/datasheets belong in the family issue); the PR checklist is fully ticked; the dir name matches the linked issue's family name; and the **PR body shows its evidence** — the issue's drawing + photo re-embedded under `## Reference`, all four renders embedded by name, the parameter/verification table, and for a multi-body family `preview_parts.png` (file **and** embed) |
 
 ## Issue taxonomy
 

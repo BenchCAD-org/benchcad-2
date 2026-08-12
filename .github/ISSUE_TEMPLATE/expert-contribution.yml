@@ -10,7 +10,7 @@ body:
         Fill in what you know; a maintainer turns it into code and **both of you
         are credited** (dataset card + paper co-authorship). No GitHub knowledge
         needed beyond this form. Guide: [English](../blob/main/docs/GETTING_STARTED.md) ·
-        [中文](../blob/main/docs/GETTING_STARTED.zh.md)
+        [Chinese](../blob/main/docs/GETTING_STARTED.zh.md)
   - type: input
     id: part
     attributes:

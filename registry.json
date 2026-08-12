@@ -1,1 +1,562 @@
-[]
+[
+{
+"name": "act_field_tray_pipe_clamp",
+"status": "proposed",
+"ref": "#90",
+"category": "",
+"anchor": ""
+},
+{
+"name": "act_twin_clamp",
+"status": "proposed",
+"ref": "#86",
+"category": "",
+"anchor": ""
+},
+{
+"name": "articulating_monitor_arm_vesa_plate",
+"status": "proposed",
+"ref": "#8",
+"category": "av-rigging",
+"anchor": ""
+},
+{
+"name": "backdraft_damper_blade",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Gravity backdraft damper blade + frame"
+},
+{
+"name": "ball_bearing_drawer_slide",
+"status": "proposed",
+"ref": "#5",
+"category": "furniture-hardware",
+"anchor": ""
+},
+{
+"name": "bass_drum_claw_hook",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Bass-drum tension claw hook"
+},
+{
+"name": "bridge_saddle_block",
+"status": "proposed",
+"ref": "#46",
+"category": "music-hardware",
+"anchor": ""
+},
+{
+"name": "cabinet_bar_pull_handle",
+"status": "proposed",
+"ref": "#26",
+"category": "furniture-hardware",
+"anchor": ""
+},
+{
+"name": "clevis_fork_head",
+"status": "merged",
+"ref": "designs/clevis_fork_head",
+"category": "",
+"anchor": "DIN 71752"
+},
+{
+"name": "confirmat_screw",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "Confirmat euro cabinet screw (7x50 etc.)"
+},
+{
+"name": "constant_torque_enclosure_hinge",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "Southco E6 position-control constant-torque hinge"
+},
+{
+"name": "din_3015_heavy_elastomer_insert_clamp",
+"status": "proposed",
+"ref": "#85",
+"category": "",
+"anchor": ""
+},
+{
+"name": "din_3015_profiled_tube_clamp_body",
+"status": "proposed",
+"ref": "#84",
+"category": "",
+"anchor": ""
+},
+{
+"name": "din_rail_end_stop",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "WAGO 249-116 / 249-197 DIN rail end stops"
+},
+{
+"name": "double_wedge_clamp",
+"status": "proposed",
+"ref": "#59",
+"category": "",
+"anchor": ""
+},
+{
+"name": "down_thrust_clamp",
+"status": "proposed",
+"ref": "#63",
+"category": "",
+"anchor": ""
+},
+{
+"name": "drawer_front_adjuster",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "Blum / Häfele drawer-front adjuster housing"
+},
+{
+"name": "drum_tension_lug",
+"status": "proposed",
+"ref": "#10",
+"category": "music-hardware",
+"anchor": ""
+},
+{
+"name": "drum_tension_rod",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Drum tension rod (#12-24 / 7-32 / M6)"
+},
+{
+"name": "duct_stiffening_bead_flange",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Transverse duct connector (TDC/TDF) flange profile"
+},
+{
+"name": "duct_takeoff_starting_collar",
+"status": "proposed",
+"ref": "#28",
+"category": "hvac-ductwork",
+"anchor": ""
+},
+{
+"name": "flat_u_bolt_short_saddle_clamp",
+"status": "proposed",
+"ref": "#91",
+"category": "",
+"anchor": ""
+},
+{
+"name": "flexible_duct_connector_flange",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Flexible-duct metal end collar / connector"
+},
+{
+"name": "furniture_connecting_bolt",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "Häfele dowel / connecting bolt for cam-lock system"
+},
+{
+"name": "gn7241_multiple_joint_hinge",
+"status": "proposed",
+"ref": "#117",
+"category": "",
+"anchor": ""
+},
+{
+"name": "grounding_standoff",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "PEM SOSG / SOAG self-clinching grounding/earthing standoff"
+},
+{
+"name": "guitar_strap_button",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Guitar strap button / end pin"
+},
+{
+"name": "guitar_string_ferrule",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Through-body / top-load guitar string ferrule"
+},
+{
+"name": "guitar_tuning_machine_head",
+"status": "proposed",
+"ref": "#9",
+"category": "music-hardware",
+"anchor": ""
+},
+{
+"name": "gusseted_corner_bracket",
+"status": "proposed",
+"ref": "#129",
+"category": "",
+"anchor": ""
+},
+{
+"name": "heavy_duty_mecanum_wheel",
+"status": "proposed",
+"ref": "#65",
+"category": "",
+"anchor": ""
+},
+{
+"name": "heavy_duty_omni_wheel",
+"status": "proposed",
+"ref": "#64",
+"category": "",
+"anchor": ""
+},
+{
+"name": "light_duty_swivel_plate_caster",
+"status": "proposed",
+"ref": "#58",
+"category": "",
+"anchor": ""
+},
+{
+"name": "magnetic_cabinet_catch",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "Magnetic touch-latch / cabinet catch body"
+},
+{
+"name": "metric_plastic_cable_gland",
+"status": "proposed",
+"ref": "#31",
+"category": "enclosure-hardware",
+"anchor": ""
+},
+{
+"name": "mic_stand_clutch",
+"status": "wanted",
+"ref": "#3",
+"category": "av-rigging",
+"anchor": "Microphone-stand height clutch body"
+},
+{
+"name": "minifix_cam_housing",
+"status": "proposed",
+"ref": "#25",
+"category": "furniture-hardware",
+"anchor": ""
+},
+{
+"name": "multi_line_pipe_clamp_body",
+"status": "proposed",
+"ref": "#87",
+"category": "",
+"anchor": ""
+},
+{
+"name": "o_clamp_lighting_hook",
+"status": "wanted",
+"ref": "#3",
+"category": "av-rigging",
+"anchor": "O-clamp / scaffold hook for pipe grid"
+},
+{
+"name": "panel_mount_filter_fan",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "Rittal Blue e+ SK 3237700 / 3239700 / 3240700 / 3243700 filter fan"
+},
+{
+"name": "pipe_grid_dropper_coupler",
+"status": "wanted",
+"ref": "#3",
+"category": "av-rigging",
+"anchor": "Pipe-grid dropper coupler"
+},
+{
+"name": "pittsburgh_lock_seam_profile",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Pittsburgh lock sheet-metal seam profile, SMACNA"
+},
+{
+"name": "projector_ceiling_mount_plate",
+"status": "wanted",
+"ref": "#3",
+"category": "av-rigging",
+"anchor": "Universal projector ceiling mount plate"
+},
+{
+"name": "quarter_turn_cam_latch",
+"status": "proposed",
+"ref": "#32",
+"category": "enclosure-hardware",
+"anchor": ""
+},
+{
+"name": "register_boot_collar",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Ceiling / wall register boot with round collar"
+},
+{
+"name": "round_duct_butterfly_damper",
+"status": "proposed",
+"ref": "#6",
+"category": "hvac-ductwork",
+"anchor": ""
+},
+{
+"name": "round_duct_worm_clamp",
+"status": "proposed",
+"ref": "#27",
+"category": "hvac-ductwork",
+"anchor": ""
+},
+{
+"name": "round_pipe_crimped_end",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Crimped-end round duct pipe section"
+},
+{
+"name": "round_u_bolt_pipe_saddle_clamp",
+"status": "proposed",
+"ref": "#92",
+"category": "",
+"anchor": ""
+},
+{
+"name": "safety_cable_swage_sleeve",
+"status": "wanted",
+"ref": "#3",
+"category": "av-rigging",
+"anchor": "AV safety cable swage sleeve / stop"
+},
+{
+"name": "safety_swivel_load_ring",
+"status": "proposed",
+"ref": "#62",
+"category": "",
+"anchor": ""
+},
+{
+"name": "set_screw_shaft_collar",
+"status": "merged",
+"ref": "designs/set_screw_shaft_collar",
+"category": "",
+"anchor": "GN 705 / DIN 705 style"
+},
+{
+"name": "shelf_support_pin",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "5 mm cabinet shelf support pin (pin + spoon styles), Häfele"
+},
+{
+"name": "single_friction_bearing_universal_joint",
+"status": "proposed",
+"ref": "#61",
+"category": "",
+"anchor": ""
+},
+{
+"name": "single_row_deep_groove_ball_bearing",
+"status": "proposed",
+"ref": "#41",
+"category": "",
+"anchor": ""
+},
+{
+"name": "slotted_din_rail",
+"status": "merged",
+"ref": "designs/slotted_din_rail",
+"category": "",
+"anchor": "EN 60715 TH35 top-hat rail, AutomationDirect DN-R35S slotted rail"
+},
+{
+"name": "slotted_din_rail_th35_7_5",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "AutomationDirect DINnector DN-R35S slotted 35 mm top-hat DIN rail"
+},
+{
+"name": "slotted_wiring_duct",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "Panduit Type G slotted wall wiring duct with cover"
+},
+{
+"name": "snap_in_cable_bushing",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "Heyco SB Snap Bushing multiple-panel nylon bushing"
+},
+{
+"name": "snare_throw_off_lever",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Snare strainer / throw-off lever body"
+},
+{
+"name": "speaker_pole_mount_socket",
+"status": "merged",
+"ref": "designs/speaker_pole_mount_socket",
+"category": "",
+"anchor": ""
+},
+{
+"name": "spin_in_fitting_collar",
+"status": "wanted",
+"ref": "#2",
+"category": "hvac-ductwork",
+"anchor": "Spin-in fitting collar with scoop/damper, SMACNA"
+},
+{
+"name": "split_cable_entry_frame",
+"status": "wanted",
+"ref": "#20",
+"category": "enclosure-hardware",
+"anchor": "icotek KEL-U split cable entry frame for pre-terminated cables"
+},
+{
+"name": "spring_gate_carabiner",
+"status": "proposed",
+"ref": "#83",
+"category": "",
+"anchor": ""
+},
+{
+"name": "srf_pipe_tube_bushing",
+"status": "proposed",
+"ref": "#89",
+"category": "",
+"anchor": ""
+},
+{
+"name": "stc_spc_channel_cushion_clamp",
+"status": "proposed",
+"ref": "#88",
+"category": "",
+"anchor": ""
+},
+{
+"name": "stop_bar_tailpiece",
+"status": "proposed",
+"ref": "#78",
+"category": "music-hardware",
+"anchor": ""
+},
+{
+"name": "swivel_ball_joint_mount",
+"status": "proposed",
+"ref": "#60",
+"category": "",
+"anchor": ""
+},
+{
+"name": "swivel_clamp_connector_joint",
+"status": "proposed",
+"ref": "#57",
+"category": "",
+"anchor": ""
+},
+{
+"name": "t_handle_ball_lock_pin",
+"status": "proposed",
+"ref": "#53",
+"category": "",
+"anchor": ""
+},
+{
+"name": "table_leg_mounting_plate",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "Straight / angled table-leg top mounting plate"
+},
+{
+"name": "three_jaw_scroll_chuck",
+"status": "proposed",
+"ref": "#81",
+"category": "",
+"anchor": ""
+},
+{
+"name": "tilting_speaker_wall_bracket",
+"status": "proposed",
+"ref": "#7",
+"category": "av-rigging",
+"anchor": ""
+},
+{
+"name": "tremolo_bridge_block",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Tremolo sustain block"
+},
+{
+"name": "truss_half_coupler_hook",
+"status": "proposed",
+"ref": "#29",
+"category": "av-rigging",
+"anchor": ""
+},
+{
+"name": "truss_rod_adjusting_nut",
+"status": "wanted",
+"ref": "#4",
+"category": "music-hardware",
+"anchor": "Guitar truss-rod adjusting nut"
+},
+{
+"name": "tv_wall_mount_arm",
+"status": "wanted",
+"ref": "#3",
+"category": "av-rigging",
+"anchor": "Full-motion TV wall-mount articulating arm"
+},
+{
+"name": "undermount_slide_locking_clip",
+"status": "wanted",
+"ref": "#1",
+"category": "furniture-hardware",
+"anchor": "Blum Tandem undermount slide locking clip"
+},
+{
+"name": "vertical_latch_toggle_clamp",
+"status": "proposed",
+"ref": "#49",
+"category": "",
+"anchor": ""
+},
+{
+"name": "window_cam_lock",
+"status": "proposed",
+"ref": "#55",
+"category": "",
+"anchor": ""
+}
+]

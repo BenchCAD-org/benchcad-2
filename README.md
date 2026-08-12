@@ -11,6 +11,11 @@ BenchCAD 2.0 is the successor to
 by explicit engineering knowledge: named parameters, sourced ranges,
 inter-parameter constraints, and deterministic CadQuery geometry.
 
+This repository is the **data pipeline** that produces those families — propose,
+implement, review, record provenance. It is not an evaluation or scoring
+pipeline: nothing here grades a model or computes a leaderboard number. See
+[Scope](CONTRIBUTING.md#scope) before opening a feature request.
+
 ## Contributing a family
 
 A family is one auditable parametric design:
@@ -25,22 +30,23 @@ designs/<family>/
 Start with:
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution lifecycle and rules
-- [`REVIEWING.md`](REVIEWING.md) — the human review checklist
+- [`REVIEWING.md`](docs/REVIEWING.md) — the human review checklist
 - [`docs/DESIGN_SPEC.md`](docs/DESIGN_SPEC.md) — the part/spec interface
 
 ```bash
 uv sync
 uv run bench2 new my_family
 # edit designs/my_family/{part.py,spec.py,family.json}
+uv run bench2 edit my_family      # optional: live 3D editing in CQ-editor (F5 to re-render)
 uv run bench2 validate my_family
 uv run bench2 preview my_family   # inspect the renders before submitting
 ```
 
-Progress is tracked in [`STATUS.md`](STATUS.md), contributor provenance in
-[`CONTRIBUTORS.md`](CONTRIBUTORS.md), and active proposals in the
+Progress is tracked in [`STATUS.md`](docs/STATUS.md), contributor provenance in
+[`CONTRIBUTORS.md`](docs/CONTRIBUTORS.md), and active proposals in the
 [family issues](../../issues?q=is%3Aissue+is%3Aopen+label%3Afamily).
 
-The architectural rationale lives in [`DESIGN.md`](DESIGN.md). The scoring
+The architectural rationale lives in [`DESIGN.md`](docs/DESIGN.md). The scoring
 engine is maintained in
 [`BenchCAD/BenchCAD-main`](https://github.com/BenchCAD/BenchCAD-main).
 
