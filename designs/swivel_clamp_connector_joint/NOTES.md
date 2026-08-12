@@ -86,10 +86,12 @@ have no counterbore or hexagonal recess.
 
 The nut and actuator head/hub touch the two outer body faces without positive
 volume overlap. The round stud passes through round proportional-clearance
-bores. The stud extends through nearly the full nut thickness. One circular
-`distance_bushing` is centered in `l5` and has only its central round stud
-bore—there is no eccentric hole. Two separate helical pressure springs are
-coaxial with the actuator, one below and one above that bushing.
+body and insert bores and meets a simplified engagement land in the nut. One
+circular `distance_bushing` spans the complete published `l5` separation and
+has only its central round stud bore; there is no eccentric hole. Two separate
+helical pressure springs sit in coaxial pockets in the lower and upper clamp
+bodies. Their flat end coils contact the insert and the corresponding pocket
+bottom, matching the load path shown in the official GN 490 section.
 
 ## Published Type B envelope
 
@@ -100,11 +102,14 @@ The drawing defines two orthogonal outer projections:
 - `l3`: radial reach from the central fastener axis to the handle's furthest
   radial edge.
 
-The handle centerline is inclined in the axial/radial plane. Its rounded end is
-backed off by the end radius so the finished solid, rather than only its
-centerline, reaches the published `l2` and `l3` limits. The direction follows
-the Type B drawing and product image. Local hub, shoulder, taper, thickness,
-rounding, and the requested top-button hexagonal recess remain proportions.
+The physical Type B actuator is reconstructed as a vertical shaft, an
+independent lever with a cylindrical root/counterbore, and a coaxial clamp
+screw with a hex socket. The handle uses a short smooth loft from its root into
+the inclined tapered grip. The three physical pieces are fused through hidden
+simplified engagement allowances into the one semantic benchmark `actuator`
+solid declared by `family.json`. Its aligned hemispherical end reaches the
+published `l2` and `l3` outer envelopes exactly. Local hub, thread, transition,
+socket, and end-cap dimensions remain proportions.
 
 ## Proportion formulas
 
@@ -113,23 +118,23 @@ The following values are not published GN 490 dimensions:
 | Detail | Formula | Purpose |
 |---|---|---|
 | Body passage radius | `0.60*d3` | Clear the nominal round stud |
-| V-groove radial center | `-(0.50*d1 + 0.60*d3 + 0.02*d1)` | Clear the central stud passage while keeping the rod inside `d4` |
-| V-groove depth | `(0.50 + 1/sqrt(2))*d1 + 0.02*d1` | 90-degree V tangent geometry plus proportional clearance |
+| V-groove radial center | `-(0.50*d1 + 0.60*d3)` | Tangent nominal rod clears the central stud passage |
+| V-groove depth | `(0.50 + 1/sqrt(2))*d1` | 90-degree V tangent construction |
 | V-groove mouth | `2*groove_depth` | Contain the full nominal rod proxy at the inner face |
 | Body end fillet | `min(0.035*d4, 0.18*l4)` | Approximate the rounded casting edge |
 | Type A shaft/head | shaft radius `0.50*d3`; external-hex circumdiameter `1.60*d3`; head height `0.85*d3` | Review-requested visible hex head; undocumented envelope is `proportion` |
 | Type A socket | hex circumdiameter `0.55*d3`; depth `0.45*head_h` | Visible socket only |
 | Nut | height `0.80*d3`; circumdiameter `1.80*d3`; bore radius `0.54*d3` | Simplified separate DIN 934 envelope |
-| Distance bushing | radius `0.46*d4`; height `0.24*l5` | Single visible circular middle separator |
+| Distance bushing | radius `0.46*d4`; height `l5` | Insert spans and contacts both published inner faces |
 | Distance-plate stud bore | `0.50*d3 + max(0.10, 0.02*d3)` | Clear the round stud |
-| Each spring height | `0.30*l5` | Fit one spring on each side of the bushing |
+| Each body spring pocket | depth `min(0.22*l4, 0.55*l5)` | Seat one spring behind each inner face |
+| Each spring height | pocket depth minus two wire radii | Flat end coils contact pocket and insert |
 | Spring mean/wire radius | `0.72*d3`; `min(0.045*d3, 0.035*l5)` | Clear the actuator and remain non-degenerate |
-| Spring pitch | `spring_h/2.5` | 2.5-turn helical sweep without self-intersection |
-| Spring/bushing/body clearance | `0.04*l5` | Separate all three central components |
-| Type B handle thickness | `max(0.70*d3, 0.14*d4)` | Flat die-cast lever section |
-| Type B handle width | `1.40*handle_t` | Simplified die-cast section |
-| Type B profile thickness | `1.18*handle_t` at hub, `0.92*handle_t` at end | Simplified taper |
-| Type B hub | height `1.35*d3`; radius derived from stud/handle width | Connect stud and handle |
+| Spring pitch | `spring_h/2` | Two-turn helical sweep with aligned flat ends |
+| Type B lever root | radius `max(1.06*d3, 0.19*d4)`; height `0.82*d3` | Independent circular mounting root |
+| Type B loft transition | root radius `max(0.68*d3, 1.80*tip_r)`; length `min(2.20*d3, 0.28*arm_length)` | Smooth contraction into inclined grip |
+| Type B grip | conical radius from `max(0.45*d3, 1.12*tip_r)` to `tip_r` | Long tapered lever section |
+| Type B clamp screw | proportional shank/head/socket and hidden engagement allowances | Coaxially retain the lever while preserving one actuator solid |
 
 Each pressure spring is a genuine CadQuery helix sweep. All 16 legal
 catalog/actuator combinations produce two valid, non-degenerate spring solids
@@ -146,13 +151,12 @@ combinations (eight rows times Types A/B):
 - Every pair of physical components has zero positive intersection volume.
 - Round stud, body passage, nut bore, and bushing bore retain their documented
   proportional clearances.
-- The central distance bushing and both coaxial springs are mutually separated
-  by their modeled axial clearances.
+- The contact graph includes nut–lower body–lower spring–central insert–upper
+  spring–upper body–actuator, plus actuator-to-nut retention.
 - Both clamp bodies retain positive material behind the V-groove and around
   the central passage.
 - A full-diameter nominal rod proxy at each published axis has zero positive
-  intersection volume with its clamp body, the stud passage, and the middle
-  distance plate.
+  intersection volume and zero-distance contact with both V faces.
 - Type B actuator bounding boxes reproduce the published `l2`/`l3` envelopes.
 
 `bench2 validate` is still the required final machine gate, but it does not
@@ -165,8 +169,9 @@ therefore included in the local acceptance report.
   are omitted.
 - The V-groove angle, tip radius, depth, radial offset, and mouth are not
   dimensioned; the model records them as `proportion`.
-- Threads, thread runout, exact DIN fastener tolerances, lever ratchet internals,
-  and surface finishes are omitted.
+- Exact threads, thread runout, DIN fastener tolerances, lever ratchet internals,
+  and surface finishes are omitted; local cylindrical engagement lands retain
+  the benchmark assembly without claiming a thread profile.
 - Type A retains the catalog's central fastener role and hex socket, but its
   outer head is deliberately modeled as the requested six-sided review shape
   rather than claiming an exact DIN 912 cylindrical-head reproduction.

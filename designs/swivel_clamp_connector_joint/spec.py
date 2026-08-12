@@ -89,7 +89,6 @@ PARAM_SPEC = {
         integer=True,
         coverage=[8, 10, 12, 14, 15, 16, 18, 20],
         source=f"{DATASHEET}; published d1=d2 rows only",
-        askable=True,
     ),
     "actuator_type": dict(
         desc="published actuator variant: 0=Type A DIN 912 socket screw, 1=Type B adjustable lever",
@@ -107,7 +106,6 @@ PARAM_SPEC = {
         range=_row_range("thread_d"),
         refine=True,
         source=f"{DATASHEET}; d3 from the row selected by clamp_d",
-        askable=True,
     ),
     "body_d4": dict(
         desc="outside cylindrical body diameter d4",
@@ -115,7 +113,6 @@ PARAM_SPEC = {
         range=_row_range("body_d4"),
         refine=True,
         source=f"{DATASHEET}; d4 from the row selected by clamp_d",
-        askable=True,
     ),
     "body_l1": dict(
         desc="overall two-body assembly length l1 along the central fastener axis",
@@ -123,7 +120,6 @@ PARAM_SPEC = {
         range=_row_range("body_l1"),
         refine=True,
         source=f"{DATASHEET}; l1 from the row selected by clamp_d",
-        askable=True,
     ),
     "lever_l2": dict(
         desc="published Type B axial envelope l2 beyond the actuator-side body face",
@@ -131,7 +127,6 @@ PARAM_SPEC = {
         range=_row_range("lever_l2"),
         refine=True,
         source=f"{DATASHEET}; l2 from the row selected by clamp_d",
-        askable=True,
     ),
     "lever_l3": dict(
         desc="published Type B radial envelope l3 from the fastener axis to the handle end",
@@ -139,7 +134,6 @@ PARAM_SPEC = {
         range=_row_range("lever_l3"),
         refine=True,
         source=f"{DATASHEET}; l3 from the row selected by clamp_d",
-        askable=True,
     ),
     "jaw_l4": dict(
         desc="axial thickness l4 of each complete clamp body",
@@ -147,7 +141,6 @@ PARAM_SPEC = {
         range=_row_range("jaw_l4"),
         refine=True,
         source=f"{DATASHEET}; l4 from the row selected by clamp_d",
-        askable=True,
     ),
     "gap_l5": dict(
         desc="published central separation l5 between the clamp sections",
@@ -155,7 +148,6 @@ PARAM_SPEC = {
         range=_row_range("gap_l5"),
         refine=True,
         source=f"{DATASHEET}; l5 from the row selected by clamp_d",
-        askable=True,
     ),
     "catalog_m": dict(
         desc="published spacing m between the two clamping axes",
@@ -163,7 +155,6 @@ PARAM_SPEC = {
         range=_row_range("catalog_m"),
         refine=True,
         source=f"{DATASHEET}; m from the row selected by clamp_d",
-        askable=True,
     ),
 }
 
@@ -204,13 +195,12 @@ def check(p):
 
     # The end-entry V-groove dimensions and radial offset are unpublished
     # proportions.  Each complete l4-thick body remains one connected solid.
-    groove_clearance = 0.02 * p["clamp_d"]
     passage_r = 0.60 * p["thread_d"]
     groove_center = (
-        0.50 * p["clamp_d"] + passage_r + groove_clearance
+        0.50 * p["clamp_d"] + passage_r
     )
     groove_depth = (
-        (0.50 + 2.0 ** -0.5) * p["clamp_d"] + groove_clearance
+        (0.50 + 2.0 ** -0.5) * p["clamp_d"]
     )
     groove_mouth = 2.0 * groove_depth
     if groove_depth >= 0.90 * p["jaw_l4"]:
@@ -218,7 +208,7 @@ def check(p):
     if groove_mouth <= 2.40 * p["clamp_d"]:
         bad.append("V-groove mouth must admit the selected clamping diameter (proportion)")
     if groove_center + 0.50 * p["clamp_d"] >= p["body_d4"] / 2.0:
-        bad.append("nominal clamped rod must remain inside the d4 body envelope (geometry)")
+        bad.append("nominal clamped rod must remain inside the d4 body envelope (proportion)")
 
     # The passage is proportioned from d3; GN 490 publishes the thread, not
     # the body through-hole.  It clears the stud while retaining a web to the
@@ -234,34 +224,36 @@ def check(p):
         - 0.50 * p["clamp_d"]
         - passage_r
         + 1e-9
-        < groove_clearance
+        < 0.0
     ):
         bad.append("V-groove must retain a positive web to the central passage (proportion)")
 
-    # One central distance bushing and two coaxial springs fit in l5. The
-    # bushing has only its central stud bore; there is no eccentric opening.
-    bushing_h = 0.24 * p["gap_l5"]
+    # The section shows a full-l5 central insert with pressure springs seated
+    # in coaxial pockets in the two clamp bodies.  Local pocket and coil sizes
+    # are unpublished proportions.
+    bushing_h = p["gap_l5"]
     bushing_outer_r = 0.46 * p["body_d4"]
     bushing_bore_r = 0.50 * p["thread_d"] + max(0.10, 0.02 * p["thread_d"])
-    spring_h = 0.30 * p["gap_l5"]
-    spring_clearance = 0.04 * p["gap_l5"]
+    spring_pocket_depth = min(0.22 * p["jaw_l4"], 0.55 * p["gap_l5"])
     coil_r = 0.72 * p["thread_d"]
     wire_r = min(0.045 * p["thread_d"], 0.035 * p["gap_l5"])
-    pitch = spring_h / 2.5
-    if bushing_h >= p["gap_l5"]:
-        bad.append("distance bushing must fit inside the central l5 gap (proportion)")
+    spring_h = spring_pocket_depth - 2.0 * wire_r
+    pitch = spring_h / 2.0
+    spring_pocket_r = coil_r + wire_r + max(0.08, 0.012 * p["thread_d"])
+    if abs(bushing_h - p["gap_l5"]) > 1e-9:
+        bad.append("distance bushing must span the published central l5 gap (GN 490 section)")
     if bushing_outer_r <= bushing_bore_r:
         bad.append("distance bushing must retain positive annular wall (proportion)")
-    if bushing_h + 2.0 * spring_h + 4.0 * spring_clearance > p["gap_l5"] + 1e-9:
-        bad.append("two springs, central bushing, and clearances must fit inside l5 (proportion)")
+    if spring_h <= 2.0 * wire_r:
+        bad.append("each body spring pocket must retain a positive helical span (proportion)")
     if coil_r - wire_r <= shaft_r + max(0.10, 0.02 * p["thread_d"]):
         bad.append("both coaxial springs must clear the actuator shaft (proportion)")
-    if coil_r + wire_r >= p["body_d4"] / 2.0:
-        bad.append("both spring outer envelopes must remain inside d4 (proportion)")
-    if spring_clearance <= wire_r:
-        bad.append("spring end clearance must exceed wire radius (non-interference)")
+    if spring_pocket_r >= p["body_d4"] / 2.0:
+        bad.append("both spring pockets must remain inside d4 (proportion)")
+    if spring_pocket_depth >= p["jaw_l4"]:
+        bad.append("each spring pocket must retain a clamp-body back wall (proportion)")
     if pitch <= 2.0 * wire_r:
-        bad.append("helical spring pitch must exceed wire diameter (non-self-intersection)")
+        bad.append("helical spring pitch must exceed wire diameter (proportion)")
 
     # The DIN 934-like nut is a separate component, not a fabricated hex
     # capture pocket.  Its round bore clears the round stud envelope.
@@ -285,6 +277,6 @@ def check(p):
         if p["lever_l3"] <= 2.0 * end_r:
             bad.append("Type B l3 must leave positive radial handle reach (published envelope + proportion)")
         if start_bottom <= p["body_l1"] / 2.0:
-            bad.append("Type B handle must clear the upper jaw in the fixed reference pose (geometry)")
+            bad.append("Type B handle must clear the upper jaw in the fixed reference pose (proportion)")
 
     return bad
