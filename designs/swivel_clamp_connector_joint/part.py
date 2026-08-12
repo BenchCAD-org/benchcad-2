@@ -144,7 +144,7 @@ def _type_a_actuator(body_l1, thread_d):
 
 
 def _type_b_actuator(body_l1, body_d4, thread_d, lever_l2, lever_l3):
-    """Adjustable-lever/stud component with the published l2/l3 envelope."""
+    """Adjustable-lever/stud with a hex recess and published l2/l3 envelope."""
     hub_h = 1.35 * thread_d
     handle_t = max(0.70 * thread_d, 0.14 * body_d4)
     handle_w = 1.40 * handle_t
@@ -213,7 +213,15 @@ def _type_b_actuator(body_l1, body_d4, thread_d, lever_l2, lever_l3):
         button_h,
         z_top + hub_h - 0.05 * button_h,
     )
-    result = shaft.union(hub).union(handle).union(button)
+    button_top = z_top + hub_h + 0.95 * button_h
+    socket_depth = 0.65 * button_h
+    socket = (
+        cq.Workplane("XY")
+        .polygon(6, 0.55 * thread_d)
+        .extrude(socket_depth + 0.05)
+        .translate((0.0, 0.0, button_top - socket_depth))
+    )
+    result = shaft.union(hub).union(handle).union(button.cut(socket))
     return result
 
 

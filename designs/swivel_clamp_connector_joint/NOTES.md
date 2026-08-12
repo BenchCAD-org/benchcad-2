@@ -104,7 +104,7 @@ The handle centerline is inclined in the axial/radial plane. Its rounded end is
 backed off by the end radius so the finished solid, rather than only its
 centerline, reaches the published `l2` and `l3` limits. The direction follows
 the Type B drawing and product image. Local hub, shoulder, taper, thickness,
-and rounding remain proportions.
+rounding, and the requested top-button hexagonal recess remain proportions.
 
 ## Proportion formulas
 
