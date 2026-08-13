@@ -104,7 +104,9 @@ def _modeled_external_metric_thread(nominal_d, pitch, length):
                           (root_r - radial_embed, half_width)])
                .close())
     ridge = profile.sweep(path, isFrenet=True).translate((0.0, 0.0, half_width))
-    return core.union(ridge)
+    # Shape-level fuse avoids CadQuery 2.3's obsolete TopoDS.HashCode path
+    # while producing the same single threaded solid in the pinned runtime.
+    return cq.Workplane(obj=core.val().fuse(ridge.val()))
 
 
 def _modeled_internal_metric_groove(nominal_d, pitch, length):
@@ -122,17 +124,64 @@ def _modeled_internal_metric_groove(nominal_d, pitch, length):
     return profile.sweep(path, isFrenet=True).translate((0.0, 0.0, -half_width))
 
 
-def _hks_bolt(shank_l, head_h, head_narrow, head_l):
-    head = cq.Workplane("XY").box(head_l, head_narrow, head_h).translate(
-        (0.0, 0.0, head_h / 2.0)
+def _hks_bolt(shank_l, thread_l, head_h, head_narrow, head_l):
+    """Build the sourced HKS M6 hammerhead bolt along positive Z.
+
+    The STAUFF drawing defines the 13.3 x 6.1 x 4.3 mm head envelope and a
+    minimum 20 mm threaded free end.  Its product view shows a forged head
+    with relieved perimeter edges rather than a sharp rectangular block.
+    The small deterministic bevels below reproduce that visible manufacture
+    without claiming an unpublished radius.
+    """
+    corner_relief = min(0.55, 0.08 * head_l)
+    bearing_bevel = min(0.45, 0.10 * head_h)
+
+    def _head_outline(length, width, corner):
+        x = length / 2.0
+        y = width / 2.0
+        return [
+            (-x + corner, -y),
+            (x - corner, -y),
+            (x, -y + corner),
+            (x, y - corner),
+            (x - corner, y),
+            (-x + corner, y),
+            (-x, y - corner),
+            (-x, -y + corner),
+        ]
+
+    # Explicit lofted profiles avoid the edge-selector instability of the
+    # pinned CQ 2.3/OCP combination while keeping a true beveled solid.
+    lower_l = head_l - 2.0 * bearing_bevel
+    lower_b = head_narrow - 2.0 * bearing_bevel
+    head = (
+        cq.Workplane("XY")
+        .polyline(_head_outline(lower_l, lower_b, corner_relief))
+        .close()
+        .workplane(offset=bearing_bevel)
+        .polyline(_head_outline(head_l, head_narrow, corner_relief))
+        .close()
+        .workplane(offset=head_h - bearing_bevel)
+        .polyline(_head_outline(head_l, head_narrow, corner_relief))
+        .close()
+        .loft(combine=True, ruled=True)
     )
-    # HKS is a fully threaded M6 hammerhead bolt.  Keep the non-standard head
-    # sourced from the catalogue and use the standard-components M6 coarse
-    # thread geometry for its shank.
-    shank = _modeled_external_metric_thread(6.0, 1.0, shank_l).translate(
-        (0.0, 0.0, head_h)
+
+    # H2 is the under-head length, whereas H4 is the minimum threaded length.
+    # Retain the catalogue's long plain anti-buckling shank and put the visible
+    # ISO 261 M6 coarse thread only at the free end.
+    plain_l = shank_l - thread_l
+    plain = (
+        cq.Workplane("XY")
+        .circle(3.0)
+        .extrude(plain_l + 0.05)
+        .translate((0.0, 0.0, head_h - 0.05))
     )
-    return head.union(shank)
+    threaded = _modeled_external_metric_thread(6.0, 1.0, thread_l).translate(
+        (0.0, 0.0, head_h + plain_l)
+    )
+    bolt = head.val().fuse(plain.val()).fuse(threaded.val())
+    return cq.Workplane(obj=bolt)
 
 
 def _iso_hex_nut(nominal_d):
@@ -182,7 +231,7 @@ def build(size_index, strip_d, strip_embed):
 
     half = _clamp_half(body_l1, 30.0, body_h, tube_od, bolt_pitch, strip_d, strip_embed)
     cover = _cover_plate(cover_l1, cover_w, cover_t, cover_pitch, cover_hole_d)
-    bolt = _hks_bolt(hks_shank_l, head_h, head_narrow, head_l)
+    bolt = _hks_bolt(hks_shank_l, 20.0, head_h, head_narrow, head_l)
     nut = _iso_hex_nut(6.0)
 
     cover_z = body_h / 2.0 + cover_t / 2.0 + 0.2
