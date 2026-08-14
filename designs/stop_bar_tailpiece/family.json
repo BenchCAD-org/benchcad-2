@@ -1,0 +1,8 @@
+{
+  "family": "stop_bar_tailpiece",
+  "standard": "Gotoh GE101Z / GE101A stop tailpiece (Gibson 3-1/4 in stud standard)",
+  "base_plane": "XY",
+  "description": "Gibson-style stop bar tailpiece (bar only): a crowned bar with six string holes (stepped bores on the real part) over a full-length base plate whose open U-slot ears hang on two threaded studs. Studs and bushings are separate hardware.",
+  "source": "Gotoh official 2D drawings GE101Z/GE101A/GE101Z-T (overall, stud span, section, tab, crown R, pitch, slot); stud span cross-checked vs StewMac/Gibson/Faber/Allparts (82 vs 82.55)",
+  "contributor": "BenchCAD-org"
+}

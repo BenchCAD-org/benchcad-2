@@ -19,7 +19,7 @@ jobs:
         with:
           script: |
             const title = context.payload.issue.title || '';
-            const m = title.match(/\[(?:family|proposal)\]\s+([a-z0-9_]+)/);
+            const m = title.match(/\[(?:family-assembly|family|proposal)\]\s+([a-z0-9_]+)/);
             const name = m ? m[1] : null;
 
             // duplicate check against the registry
@@ -63,7 +63,7 @@ jobs:
               ``,
               `Gaps? Fill them yourself (credited) or label \`needs-evidence\` with one comment naming what's missing.`,
               ``,
-              `新人中文指南: [GETTING_STARTED.zh.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/GETTING_STARTED.zh.md) · Questions → [Discord](https://discord.gg/be9AtvrDyK)`,
+              `Chinese guide: [GETTING_STARTED.zh.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/GETTING_STARTED.zh.md) · Questions → [Discord](https://discord.gg/be9AtvrDyK)`,
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,

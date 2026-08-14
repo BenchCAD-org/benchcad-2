@@ -1,6 +1,11 @@
 name: registry
-# Keep registry.json (the duplicate-check index) fresh: every family/category
-# issue change and every designs/ merge regenerates it.
+# Watch registry.json (the duplicate-check index): every family/category issue
+# change and every designs/ merge re-derives it and warns when the committed
+# copy has drifted.
+#
+# POLICY: bots never push to main (the ruleset requires a PR for every change and
+# github-actions[bot] deliberately has no bypass) — a maintainer regenerates and
+# pushes the refresh (see .github/scripts/gen_registry.py).
 
 on:
   issues:
@@ -15,7 +20,7 @@ jobs:
     if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'family') || contains(github.event.issue.labels.*.name, 'category')
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       issues: read
     steps:
       - uses: actions/checkout@v4
@@ -25,9 +30,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/gen_registry.py
-      - name: commit if changed
+      - name: warn if the committed index is stale
         run: |
-          git config user.name "benchcad-bot"
-          git config user.email "actions@github.com"
-          git add registry.json
-          git diff --cached --quiet || (git pull --rebase origin main && git commit -m "registry: refresh [skip ci]" && git push)
+          git diff --quiet -- registry.json || echo "::warning::registry.json is stale (welcome-bot duplicate checks run against the old index). Maintainer: run .github/scripts/gen_registry.py and push the refresh (bots do not push to main by policy)."
