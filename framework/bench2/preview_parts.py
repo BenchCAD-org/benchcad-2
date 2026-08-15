@@ -180,14 +180,20 @@ def _normalized(verts_list: list[np.ndarray]) -> list[np.ndarray]:
 
 
 def build_preview_parts(fam_dir: Path, per_instance: bool = False,
-                        transparent: bool = False,
+                        transparent: bool = True,
                         required: bool = True) -> Path | None:
     """Render designs/<family>/preview_parts.png for the deterministic
     hard / seed 0 instance. With required=False (the `bench2 preview`
     auto-detect path) a non-Assembly `result` returns None instead of failing;
     every contract violation still fails clearly rather than producing a
-    misleading image. `transparent` ghosts the non-highlighted components
-    (see-through) so an internal component stays visible when highlighted."""
+    misleading image.
+
+    `transparent` (the default) ghosts the non-highlighted components in the
+    highlight rows, so a component that lives INSIDE the assembly still reads:
+    a bushing pressed into its bore, a bolt shank inside its hole, rollers
+    between a pin and a sheave. Opaque neighbours hide exactly the parts a
+    reviewer most needs to see, which is why this is the default and
+    `transparent=False` is the opt-out."""
     from . import render
     from .derive import derive_program
     from .execute import execute_cq_to_parts

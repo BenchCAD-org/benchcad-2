@@ -11,6 +11,11 @@ BenchCAD 2.0 is the successor to
 by explicit engineering knowledge: named parameters, sourced ranges,
 inter-parameter constraints, and deterministic CadQuery geometry.
 
+This repository is the **data pipeline** that produces those families — propose,
+implement, review, record provenance. It is not an evaluation or scoring
+pipeline: nothing here grades a model or computes a leaderboard number. See
+[Scope](CONTRIBUTING.md#scope) before opening a feature request.
+
 ## Contributing a family
 
 A family is one auditable parametric design:
@@ -32,6 +37,7 @@ Start with:
 uv sync
 uv run bench2 new my_family
 # edit designs/my_family/{part.py,spec.py,family.json}
+uv run bench2 edit my_family      # optional: live 3D editing in CQ-editor (F5 to re-render)
 uv run bench2 validate my_family
 uv run bench2 preview my_family   # inspect the renders before submitting
 ```

@@ -33,6 +33,9 @@ packages = ["framework/bench2"]
 
 [dependency-groups]
 dev = ["ruff>=0.8"]
+editor = [
+    "cq-editor>=0.7",
+]
 
 [tool.uv]
 # cadquery 2.3's dep chain still uses np.bool8 (removed in numpy 2) — force 1.26.

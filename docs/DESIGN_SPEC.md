@@ -233,13 +233,21 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    bounding box in mm;
 2. the complete assembly in its true pose, labeled with the instance's
    parameters;
-3. one red-on-gray highlight row per component (correct depth occlusion, the
-   rest of the assembly stays in place). Repeated instances highlight together
+3. one red-on-gray highlight row per component. The rest of the assembly stays
+   in place and is **ghosted (see-through) by default**, so a component that
+   lives inside the assembly still reads — a bushing pressed into its bore, a
+   bolt shank inside its hole, rollers between a pin and a sheave. Opaque
+   neighbours hide exactly the parts a reviewer most needs to see; pass
+   `--opaque` if you want them solid. Repeated instances highlight together
    with `quantity=N` by default; `--per-instance` renders one row per instance
-   (`bolt_01`, `bolt_02`, …) instead, and `--transparent` ghosts the
-   non-highlighted components (see-through) so an internal component — a
-   bushing pressed into its bore, a bolt shank inside its hole — stays visible
-   when highlighted.
+   (`bolt_01`, `bolt_02`, …) instead.
+
+The cutaway is a **fixed** half-section: the +Y half of the shape is removed at
+that shape's own bounding-box centre, the same plane `preview_hard_zoom.png`
+uses. A concavity the plane misses — an off-centre pocket, a bore parallel to Y
+away from the mid-plane — stays hidden, so the panel can prove a feature is
+present but never that one is absent. Rotate the component into that plane in
+its local frame, or check it another way, before concluding it isn't there.
 
 `bench2 preview` runs the same render automatically when `build()` returns a
 named assembly; single-part families are unaffected. Component order and image
@@ -294,7 +302,7 @@ A complete runnable example — three semantic components, a repeated
 `bolt_01`/`bolt_02` pair, a nested and rotated sub-assembly — lives in
 [`docs/examples/preview_parts_demo/`](examples/preview_parts_demo/) with the
 grouped, [per-instance](examples/preview_parts_demo/preview_parts_per_instance.png),
-and [transparent](examples/preview_parts_demo/preview_parts_transparent.png)
+and [opaque](examples/preview_parts_demo/preview_parts_opaque.png)
 artifacts committed (a framework test keeps it runnable). The grouped default
 looks like this:
 

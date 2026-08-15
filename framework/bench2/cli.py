@@ -1,6 +1,7 @@
 """bench2 — the BenchCAD 2.0 contributor CLI.
 
     bench2 new <family>            scaffold designs/<family>/ from the template
+    bench2 edit <family>           open part.py in CQ-editor (live 3D; F5 renders)
     bench2 validate <family>       run every machine gate locally (same as CI)
     bench2 preview <family>        render a difficulty x seed grid PNG
     bench2 preview-parts <family>  render assembly components + highlight rows
@@ -178,14 +179,15 @@ def cmd_preview(family: str, per_diff: int) -> int:
     return 0
 
 
-def cmd_preview_parts(family: str, per_instance: bool, transparent: bool) -> int:
+def cmd_preview_parts(family: str, per_instance: bool, opaque: bool) -> int:
     from .preview_parts import build_preview_parts
 
     fam_dir = _designs_root() / family
     if not fam_dir.is_dir():
         sys.exit(f"bench2: designs/{family}/ not found")
     try:
-        out = build_preview_parts(fam_dir, per_instance=per_instance, transparent=transparent)
+        out = build_preview_parts(fam_dir, per_instance=per_instance,
+                                  transparent=not opaque)
     except (ValueError, RuntimeError) as e:
         sys.exit(f"bench2: preview-parts: {e}")
     print(f"assembly components + highlights → {out}")
@@ -209,6 +211,16 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p_new = sub.add_parser("new", help="scaffold a new family")
     p_new.add_argument("family")
+    p_edit = sub.add_parser("edit", help="open a family's part.py in CQ-editor (live 3D)")
+    p_edit.add_argument("family", nargs="?", help="family name (designs/<family>/part.py)")
+    p_edit.add_argument("set", nargs="*", metavar="k=v",
+                        help="override sampled parameters, e.g. outer_d=80")
+    p_edit.add_argument("--file", help="open this part.py instead of a family name")
+    p_edit.add_argument("--diff", default="medium", choices=["easy", "medium", "hard"],
+                        help="difficulty tier to sample the preview instance from")
+    p_edit.add_argument("--seed", type=int, default=0, help="sampling seed (default 0)")
+    p_edit.add_argument("--strip", action="store_true",
+                        help="only remove a leftover scratch block, don't open the editor")
     p_val = sub.add_parser("validate", help="run all machine gates")
     p_val.add_argument("family")
     p_val.add_argument("--seeds", type=int, default=4, help="seeds per difficulty (default 4)")
@@ -228,19 +240,29 @@ def main() -> None:
         help="one highlight row per instance (bolt_01, bolt_02) instead of per component",
     )
     p_parts.add_argument(
+        "--opaque",
+        action="store_true",
+        help="keep the non-highlighted components solid instead of ghosting them "
+             "(the highlight rows ghost them by default, so internal parts stay visible)",
+    )
+    p_parts.add_argument(
         "--transparent",
         action="store_true",
-        help="ghost the non-highlighted components (see-through) so internal parts stay visible",
+        help="no-op: ghosting is the default. Kept so older commands still run.",
     )
     sub.add_parser("status", help="regenerate docs/STATUS.md")
     a = ap.parse_args()
     if a.cmd == "new":
         sys.exit(cmd_new(a.family))
+    if a.cmd == "edit":
+        from .edit import cmd_edit
+
+        sys.exit(cmd_edit(a.family, a.file, a.diff, a.seed, a.set, a.strip))
     if a.cmd == "validate":
         sys.exit(cmd_validate(a.family, a.seeds, a.fast))
     if a.cmd == "preview":
         sys.exit(cmd_preview(a.family, a.per_diff))
     if a.cmd == "preview-parts":
-        sys.exit(cmd_preview_parts(a.family, a.per_instance, a.transparent))
+        sys.exit(cmd_preview_parts(a.family, a.per_instance, a.opaque))
     if a.cmd == "status":
         sys.exit(cmd_status())
