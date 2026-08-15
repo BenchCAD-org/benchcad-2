@@ -194,17 +194,42 @@ def _build_center_wedge(
     )
     wedge = wedge.cut(through_hole)
 
-    head_h = 0.45 * d
-    head_protrusion = 0.35 * head_h
-    recess_depth = head_h - head_protrusion
-    bearing_z = top_z - recess_depth
+    hf = _head_fits(d, h1, h2)
     head_recess = (
         cq.Workplane("XY")
-        .workplane(offset=bearing_z)
-        .circle((head_d + 2.0 * clearance) / 2.0)
-        .extrude(recess_depth + 0.1)
+        .workplane(offset=hf["bearing_z"])
+        .circle((hf["head_d"] + 2.0 * clearance) / 2.0)
+        .extrude(hf["recess_depth"] + 0.1)
     )
     return wedge.cut(head_recess)
+
+
+def _head_fits(d, h1, h2):
+    """Where the screw head sits, in ONE place.
+
+    The wedge's counterbore and the screw's head were computed independently
+    from the same proportions, which is how they drifted: the head stood
+    `head_protrusion` PROUD of the wedge's top face. On the catalog part the
+    head is sunk into its counterbore — the top of the clamp is a flat face with
+    a recess in it, not a face with a boss sticking out of it — so the head top
+    now sits `head_sink` BELOW top_z and the counterbore is cut deep enough to
+    take it.
+    """
+    top_z = h1 + h2
+    head_d = 1.35 * d
+    head_h = 0.45 * d
+    head_sink = 0.15 * head_h          # how far the head is recessed (proportion)
+    head_top = top_z - head_sink
+    bearing_z = head_top - head_h
+    return {
+        "top_z": top_z,
+        "head_d": head_d,
+        "head_h": head_h,
+        "head_sink": head_sink,
+        "head_top": head_top,
+        "bearing_z": bearing_z,
+        "recess_depth": top_z - bearing_z,   # counterbore depth in the wedge
+    }
 
 
 def _coarse_thread_pitch(d):
@@ -243,12 +268,9 @@ def _external_thread(d, pitch, z0, z1):
 
 
 def _build_screw(d, h1, h2, screw_projection):
-    top_z = h1 + h2
-    head_d = 1.35 * d
-    head_h = 0.45 * d
-    head_protrusion = 0.35 * head_h
-    recess_depth = head_h - head_protrusion
-    bearing_z = top_z - recess_depth
+    hf = _head_fits(d, h1, h2)
+    head_d, head_h = hf["head_d"], hf["head_h"]
+    bearing_z = hf["bearing_z"]
     shank_top = bearing_z + 0.2
     pitch = _coarse_thread_pitch(d)
     root_r = d / 2.0 - 0.54 * pitch
@@ -291,7 +313,7 @@ def _build_screw(d, h1, h2, screw_projection):
     #    specified across FLATS (the key size). Feeding the flats figure
     #    straight in made the socket cos30 too small — 4.30 mm across flats on
     #    an M8 where DIN 7984's key is 5.
-    head_top = bearing_z + head_h
+    head_top = hf["head_top"]
     socket_across_flats = 0.62 * d
     socket_depth = 0.6 * head_h          # engagement, well clear of the shank
     socket = (
