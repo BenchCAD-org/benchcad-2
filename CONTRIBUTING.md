@@ -38,6 +38,7 @@ default, and it is not a benchmark metric just because it produces a number.
 uv sync
 uv run bench2 new <family>
 # fill designs/<family>/{part.py,spec.py,family.json}
+uv run bench2 edit <family>        # optional: live 3D editing (CQ-editor, F5) — docs/DEBUGGING.md
 uv run bench2 validate <family>
 uv run bench2 preview <family>     # inspect every generated view yourself
 # assembly family: preview also renders preview_parts.png
