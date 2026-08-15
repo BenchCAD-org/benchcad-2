@@ -82,19 +82,20 @@ def _free_names(code_text: str) -> set[str]:
     return loaded - bound - _BUILTINS
 
 
-def _collect(name, part, acc, seen):
+def _collect(name, namespace, acc, seen):
     """Recursively gather what a free `name` needs to become stand-alone."""
     if name in seen or name in acc["params"]:
         return
     seen.add(name)
-    val = getattr(part, name, None)
+    val = getattr(namespace, name, None)
     if inspect.ismodule(val):
         acc["imports"][name] = val.__name__
     elif inspect.isfunction(val):
         fsrc = textwrap.dedent(inspect.getsource(val)).rstrip()
         acc["funcs"][name] = fsrc
+        owner = inspect.getmodule(val) or namespace
         for dep in _free_names(fsrc):
-            _collect(dep, part, acc, seen)
+            _collect(dep, owner, acc, seen)
     elif val is not None:  # a module-level constant (table/number/str)
         acc["consts"][name] = f"{name} = {val!r}"
     # else: unknown free name (bound elsewhere in the body, or a builtin miss)
