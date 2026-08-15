@@ -1,5 +1,7 @@
 """JW Winco GN 920.1 double-wedge clamp as a static catalog assembly."""
 
+import math
+
 import cadquery as cq
 
 
@@ -278,14 +280,25 @@ def _build_screw(d, h1, h2, screw_projection):
     screw = thread_core.union(thread_ridge).union(smooth_shank).union(head)
 
     # DIN 7984 is the catalog callout; exact socket dimensions are not printed
-    # there, so this hex recess is an explicit visual proportion.
-    socket_d = 0.62 * d
-    socket_depth = 0.22 * d
+    # there, so the hex recess is an explicit visual proportion. Two things it
+    # has to get right, and previously did not:
+    #
+    #  * it must be cut from the HEAD's top face. The head stands
+    #    `head_protrusion` proud of top_z, so cutting from top_z left the recess
+    #    buried ~1.25 mm inside the head on M8 — an enclosed hexagonal void
+    #    rather than a drive, which is why no socket showed in any view.
+    #  * cq's `polygon(n, D)` takes D ACROSS CORNERS, but a hex drive is
+    #    specified across FLATS (the key size). Feeding the flats figure
+    #    straight in made the socket cos30 too small — 4.30 mm across flats on
+    #    an M8 where DIN 7984's key is 5.
+    head_top = bearing_z + head_h
+    socket_across_flats = 0.62 * d
+    socket_depth = 0.6 * head_h          # engagement, well clear of the shank
     socket = (
         cq.Workplane("XY")
-        .workplane(offset=top_z + 0.01)
-        .polygon(6, socket_d)
-        .extrude(-socket_depth)
+        .workplane(offset=head_top + 0.01)
+        .polygon(6, socket_across_flats / math.cos(math.radians(30.0)))
+        .extrude(-(socket_depth + 0.01))
     )
     return screw.cut(socket)
 
