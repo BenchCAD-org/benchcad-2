@@ -262,9 +262,15 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
     # so every row shows the identical pose and scale
     shared = _normalized([verts for verts, _ in world_meshes])
     posed = list(zip(shared, [tris for _, tris in world_meshes]))
-    assembly_actors = [(verts, tris, render.TEAL_STYLE) for verts, tris in posed]
-    rows.append([render.render_actors(assembly_actors, front=f) for f in render.BENCH_FRONTS])
-    labels.append(f"assembly overview\nhard / seed 0\n{param_caption(spec, p)}")
+    # ghosting reaches the OVERVIEW too, not just the highlight rows -- opaque,
+    # the overview of anything with a housing is a featureless can
+    overview_style = render.TEAL_GHOST_STYLE if transparent else render.TEAL_STYLE
+    assembly_actors = [(verts, tris, overview_style) for verts, tris in posed]
+    rows.append([render.render_actors(assembly_actors, front=f)
+                 for f in render.BENCH_FRONTS])
+    labels.append(f"assembly overview\nhard / seed 0"
+                  + ("\n(see-through)" if transparent else "")
+                  + f"\n{param_caption(spec, p)}")
 
     if per_instance:
         highlight_rows = [
@@ -284,7 +290,8 @@ def build_preview_parts(fam_dir: Path, per_instance: bool = False,
             (verts, tris, render.HIGHLIGHT_STYLE if i in indices else other_style)
             for i, (verts, tris) in enumerate(posed)
         ]
-        rows.append([render.render_actors(actors, front=f) for f in render.BENCH_FRONTS])
+        rows.append([render.render_actors(actors, front=f)
+                     for f in render.BENCH_FRONTS])
         labels.append(f"{row_no}. {label} highlighted\n{detail}\n{others_note}")
 
     render.compose_grid(rows, labels, out)

@@ -14,7 +14,26 @@ import numpy as np
 
 ISO_FRONT = (-1.0, -1.0, -1.0)  # classic above-front iso octant
 # the benchmark's four diagonal cameras (matches BenchCAD-main scoring/views.py)
-BENCH_FRONTS = [(1.0, 1.0, 1.0), (-1.0, -1.0, -1.0), (-1.0, 1.0, -1.0), (1.0, -1.0, 1.0)]
+# CAMERA_DISTANCE below is NEGATIVE, so `front` is the direction the camera is
+# negated FROM: eye = focal + front * -0.9. A "front" of (1,1,1) is a camera in
+# the (-1,-1,-1) octant. Getting this backwards is what put benchcad-main's
+# CodeGen prompt labels 180 deg out of step with its own renderer
+# (BenchCAD/BenchCAD-main PR #1), so every view set here is written as the
+# CAMERA position and negated once, at the definition.
+#
+# The four scored cameras are the vertices of a REGULAR TETRAHEDRON. All six
+# pairwise angles are 109.47 deg, which is the Tammes optimum for four points on
+# a sphere -- no other four directions separate better.
+#
+# They replace (-1,-1,-1), (1,1,1), (1,-1,1), (-1,1,-1), which were two
+# antipodal pairs, all satisfied x == z (rank 2, four points on ONE great
+# circle) and were closed under a y-mirror -- so on a part that is mirror-
+# symmetric about its own XZ plane, most hardware, all four collapsed to two
+# distinct aspects. The tetrahedron is rank 3 and no axis mirror maps it onto
+# itself, so four views really are four.
+BENCH_CAMERAS = [(1.0, 1.0, 1.0), (-1.0, 1.0, -1.0),
+                 (-1.0, -1.0, 1.0), (1.0, -1.0, -1.0)]
+BENCH_FRONTS = [tuple(-c for c in cam) for cam in BENCH_CAMERAS]
 LOOKAT = np.array([0.5, 0.5, 0.5], dtype=np.float64)
 CAMERA_DISTANCE = -0.9
 TEAL01 = (110 / 255, 195 / 255, 192 / 255)
@@ -96,6 +115,13 @@ TEAL_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.6, 0.3, 0.7, 1.0)
 HIGHLIGHT_STYLE = ((0.83, 0.15, 0.16), (0.40, 0.04, 0.05), 1.8, 0.3, 0.7, 1.0)
 DIMMED_STYLE = ((0.80, 0.80, 0.82), (0.46, 0.46, 0.48), 1.0, 0.55, 0.45, 1.0)
 GHOST_STYLE = ((0.72, 0.74, 0.76), (0.58, 0.60, 0.62), 0.8, 0.6, 0.35, 0.22)
+# the assembly OVERVIEW rendered see-through: the same teal identity, but the
+# outer bodies stop hiding everything inside them.  A gearbox's overview is
+# otherwise a featureless can -- a planetary set's sun, planets, ring and
+# carrier all sit behind the housing, so the one row whose job is to show the
+# assembly showed the least of any row on the sheet.  Edges stay near full
+# strength so the silhouette still reads.
+TEAL_GHOST_STYLE = (TEAL01, (0.12, 0.12, 0.12), 1.4, 0.35, 0.65, 0.28)
 
 
 def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
@@ -251,10 +277,14 @@ def render_bench_views(verts, tris, img_size: int = 320):
     return [render_iso(verts, tris, img_size, front=f) for f in BENCH_FRONTS]
 
 
-# front / side / top / iso for a human three-view. `up` is hard-coded (0,0,1), so
-# a pure top front=(0,0,1) collapses the camera basis; the top view uses a small
-# forward tilt instead (a near-plan view).
-THREE_VIEW_FRONTS = [(0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (0.0, -0.12, 1.0), (1.0, -1.0, 1.0)]
+# front / side / top / iso for a human three-view, again written as CAMERA
+# positions. Written as fronts they were negated on the way to the camera, which
+# put the panel labelled "top" at z = -1 -- a BOTTOM view under a top label, and
+# the iso below the part too. `up` is hard-coded (0,0,1), so a camera straight
+# overhead collapses the basis; the top view keeps a small tilt (a near-plan).
+THREE_VIEW_CAMERAS = [(0.0, -1.0, 0.0), (1.0, 0.0, 0.0),
+                      (0.0, -0.12, 1.0), (1.0, -1.0, 1.0)]
+THREE_VIEW_FRONTS = [tuple(-c for c in cam) for cam in THREE_VIEW_CAMERAS]
 
 
 def step_cutaway_mesh(step_path: Path):
