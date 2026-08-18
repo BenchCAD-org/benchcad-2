@@ -18,9 +18,6 @@ import json
 from datetime import date
 from pathlib import Path
 
-TARGET = 150
-
-
 def generate(root: Path) -> str:
     designs = sorted(
         d.name for d in (root / "designs").iterdir()
@@ -50,9 +47,6 @@ def generate(root: Path) -> str:
     n_ref = sum(1 for n in designs if n.startswith("example_"))
     n_real = len(designs) - n_ref
     n_qual = sum(1 for n in designs if stage(n) in ("QUALIFIED", "RELEASED"))
-    filled = round(20 * n_real / TARGET)
-    bar = "█" * filled + "░" * (20 - filled)
-
     lines = [
         "# Status",
         "",
@@ -60,7 +54,7 @@ def generate(root: Path) -> str:
         "GENERATED → QUALIFIED/NEEDS_WORK → RELEASED (see CONTRIBUTING.md rule 4). "
         "In-progress work = the [open PRs](../../../pulls).*",
         "",
-        f"**{n_real} / {TARGET} families merged** `{bar}` "
+        f"**{n_real} families merged** "
         f"(+{n_ref} reference) · {n_qual} release-qualified · updated {date.today()}",
         "",
         "| Family | Owner | Standard | Instances | Frontier IoU | Stage |",

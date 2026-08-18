@@ -1,7 +1,7 @@
 # BenchCAD 2.0 — Agent Guide
 
 Guide for AI agents and humans contributing to BenchCAD 2.0. This repository
-targets **150 industrial part families**.
+is built from **explicit parametric part families**.
 
 Scope, before you build anything: this is the **data pipeline** for those
 families, not an evaluation or scoring pipeline. A metric may live here only as
