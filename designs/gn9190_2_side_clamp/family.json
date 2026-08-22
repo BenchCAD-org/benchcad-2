@@ -1,0 +1,16 @@
+{
+  "family": "gn9190_2_side_clamp",
+  "standard": "Ganter GN 9190.2",
+  "base_plane": "XY",
+  "description": "Steel side clamp with stepped housing, pivoted jaw, support, coded clamping screw, and operating end.",
+  "source": "Ganter GN 9190.2 catalog drawing and supplied 9190.2-10-M8-E-G.step reference",
+  "contributor": "JiusongZhou7",
+  "solids": 5,
+  "components": [
+    {"name": "steel_body", "quantity": 1},
+    {"name": "pivoted_jaw", "quantity": 1},
+    {"name": "support_block", "quantity": 1},
+    {"name": "clamping_screw", "quantity": 1},
+    {"name": "operating_end", "quantity": 1}
+  ]
+}
