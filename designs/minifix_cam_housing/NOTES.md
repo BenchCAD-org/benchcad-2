@@ -1,246 +1,181 @@
-# Minifix 15 geometry notes
+# Minifix cam housing: reference-based reconstruction
 
-## Evidence scope
+## Evidence and identity
 
-The seven installation rows come from Häfele UK catalogues `14CFC294.pdf`
-and `14CFC295.pdf`, pp. 294--295. The CAD-calibrated reference is Häfele
-item **262.25.035**, `Cas. Minifix 15R/19`, downloaded as STEP AP214 from the
-[Häfele Minifix 15 product page](https://www.hafele.com/us/en/product/connector-housing-minifix-15/P-00861332/)
-on 2026-07-23.
+This revision replaces the stored contour stack with analytic CadQuery features.
+It addresses [issue #25](https://github.com/BenchCAD-org/benchcad-2/issues/25),
+which was previously closed through PR #34 and subsequently patched in PR #223.
 
-The STEP carries two transfer roots. Root 1 is a 27-face CADClick artefact
-with zero volume; root 2 is the 342-face manufacturer solid (163 planes,
-147 cylinders, 21 cones, 11 tori; no free-form surfaces). Root 2 was audited
-locally by a full face census plus planar cross-sections at 21 axial stations;
-the closed contours of those sections are the radial master profiles stored in
-`part.py`. `build()` performs no file I/O and no OEM STEP, BREP, mesh, or
-encoded topology ships in the family.
+The geometry reference was supplied by the user as `minifiks kilidi.SLDPRT`.
+Its SHA-256 is
+`1dc6a51a00041a4bc87b38df3100b314283cc55bad1f359ca402a4d8329f3e37`.
+The preceding search identified the same filename on
+[GrabCAD: minifix lock](https://grabcad.com/library/minifix-lock-1).
+The file's manufacturer and catalogue SKU are **not verified**. It is not
+described here as original Hafele CAD. The original family credit is retained.
 
-## Why a contour stack
+The reference was inspected in SOLIDWORKS 2023 SP5 (31.5.0) on 2026-09-10.
+It contains an imported base body and a subsequent 0.2 mm marking cut;
+there is no recoverable feature history for its main body. A STEP copy was
+exported with the original native path unchanged. The exported solid has
+318 faces, one valid solid and volume 707.428651 mm3. No source BREP, STEP,
+SLDPRT, mesh or sampled contour data is embedded in `part.py`.
 
-An earlier draft built the body from concept primitives (an eccentric cam
-*ring*, a thin shell, rectangular windows and rails). Cross-sectioning the OEM
-solid showed that draft was topologically wrong: at the bolt plane the OEM cam
-is a *solid eccentric lobe* (not a ring), the cage wall is thick and joined to
-the cam by webs, the radial mouth has a shaped lip, the top carries *two*
-rotation arrows, and the bottom is a splayed fork. The OEM solid is itself a
-stack of flat-z extrusions (its plane census is a ladder of horizontal faces),
-so the faithful and robust reconstruction is a **stack of constant-section
-prisms whose outer sections are the manufacturer's own cross-sections**,
-resampled to closed polylines. The outer silhouette, the cam lobe, the thick
-walls, the webs, the mouth lip, the two arrows and the splayed fork are baked
-into the stored contours; only a few inner loops / sharp corners at complex
-sections are simplified by the chainer (see the fidelity table below).
+Installation dimensions were rechecked against the actual PDF pages:
 
-## Baseline measurements (OEM root 2)
+- [Hafele UK 2014 catalogue p. 294, unrimmed](https://files.hafele.co.uk/catalogfiles/www/14CFC294.pdf)
+- [Hafele UK 2014 catalogue p. 295, rimmed](https://files.hafele.co.uk/catalogfiles/www/14CFC295.pdf)
+- [Original issue's product anchor](https://www.hafele.com/us/en/product/connector-housing-minifix-15/P-00861332/)
 
-| Landmark | OEM root 2 | Catalogue nominal |
-|---|---:|---:|
-| Bounding box | 16.30 x 16.30 x 14.65 mm | -- |
-| Housing casting OD | 14.90 mm | 15 mm drill hole |
-| Seating rim OD | 16.30 mm | 16.5 mm |
-| Seating rim projection | 0.80 mm | 1.0 mm |
-| Casting end | 13.85 mm from seating plane | X = 14.5 mm |
-| Bolt-axis datum | 9.50 mm | A = 9.5 mm |
-| Eccentric cam outer | R4.400 mm at (1.98, -0.43) | -- |
-| Eccentric cam inner | R3.787 mm at (1.53, -0.99) | -- |
-| Hook inner face (seat) | y = 3.50 at A (=> Ø7 option CAD) | -- |
-| OEM solid volume | 801.707894 mm3 | -- |
+## Catalogue rows and units
 
-## Parametric story
+All lengths below are millimetres. X is the panel **bore depth**, not a binding
+casting dimension. The table specifies a 15 mm housing bore for every row.
+The edge bore for a mating bolt is 7 or 8 mm according to the selected bolt.
+That panel hole is not the diameter of the head or neck inside the cam.
+Consequently it does not drive an arbitrary cut through this part.
 
-Every catalogue row is a Ø15 housing, so the **radial** master profiles are
-constant across the family. The **axial** layout is the honest parametric axis,
-built as three *rigid* blocks joined by two *compressible* straight-wall necks:
-the top drive cup (sections <= 2.715) is fixed at the seating plane, the
-cam/mouth hook block (6.6..11.2) is translated rigidly by `A - 9.5` so its
-proportions stay identical to the OEM at every row (the translation preserves
-the OEM's own hook/bolt-axis offset, so the 19 mm baseline is the identity), and
-the bottom fork (>= 12.85) is translated rigidly to the casting end `X - 0.65`;
-only the two necks (drive-cup-to-hook and hook-to-fork) stretch or compress to
-absorb the drilling depth -- the physically correct degree of freedom, which
-keeps the hook from being elongated on long rows or squashed on short ones. For
-rim-less rows the OEM z=0 section (the rim disc) is unavailable, so the valid
-0.8 cage section is held up to the seating plane, giving a flush rim-less top.
-The radial shape is unaffected by this map.
+| Index | Example article | Panel t | Axis A | Bore X | Rim diameter x height |
+|---|---|---:|---:|---:|---|
+| 0 | 262.25.070 | 12 | 6 | 9.5 | 16.5 x 1 |
+| 1 | 262.26.032 | 15 | 7.5 | 12 | none |
+| 2 | 262.25.212 | 16 | 8 | 12.5 | 16.5 x 1 |
+| 3 | 262.25.221 | 19 | 9.5 | 14.5 | 16.5 x 1 |
+| 4 | 262.25.669 | 23 | 11.5 | 16.5 | 16.5 x 1 |
+| 5 | 262.26.291 | 29 | 14.5 | 19.5 | none |
+| 6 | 262.25.081 | 34 | 17 | 22.5 | 16.5 x 1 |
+| 7 | 262.26.034 | 18 | 9 | 13.5 | none |
 
-The OEM CAD exists for a single connecting-bolt option (the hook inner face at
-`A` measures 3.50 mm, i.e. the Ø7 head). `bolt_hole_diameter` therefore trims a
-parametric head-clearance on the hook inner face (head radius + 0.3 mm): the Ø7
-option clears the baked edge, the Ø8 option trims a little more. This is the
-honest proportion rule for the option without CAD, and it keeps the two
-catalogue bolt-hole values geometrically distinct.
+Rows 0-6 retain the issue's indices. Row 7 is added because the supplied
+unrimmed model has casting height 13.5 and top-to-slot-axis distance 9.0.
+Those dimensions match this **installation row**; they do not establish its SKU.
+The page-295 prose mentions 29 mm in one heading while its order table lists
+23 mm; this family follows the explicit 23 / 11.5 / 16.5 order-table row.
 
-## Verification of item 262.25.035
+Two independent endpoint spot-checks: row 0 has `A=12/2=6`, `t-X=2.5`,
+`X-A=3.5`; row 6 has `A=34/2=17`, `t-X=11.5`, `X-A=5.5`.
+The source specifies X +/-0.2 on row 0 and X +0.5 on the other selected rows.
+The catalogue calls its dimensions non-binding nominal data.
 
-| Metric | OEM root 2 | Parametric Ø8 | Difference |
-|---|---:|---:|---:|
-| Bounding box X | 16.300000 mm | 16.180 mm | -0.120 mm |
-| Bounding box Y | 16.300000 mm | 16.240 mm | -0.060 mm |
-| Bounding box Z | 14.650000 mm | 14.650000 mm | < 0.000001 mm |
-| Solid count | 1 | 1 | 0 |
-| Volume | 801.707894 mm3 | 910.35 mm3 | +108.6 mm3 (+13.5%) |
-| 3D sym-diff vs OEM | 0 | 19.00% | -- |
+## Datum and feature mapping
 
-The Ø7 baseline measures sym-diff ~17.5% (the OEM CAD is the Ø7 option, so the
-Ø7 row is the closest match). Bounding box Z is exact; X/Y undershoot the OEM's
-torus-lipped rim (R8.14) because the stored rim is a 48-gon at R7.94. The volume
-now *over*-shoots OEM because the z=0..2 cage-top band (the clean R7.45 circle)
-is a near-solid disc where the OEM has the open drive recess / window / mouth
-openings -- that over-build is the dominant remaining residual (see below) and
-is why volume is only a mass-property check, not a fidelity claim. The 3D
-sym-diff is the primary fidelity metric.
+The output seating face is z=0. The casting occupies `-housing_height..0`;
+an optional rim occupies `0..rim_height`. The bolt axis is at
+`z=-bolt_axis_height`. The reference's original bottom datum was z=0 with
+its top at z=13.5; subtract 13.5 from its Z coordinates to compare the two.
 
-## 3D sym-diff oracle progress (analytic/hybrid rebuild in progress)
+Inside `build()`, features are constructed from the bottom up and translated
+to the seating datum once at the end. Let `H=housing_height`, `A=bolt_axis_height`
+and `c=H-A`:
 
-The un-gameable shape metric is the 3-D symmetric volume difference vs the OEM
-BREP (`sym = vol(mine)+vol(oem)-2*vol(BRepAlgoAPI_Common)`, as % of vol(oem)),
-measured in the OEM frame (the build's display rotation undone). Each geometric
-change was prototyped in-memory and only written when it strictly lowered this
-metric while keeping one solid and exact bbox Z.
+| Physical feature | Reference / formula in the build | Evidence |
+|---|---|---|
+| Casting outside diameter | 14.8; R7.4 cylindrical surface | native measurement |
+| Model height H | nominal bore X | proportion anchored by reference H=13.5=X |
+| Cam slot centre | c; 4.5 at baseline | reference R1.5 cylinder at z=4.5 |
+| Closed end of radial slot | x=2.1, radius `neck_slot_width/2` | reference cylindrical face |
+| Bolt-head bowl | sphere R3 at (0,0,c), reduced to c-0.7 for shortest row | spherical fit / proportion |
+| Upper jaw / rib start | c+2.583 | reference plane z=7.082962 |
+| Top cap underside | H-0.8 | reference plane z=12.7 |
+| X-directed straight web | y=-1..0; 1 mm nominal thickness | reference y=-1 and y=0 planes |
+| Y-directed straight web | x=3.705..4.4; thickness 0.695 | measured reference planes |
+| Drive cup start | c+3.2 | reference front underside z=7.7 |
+| Drive cup outline | R2.8 core, full Y arm and front half of X arm; 2.8-wide arms reaching 4.4, end radii 1 | cylindrical/planar face census and XY section at z=9 |
+| Blind cross drive | R2 core, 1.2-wide arms reaching 3.6 | reference R2 and y=+/-0.6 walls |
+| Cast edge / root blends | R0.25 at jaw edges, cage windows, web ends, cup underside, drive mouth and floor | reference cylindrical blend faces, e.g. 13-27, 121-125, 172-193, 194-214 and 256-264 |
+| Jaw-tip inner flanks | right x=5.4785+0.491y; left x=-5.1517-0.109y, clipped by R7.4 | rounded measurements from reference planes 235 and 130/223 |
+| Drive floor | 0.8 above cup start; depth A-4 | reference floor z=8.5; cross-row proportion |
+| Direction markings | clockwise from +Z; R6.5 / R5.38 arcs, 0.6 shoulders, 140-degree tail; recessed 0.2 | exact native Sketch1 / Cut-Extrude1 pocket boundaries |
+| Optional flange | supplied rim diameter / height | catalogue p. 295; absent from native reference |
 
-| Step | Change | sym-diff |
-|---|---|---:|
-| contour stack (committed baseline) | 21 OEM sections, rigid-block axial map | 46.05% |
-| hold cage section at seating plane | z=0.0 was the rim disc (R~8.1) extruded up to z=0.8 where the OEM has the R7.45 cage; hold the z=0.8 cage section at z=0..0.8 for every row | 30.58% |
-| hold rim section at rim bottom | z=-0.8 contour was a chainer artefact at R~3.9; hold the z=-0.5 rim section (R~7.94) down to the rim bottom | 28.49% |
-| clean cage-top outer circle | z=0.8 outer was a chainer artefact (cam-pocket/drive merged into the outer C, +x concavity) -- replace with a clean R7.45 circle, keeping holes; makes the rim-less top circular | 19.00% |
-| raised top direction marks | four raised triangular wedges at the cardinal points (R~3.6, 0.3 mm out) embossed on the cage-top face, restoring the OEM's raised rotation arrows / triangles (the chainer had baked them as concavities = recessed; the circle step removed them) | 19.01% |
+The two support ribs follow the Cartesian X and Y directions. The Y rib is
+offset to x=3.7053369..4.4; neither rib is generated by a polar pattern or aimed
+at the cylinder centre. Straight web solids define the material retained between
+window cutters; the cylinder trims their ends. Rounding the window cutters gives
+continuous R0.25 roots at both the jaw roof and cap. Exposed web ends, cap
+underside and cup underside are then filleted by their geometric locations.
+The back of the X web meets the R2.8 cup directly, with R0.25 junctions;
+the horizontal cup arm does not project behind the web's y=-thickness face.
 
-A per-z-band hotspot map (1 mm slabs) drives the next target. At 19.00% the
-residual is almost entirely the z=0..2 band (the cage-top over-builds the OEM's
-open drive recess / window / mouth openings): z=0.2 = 72 mm3 over, z=1.2 = 82
-mm3 over. The central drive-recess opening IS captured (the z=0.8 section's
-offset hole covers the centre, and mine(0,0)=0 matches OEM(0,0)=0 there), so
-the over-build is the cage-wall *ring* (R3.5..7.45) where the OEM has the PZ2
-drive lobes, the radial mouth, and the cage windows -- openings whose azimuths
-vary with z (4 drive lobes at the top, 3 webs / 3 windows mid-body). The other
-bands sum to ~0 (the contour stack's C-shape sections match the open cage
-mid-body).
+The left jaw-tip slot edges follow `c +/- neck_slot_width/2`, keeping them
+flush with the slot through the exploratory width range. At baseline the lower
+tip starts at c-2.5 and the upper tip extends to the modeled roof. The right tip
+is 1.5 high. Jaw tips are merged before edge filleting to avoid artificial seams.
+Drive-mouth and drive-floor blends are R0.25; the top external circle and the
+0.2-deep markings retain their reference sharp boundaries. An optional catalogue
+rim has no supplied shape reference and is modeled with sharp outer edges.
 
-### Rejected patches (oracle-gated, not merged)
+`rim_diameter` and `rim_height` now both affect actual geometry.
+`body_diameter` now means casting diameter; `housing_bore_diameter` separately
+records the required 15 mm panel bore. The 0.2 mm diametral difference is a
+reference observation, not a prescribed production tolerance.
 
-### Rejected patches (oracle-gated, not merged)
+## Variation and constraints
 
-Cheap add/remove patches were all prototyped in-memory and rejected or neutral:
-- analytic rim flange (R8.15 annulus + torus lip, fused): +0.07 to +1.15 (the
-  contour rim already overlaps OEM; added material lands outside or in filled
-  space).
-- drive-recess deepen (cut a wider/deeper R3.6 cone/cylinder at z=0..2.2):
-  +4.0 to +5.2, and at the 19% baseline a central R3.597 drive cut (straddling
-  the top face, stopping before the z=2.0 boundary) is +3.2 to +3.6 or
-  degenerate (+190 / +209 when the cutter reaches the z=2.0 boundary, whose
-  contour bakes the drive feature, or coincides with the z=0.8 offset hole
-  which already covers the centre). A probe confirms mine(0,0)=0 = OEM(0,0)=0
-  in z=0..2, so the central drive opening is already captured and a central
-  cut is disjoint/degenerate -- the over-build is the ring, not the centre.
-- extending the clean R7.45 circle to z>=2.0 stations: +1.6 to +25 (those
-  contours correctly bake the drive/cam features the circle would lose).
-- holding the z=2.0/2.715/3.685/4.5 outer at z=0.8 to restore the windows:
-  neutral (0.00) or worse -- their +x cam bump is wrong at the cage-top and
-  their window azimuths do not match the z=0..2 openings.
-- full and partial-azimuth cam lobes (eccentric R4.40 cylinder, solid / half /
-  z-segmented): +1.2 to +35.5. The cam outer wall is a partial-azimuth patch
-  (face bbox xy[-2.42,-1.99]x[-0.52,3.19], a vertical strip on the -x side of
-  the cam circle), and the cam inner bore (R3.787, offset 0.718) pokes through
-  the outer wall (3.787+0.718 > 4.40) so the cam is an open C, not a closed
-  annulus; any full-ring add over-fills.
-- cam-inner bore cut (R3.787 hole) on the over-built cam contours: neutral
-  (-0.06) or degenerate (+166 at z=6.6, a coincident cut at the mouth).
-- a systematic section-replacement sweep (hold each other station's contour at
-  each station) found drops only by holding the small fork-tip contour (z=13.7)
-  at the cam/drive stations (-0.5 to -6.6). That is a size-matching over-fit,
-  not shape-matching: the cam/drive contours are over-built and the small
-  fork-tip contour trims the over-fill while rendering the cam region as a fork
-  tip. It is rejected as physically incoherent (volume-over-fit, which the
-  coherent-reconstruction principle forbids). Note the 3-D oracle rewards these
-  size matches, so the oracle must be gated on physical coherence too, not only
-  on the number.
+Easy uses the measured 18 mm baseline with no markings. Medium varies five
+installation rows and adds markings; hard includes all eight rows and the
+12 / 34 mm panel extremes. `web_thickness` varies 0.85-1.15 and
+`neck_slot_width` varies 2.8-3.2 in hard. Those are explicitly labelled
+exploratory proportions around measured 1.0 / 3.0 values, not catalogue options.
 
-The three merged fixes are all *section replacements* (reuse a measured contour
-or a clean analytic circle at a station whose stored contour is a chainer
-artefact), the same coherent class as the rigid-block axial map. The contour
-stack is at its coherent ceiling (~19%); the remaining residual is the z=0..2
-cage-top over-build (the PZ2 drive lobes + radial mouth + cage windows, whose
-azimuths vary with z, are not cut into the clean R7.45 ring). Robust OEM section
-extraction at z=0.8 failed (plane-section edges do not discretise via GCPnts;
-the slab has no horizontal cap because z=0.8 cuts drafted walls), so the next
-milestone needs an analytic open-cage window/mouth cut with z-varying azimuths
--- a multi-iteration effort that must stay oracle-gated.
+`check()` enforces complete catalogue rows, A=t/2, a minimum 2 mm panel floor,
+the X-A envelope 3.5-5.5, flange overhang, reference-based web/slot bounds,
+at least 1.8 mm lower jaw below the slot and at least 2.5 mm cage support
+between the jaw roof and the cap. These geometric margins are proportions;
+they are not presented as a load-rating standard. The blind-drive floor remains
+0.8 mm even on the tallest row. The result must always contain exactly one solid.
 
-### Section fidelity (chaining-free point-cloud Hausdorff, stored vs OEM)
+The build has no I/O, random numbers, exception suppression, skipped faces,
+substitute boxes, face census, polygon fitting or topology reconstruction.
+Helpers only construct ordinary analytic features from the named parameters.
 
-The stored contours reproduce the OEM **outer silhouette and topology** well, but
-a chain-free comparison (stored outer+hole points vs the union of *all* OEM
-section-edge points, so neither chaining nor prism-boundary artefacts flatter the
-result) shows the inner loops / sharp corners are not all captured. Directed
-distance OEM->stored ("OEM boundary not covered by the stored contour"):
+## Deliberate approximations
 
-| z | -0.8 | -0.5 | 0.0 | 0.8 | 2.0 | 2.7 | 3.7 | 4.5 | 5.3 | 6.6 | 7.3 | 8.0 | 9.5 | 11.2 | 12.85 | 13.3 | 13.7 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| mm | 0.27 | 0.47 | 0.58 | 0.63 | 1.43 | 0.46 | 1.02 | 0.50 | 2.99 | 1.28 | 0.53 | 0.24 | 0.22 | 0.25 | 0.56 | 0.58 | 0.84 |
+- Cross-SKU internal shapes are reference-based extrapolations. Only the
+  supplied unrimmed 18 mm installation baseline has a measured shape reference.
+- The jaw-tip inner flanks use measured planes and a cylindrical outer envelope;
+  the small draft slopes and spline transitions remain simplified. The upper
+  tip ends at the common modeled roof c+2.583 rather than the reference's c+2.5
+  front plane. Main cast blends are now R0.25, including the web roots, exposed
+  edges and blind-drive mouth/floor; these do not reproduce every imported
+  spline patch of the source.
+- The bolt-head bowl is a spherical approximation to the reference spline
+  surface. The cross drive is a measured geometric approximation, not a certified
+  ISO PZ2/PZ3 or SW4 tool profile. A separate SW4 hex socket is not claimed.
+- The marking outline is reconstructed analytically from the exact reference
+  pocket edges, including the right-hand clockwise tip and the separate
+  negative-Y pointer. Markings are omitted only in the easy tier.
+- The catalogue's installation tolerances and mechanical locking forces are
+  not simulated. Geometry validity and reference agreement do not establish
+  production interchangeability or a load rating.
 
-(The reverse direction, stored->OEM, is <= 0.98 mm everywhere, so the model
-invents no geometry far from the OEM.) 16 of 21 stations cover the OEM boundary
-within 0.63 mm. The residuals are at the drive-recess mid-depth (2.0, 3.7), the
-cam-hook inner loop (5.3, 6.6) and the foot tip (13.7): at these complex /
-tangent sections the endpoint-greedy edge chainer dropped an inner loop or a
-sharp corner (worst 2.99 mm at 5.3 = the eccentric cam-inner wall that the
-chainer merged into the outer C). The inter-plane drafts are also represented as
-held sections, so the curved side surfaces show **terracing** in the render.
-(An earlier linear axial map stretched the hook on long rows and squashed it on
-short ones; the rigid-block map removes that proportion distortion -- verified
-across easy / medium / hard and both extremes -- so terracing is now the only
-axial artefact.) These inner-feature simplifications plus the held-section
-approximation account for the -8.7% volume.
+## Verification record
 
-### Independent adversarial review
+Local verification compares all eight catalogue rows at the four combinations
+of hard web/slot limits, checks one valid solid and exact seating/envelope datums,
+and checks that deliberately wrong catalogue/geometry inputs are rejected.
+The normal `bench2 validate` and `bench2 preview` commands supply the repository
+gates and the four preview artifacts. Reference checks compare arrow/pointer
+pocket outlines, X/Y rib planes, blend radii, mass properties and side-by-side
+views in the same coordinate frame. Mass difference is not geometric overlap.
+Boolean intersection with the imported spline body did not provide a reliable
+valid common solid, so no 3D overlap percentage is claimed.
 
-A two-lens independent verification was run. The gates/derivation lens **PASS**ed:
-`validate` clean, derived programs ASCII + deterministic + mutually distinct,
-`build()` binds `result` with no module-scope-illegal return. The section-fidelity
-lens returned **FAIL** on a strict per-largest-ring metric that also sectioned the
-model exactly on the prism-boundary planes; that metric is partly a method
-artefact (it breaks whenever greedy chaining fragments a section -- it fragmented
-its *own* OEM side at 6.6 and 0.8 -- and a boundary-plane section returns a
-neighbour zone's held contour), and partly the real inner-loop drops above, which
-the chaining-free table quantifies. That lens's topology/aspect sub-checks passed
-(single solid, exact Z, cam lobe present at 9.5, two arrow holes at the top).
+The 2026-09-10 local checks passed all 32 row/web/slot boundary combinations,
+including exact Z envelopes and one valid solid, and rejected nine deliberately
+incorrect inputs. Arrow and pointer planar symmetric differences were both
+0 mm2 (maximum matched-vertex distance below 4e-14 mm). Four source/rebuilt
+web-plane checks confirmed the X/Y directions. Seven blend zones contained
+measured R0.25 cylinders in both models. The marked 18 mm baseline has volume
+716.909336 mm3 versus reference 707.428651 mm3 (+1.340%); remaining differences
+include the spherical seat approximation and the simplified cast draft/tips.
+The user approved proceeding to PR publication after the local preview review.
+The family package contains the four standard previews. Additional source
+overlays and explicit 12 / 34 mm catalogue endpoint views were used for local
+review and retained outside the submitted package, as the repository requires.
 
-Two remediation attempts were prototyped against an in-memory oracle and **not**
-merged: (a) a planar CCW half-edge face-walker with containment-depth nesting
-mis-nested loops and collapsed the body; (b) overlaying the analytic combination
-drive recess was based on two false premises -- the 5.3 gap is the cam-inner loop
-not the SW4 socket (the socket, z ~ 2--3.7, is already stored), and the carried-
-over PZ2 template mismatches this OEM's PZ2 by ~5 mm. Both were discarded, so the
-validated 21-station contour stack above is the shipped model.
-
-### Recommended path to close the residuals
-
-A correctly implemented planar face-walker -- build the half-edge graph from
-finely discretised section edges, walk faces by the "turn-most-clockwise" next
-rule, and classify outer/hole by **containment depth** (unbounded = 0 dropped,
-outer = 1, hole = 2, hole-interior = 3 dropped; this is orientation-free so the
-CCW/CW sign need not be right) -- would capture every inner loop and preserve
-every junction corner (closing 2.0/3.7/5.3/6.6/13.7) *and* make mid-draft
-sections chainable (enabling dense stations that remove the terracing). Any
-analytic overlay must first re-fit its template to the stored contour (do not
-reuse an un-fitted PZ2). Re-verify with the chaining-free point-cloud Hausdorff
-and an in-memory build sanity gate (single solid, sane volume, the hex/inner
-loops present) before writing to `part.py`.
-
-## Deliberate deviations
-
-- The manufacturer STEP has no recoverable feature tree. This is a new,
-  editable, section-anchored parametric reconstruction, not copied OEM topology.
-- Inter-plane die-cast draft, tiny blends, ejector marks and sub-millimetre edge
-  treatments are represented as held sections (21 stations) rather than modelled
-  surface-by-surface.
-- For `has_rim = 0` rows the rim flange is omitted and the seating-plane
-  section is clipped to the Ø14.9 cage radius; this radial clip is an
-  approximation and makes the no-rim envelope slightly oval in plan (measured
-  14.43 x 14.90 mm on the short rows).
-- Only item 262.25.035 directly anchors internal casting geometry; other
-  catalogue lengths are axial extrapolations of the same radial master, not
-  asserted OEM CAD.
-- The family is benchmark geometry, not production tolerance or fit data.
+The standard preview command's aggregate extrema select rows 1 and 6; local
+checks additionally cover the actual shortest row 0. The shared hard-zoom preset
+labelled "top" looks from -Z for this part; arrow direction was checked from +Z
+using the measured pocket outlines and a separate local top view. No shared
+renderer changes are included in this family revision.
