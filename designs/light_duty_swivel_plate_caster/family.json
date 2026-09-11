@@ -1,0 +1,36 @@
+{
+  "family": "light_duty_swivel_plate_caster",
+  "standard": "JW Winco EN 22870 Form L",
+  "base_plane": "XY",
+  "solids": 5,
+  "components": [
+    {
+      "name": "mounting_plate",
+      "quantity": 1,
+      "role": "Drawn thin-sheet mounting plate and upper race envelope"
+    },
+    {
+      "name": "swivel_fork",
+      "quantity": 1,
+      "role": "Rotating fork, bridge, and simplified lower swivel race"
+    },
+    {
+      "name": "wheel",
+      "quantity": 1,
+      "role": "Connected rubber-tread and polypropylene-core wheel envelope"
+    },
+    {
+      "name": "axle_bolt",
+      "quantity": 1,
+      "role": "Proportioned hex-head axle-bolt envelope"
+    },
+    {
+      "name": "axle_nut",
+      "quantity": 1,
+      "role": "Proportioned hex nut on the axle bolt"
+    }
+  ],
+  "description": "Five-component unbraked Form L light-duty swivel plate caster with complete EN 22870 catalog-row coupling and proportioned unpublished axle hardware.",
+  "source": "JW Winco EN 22870 product page, metric dimension PDF, engineering drawing, product photograph, and documented proportion rules for unpublished construction details",
+  "contributor": "sunzhenchuan007"
+}
