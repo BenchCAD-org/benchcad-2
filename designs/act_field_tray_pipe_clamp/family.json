@@ -1,0 +1,15 @@
+{
+  "family": "act_field_tray_pipe_clamp",
+  "standard": "STAUFF Catalogue 1 - STAUFF Clamps, 06/2026, pp. 83-84, 90 and 93",
+  "base_plane": "XY",
+  "description": "Seven-solid ACT field-tray clamp with two opposed clamp halves, integrated ACE contact strips, a DP cover, two HKS bolts, and two nuts.",
+  "source": "https://cdn-assets.stauff.com/pdfcatalogs/en/STAUFF-Catalogue-1-STAUFF-Clamps-English.pdf; undimensioned ACE details use documented proportions",
+  "contributor": "sunzhenchuan007",
+  "solids": 7,
+  "components": [
+    {"name": "clamp_half", "quantity": 2},
+    {"name": "cover_plate", "quantity": 1},
+    {"name": "hks_bolt", "quantity": 2},
+    {"name": "lock_nut", "quantity": 2}
+  ]
+}
