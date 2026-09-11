@@ -1,0 +1,8 @@
+{
+  "family": "gusseted_corner_bracket",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "Self-contained parameterized 90-degree gusseted corner bracket family for a generic aluminum-frame connection bracket, with perpendicular mounting plates, outer side panels, locator tabs, analytic rounded central openings, and an optional pair of coaxial side-panel holes.",
+  "source": "Generic gusseted corner-bracket layout informed by benchmark geometry and documented engineering-proportion ranges in NOTES.md.",
+  "contributor": "codex"
+}
