@@ -1,0 +1,14 @@
+{
+  "family": "round_u_bolt_pipe_saddle_clamp",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "STAUFF RB round-steel U-bolt with a discrete RUK short or RUL long plastic saddle and four nut envelopes.",
+  "source": "STAUFF Catalogue 1, version 06/2026, pages 152-155; evidence 04-12 and 16-18 only; undimensioned details are documented proportions",
+  "contributor": "sunzhenchuan007",
+  "solids": 6,
+  "components": [
+    {"name": "round_u_bolt", "quantity": 1},
+    {"name": "saddle", "quantity": 1},
+    {"name": "nut", "quantity": 4}
+  ]
+}
