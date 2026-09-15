@@ -1,0 +1,18 @@
+{
+  "family": "gn3971_bevel_gear_box",
+  "standard": "Ganter GN 3971",
+  "base_plane": "XZ",
+  "description": "Nine-solid GN 3971 aluminum-housing bevel gear box assembly covering all seven catalog sizes and both L/T shaft arrangements. Official external envelopes, keyed shaft ends, and mounting interfaces are table-driven; two equal 45-degree straight-bevel approximations share one pitch-cone apex and move at the documented 1:1 ratio. Hidden tooth count, bearing width, internal cavity, fits, and minor edge details are documented proportions.",
+  "source": "Ganter GN 3971 standard sheet pages 1-3 and product page; DIN 6885-1 keyway reference; documented proportion rules for unpublished internals",
+  "contributor": "TimPetrillo",
+  "solids": 9,
+  "components": [
+    {"name": "housing", "quantity": 1},
+    {"name": "input_shaft", "quantity": 1},
+    {"name": "output_shaft", "quantity": 1},
+    {"name": "input_gear", "quantity": 1},
+    {"name": "output_gear", "quantity": 1},
+    {"name": "input_bearing", "quantity": 2},
+    {"name": "output_bearing", "quantity": 2}
+  ]
+}
