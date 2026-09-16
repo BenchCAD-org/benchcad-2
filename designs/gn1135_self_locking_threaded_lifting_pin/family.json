@@ -1,0 +1,19 @@
+{
+  "family": "gn1135_self_locking_threaded_lifting_pin",
+  "standard": "Ganter GN 1135",
+  "base_plane": "XY",
+  "description": "Nine-solid GN 1135 self-locking threaded lifting-pin assembly with catalog-row geometry, coupled locked/released states, a rotating collar, and a 180-degree swiveling shackle.",
+  "source": "Ganter GN 1135 product page and 1135.pdf dimensional table; issue #154; documented proportion rules for unpublished internals",
+  "contributor": "TimPetrillo",
+  "solids": 9,
+  "components": [
+    {"name": "main_pin_body", "quantity": 1},
+    {"name": "rotating_collar", "quantity": 1},
+    {"name": "shackle", "quantity": 1},
+    {"name": "shackle_pivot", "quantity": 1},
+    {"name": "push_button", "quantity": 1},
+    {"name": "return_spring", "quantity": 1},
+    {"name": "safety_guard", "quantity": 1},
+    {"name": "thread_segment", "quantity": 2}
+  ]
+}
