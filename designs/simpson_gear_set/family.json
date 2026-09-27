@@ -1,0 +1,16 @@
+{
+  "family": "simpson_gear_set",
+  "standard": "ISO 53 / DIN 867 basic rack; ISO 54 / DIN 780 modules; DIN 3960 definitions",
+  "base_plane": "XY",
+  "description": "Simpson gear set: two ordinary planetary stages on ONE common sun, with the stage-1 carrier bolted to the stage-2 ring so that carrier 1, ring 2 and the output are a single rigid member. That one coupling is what turns two ordinary stages into a multi-ratio set, and it is modelled as one solid. Tooth flanks are true involutes generated from the DIN 867 basic rack; each stage is an ordinary planetary, so the assembly and neighbouring conditions apply per stage. Every member's angle is solved from the output angle through the 1st-gear mesh relations, so the coupling is computed rather than drawn.",
+  "source": "ISO 53 / DIN 867, ISO 54 / DIN 780 and DIN 3960 for the tooth form and module series. The topology is the Simpson set; its four ratios are a property of the tooth counts and were solved from a Willis system in exact rational arithmetic, not taken from any one product's table.",
+  "contributor": "BenchCAD",
+  "components": [
+    {"name": "common_sun_shell", "quantity": 1},
+    {"name": "ring1_input", "quantity": 1},
+    {"name": "carrier1_ring2_output", "quantity": 1},
+    {"name": "carrier2_reaction", "quantity": 1},
+    {"name": "planet1", "quantity": "n_planets1"},
+    {"name": "planet2", "quantity": "n_planets2"}
+  ]
+}
