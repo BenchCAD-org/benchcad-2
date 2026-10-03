@@ -1,0 +1,19 @@
+{
+  "family": "twisted_gemstone_bracelet_asm",
+  "standard": null,
+  "base_plane": "XY",
+  "description": "Twisted openwork bracelet with four hollow spherical seats and four faceted gemstones; source defects regularized.",
+  "source": "User-supplied native SOLIDWORKS snapshot; measured geometry and proportion ranges. Issue #226; see NOTES.md.",
+  "contributor": "sunzhenchuan007",
+  "solids": 5,
+  "components": [
+    {
+      "name": "bracelet",
+      "quantity": 1
+    },
+    {
+      "name": "gem",
+      "quantity": 4
+    }
+  ]
+}
