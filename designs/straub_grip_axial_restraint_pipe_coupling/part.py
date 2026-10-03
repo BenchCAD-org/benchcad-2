@@ -403,14 +403,16 @@ def build(catalog_index, fitted_pipe_od):
     _ = (pipe_od, pipe_hi, c, gap_r)
     # One named assembly leaf per body; repeated parts share a component name
     # with an _NN suffix (family.json "components"). Every body keeps the
-    # geometry and placement it had as a compound member.
+    # geometry and placement it had as a compound member. The two D bars are a
+    # left/right mirror pair (the bolt bores run along Y, oblique to each bar's
+    # +/-105 deg cant), so they are two components, not one placed twice.
     result = cq.Assembly(name="straub_grip_axial_restraint_pipe_coupling")
     result.add(casing, name="casing")
     result.add(sleeve.val(), name="sleeve")
     result.add(ring_left, name="anchoring_ring_01")
     result.add(ring_right, name="anchoring_ring_02")
-    result.add(d_bar_left, name="d_bar_01")
-    result.add(d_bar_right, name="d_bar_02")
+    result.add(d_bar_left, name="d_bar_left")
+    result.add(d_bar_right, name="d_bar_right")
     result.add(bolt_left, name="lock_bolt_01")
     result.add(bolt_right, name="lock_bolt_02")
     return result

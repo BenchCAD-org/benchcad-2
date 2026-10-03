@@ -10,7 +10,8 @@
     {"name": "casing", "quantity": 1},
     {"name": "sleeve", "quantity": 1},
     {"name": "anchoring_ring", "quantity": 2},
-    {"name": "d_bar", "quantity": 2},
+    {"name": "d_bar_left", "quantity": 1},
+    {"name": "d_bar_right", "quantity": 1},
     {"name": "lock_bolt", "quantity": 2}
   ],
   "catalog_mapping": {
