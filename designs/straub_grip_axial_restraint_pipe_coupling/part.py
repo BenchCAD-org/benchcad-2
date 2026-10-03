@@ -401,8 +401,16 @@ def build(catalog_index, fitted_pipe_od):
     # The source's R value is a pipe-end installation clearance; it is retained
     # in the catalog mapping but no pipe is part of this coupling model.
     _ = (pipe_od, pipe_hi, c, gap_r)
-    result = cq.Compound.makeCompound([
-        casing, sleeve.val(), ring_left, ring_right,
-        d_bar_left, d_bar_right, bolt_left, bolt_right,
-    ])
+    # One named assembly leaf per body; repeated parts share a component name
+    # with an _NN suffix (family.json "components"). Every body keeps the
+    # geometry and placement it had as a compound member.
+    result = cq.Assembly(name="straub_grip_axial_restraint_pipe_coupling")
+    result.add(casing, name="casing")
+    result.add(sleeve.val(), name="sleeve")
+    result.add(ring_left, name="anchoring_ring_01")
+    result.add(ring_right, name="anchoring_ring_02")
+    result.add(d_bar_left, name="d_bar_01")
+    result.add(d_bar_right, name="d_bar_02")
+    result.add(bolt_left, name="lock_bolt_01")
+    result.add(bolt_right, name="lock_bolt_02")
     return result

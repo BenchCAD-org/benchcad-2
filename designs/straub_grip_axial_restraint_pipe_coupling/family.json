@@ -6,6 +6,13 @@
   "source": "Dixon DPL424 catalogue p.965 (https://dixonvalve.com/sites/default/files/catalog/dixonvalve_com/2024_14/DPL%202024%20catalog%20fixed/DPL424%20page%20965.pdf); STRAUB-GRIP-L datasheet (https://www.straub.ch/fileadmin/Straub/Downloads/EN/Produkte/Grip-L/Datenblaetter/STRAUB-GRIP-L_Stufenkupplung_Datenblatt_072015_en.pdf); STRAUB fitting instruction ST00152_0820 (https://www.straub.ch/fileadmin/AUI/user_upload/ST00152_0820_Montageanleitung_STRAUB-METAL-GRIP_STRAUB-GRIP__inkl._GRIP-L_.pdf)",
   "contributor": "jiashunwu1030-oss",
   "solids": 8,
+  "components": [
+    {"name": "casing", "quantity": 1},
+    {"name": "sleeve", "quantity": 1},
+    {"name": "anchoring_ring", "quantity": 2},
+    {"name": "d_bar", "quantity": 2},
+    {"name": "lock_bolt", "quantity": 2}
+  ],
   "catalog_mapping": {
     "0": "STR20650 | 3 in | O.D. 3.50 in | range 3.46-3.54 in | 377 PSI | B 3.9 in | C 1.5 in | DV 4.4 in | R 0.2 in",
     "1": "STR20900 | 4 in | O.D. 4.50 in | range 4.46-4.54 in | 319 PSI | B 3.9 in | C 1.5 in | DV 5.5 in | R 0.4 in",
