@@ -752,15 +752,19 @@ def build(
         x=x,
         y=y,
     )
+    # One named assembly leaf per body (family.json "components"); every body
+    # keeps the geometry and placement it had as a compound member.
     subparts = [
-        solid_0_first_mounting_seat(p),
-        solid_1_upper_outer_link(p),
-        solid_2_center_rocker(p),
-        solid_3_second_mounting_seat(p),
-        solid_4_rear_curved_link(p),
-        solid_5_long_lower_link(p),
+        ("first_mounting_seat", solid_0_first_mounting_seat(p)),
+        ("upper_outer_link", solid_1_upper_outer_link(p)),
+        ("center_rocker", solid_2_center_rocker(p)),
+        ("second_mounting_seat", solid_3_second_mounting_seat(p)),
+        ("rear_curved_link", solid_4_rear_curved_link(p)),
+        ("long_lower_link", solid_5_long_lower_link(p)),
     ]
-    result = cq.Compound.makeCompound([part.val() for part in subparts])
+    result = cq.Assembly(name="gn7241_multiple_joint_hinge")
+    for name, part in subparts:
+        result.add(part.val(), name=name)
     return result
 
 
