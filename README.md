@@ -1,7 +1,7 @@
 # BenchCAD 2.0
 
 **Agentic generation and multi-turn refinement over community-grounded
-parametric CAD — 150 industrial part families, each backed by an auditable
+parametric CAD — industrial part families, each backed by an auditable
 parametric design.**
 
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/be9AtvrDyK)

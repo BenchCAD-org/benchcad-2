@@ -12,7 +12,7 @@ candidate under a turn or token budget. Results are reported as
 quality-versus-budget curves and pass@budget. A one-turn run remains the
 one-shot baseline.
 
-**Community-grounded data.** The project targets **150 industrial part
+**Community-grounded data.** The project is built from **industrial part
 families**, each defined by an explicit parametric design whose ranges and
 engineering constraints are sourced, readable, and reviewed.
 

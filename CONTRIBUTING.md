@@ -1,6 +1,6 @@
 # Contributing
 
-BenchCAD 2.0 is built from **150 explicit parametric part families**. Every
+BenchCAD 2.0 is built from **explicit parametric part families**. Every
 merged family contributes readable engineering knowledge: geometry, sourced
 parameter ranges, constraints, reference evidence, and provenance.
 
