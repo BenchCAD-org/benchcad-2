@@ -1,0 +1,66 @@
+{
+  "family": "snatch_block_single_sheave",
+  "standard": "ASME B30.26 (rigging hardware); dimensions from the Crosby Blocks catalogue p.326; fasteners to ISO 261 / ISO 272 / ISO 4014 / ISO 4032 / ISO 1234, hitch pin form DIN 11024",
+  "base_plane": "XZ",
+  "description": "Single-sheave snatch block with shackle fitting, 2-12 t, modelled as the load path the McKissick manual disassembles: shackle bow, shackle bolt and its cotter, swivel tee, the swivel itself, the swivel case, the hook bolt and its hitch pin through both side plates, the centre pin, the bearing and the grooved sheave. The near side plate swings open on the centre pin once the hook bolt is unscrewed, and the fitting turns freely in the swivel. The bearing is the catalogue's own BB/RB choice and it changes the body count: one bronze bushing, or a full complement of straight rollers on the pin. Thirteen catalogue rows drive two independent ladders - the sheave is sized by wire rope diameter, the fitting and every load-carrying pin by working load limit - and the published overall height A is reproduced exactly by the B/2 + D + E stack rather than tabulated.",
+  "source": "Crosby Blocks catalogue p.326 metric size table (https://kitocrosby.com/wp-content/uploads/2025/07/15_Blocks_MET_326.pdf) and the McKissick Snatch Blocks manual (parts reference p.2, disassembly pp.10-12, inspection diagram p.13); groove profile and unpublished fitting proportions documented in NOTES.md",
+  "contributor": "BenchCAD",
+  "components": [
+    {
+      "name": "side_plate",
+      "quantity": 2
+    },
+    {
+      "name": "sheave",
+      "quantity": 1
+    },
+    {
+      "name": "bearing_element",
+      "quantity": "roller_count"
+    },
+    {
+      "name": "centre_pin",
+      "quantity": 1
+    },
+    {
+      "name": "centre_pin_nut",
+      "quantity": 1
+    },
+    {
+      "name": "hook_bolt",
+      "quantity": 1
+    },
+    {
+      "name": "retention_nut",
+      "quantity": 1
+    },
+    {
+      "name": "hitch_pin",
+      "quantity": 1
+    },
+    {
+      "name": "swivel_case",
+      "quantity": 1
+    },
+    {
+      "name": "swivel_tee",
+      "quantity": 1
+    },
+    {
+      "name": "shackle_bow",
+      "quantity": 1
+    },
+    {
+      "name": "shackle_bolt",
+      "quantity": 1
+    },
+    {
+      "name": "shackle_nut",
+      "quantity": 1
+    },
+    {
+      "name": "shackle_cotter",
+      "quantity": 1
+    }
+  ]
+}
