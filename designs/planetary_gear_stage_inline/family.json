@@ -1,0 +1,24 @@
+{
+  "family": "planetary_gear_stage_inline",
+  "standard": "ISO 53 / DIN 867 basic rack; ISO 54 / DIN 780 modules; DIN 3960 definitions; ISO 15 / DIN 625-1 series 60 output bearings; DIN 3760 form A shaft seal; DIN 471 retaining rings; ISO 4762 tie bolts",
+  "base_plane": "XY",
+  "description": "Complete single-stage inline planetary gearhead, not a bare gear set: a sun cut on its input shaft, N planets running on flanged bushings over cantilevered pins retained by split rings, an internal ring gear machined into the housing bore, a disc carrier whose plate, pins, bearing journal and output shaft are one rigid body, two deep-groove ball bearings on that journal, a bearing head that is also the machine mounting flange, a radial shaft seal, a motor adapter, an input clamping hub and the tie bolts that clamp the case. Tooth flanks are true involutes generated from the DIN 867 basic rack, so the geometry follows the standard rather than a table; the bearings and the seal are selected from the ISO 15 and DIN 3760 tables by the output journal rather than dimensioned; and the housing diameter is set by what the tie bolts need to clear the ring gear and the bearing seat. The catalogue single-stage ratio fixes the tooth counts through coaxiality, and the assembly and neighbouring conditions decide which planet counts are admissible. Carrier rotation is an operating state and the planets stay meshed as it turns.",
+  "source": "ISO 53 / DIN 867, ISO 54 / DIN 780, DIN 3960 for the tooth form and module series; ISO 15 / DIN 625-1 series 60 for the output bearings, DIN 3760 form A for the shaft seal, DIN 471 for the planet retaining rings and ISO 4762 for the tie bolts; Neugart PLE catalogue for the single-stage ratio ladder and the output shaft dimensions (https://www.neugart.com/fileadmin/user_upload/Downloads/Catalog_Chapters/Neugart_PLE_EN.pdf). Envelope cross-checked against an independently authored MIT-licensed planetary CAD set (punkfab/robot-actuators); unpublished proportions documented in NOTES.md",
+  "contributor": "BenchCAD",
+  "components": [
+    {"name": "housing_ring_gear", "quantity": 1},
+    {"name": "sun_shaft", "quantity": 1},
+    {"name": "motor_adapter", "quantity": 1},
+    {"name": "input_clamp_hub", "quantity": 1},
+    {"name": "output_bearing_head", "quantity": 1},
+    {"name": "output_shaft_seal", "quantity": 1},
+    {"name": "carrier_output", "quantity": 1},
+    {"name": "planet_gear", "quantity": "n_planets"},
+    {"name": "planet_bushing", "quantity": "n_planets"},
+    {"name": "planet_retaining_ring", "quantity": "n_planets"},
+    {"name": "output_bearing_inner", "quantity": 2},
+    {"name": "output_bearing_outer", "quantity": 2},
+    {"name": "output_bearing_ball", "quantity": "n_output_balls"},
+    {"name": "case_screw", "quantity": "n_case_screws"}
+  ]
+}
