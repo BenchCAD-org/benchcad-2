@@ -1,0 +1,14 @@
+{
+  "family": "compound_stepped_planet_stage",
+  "standard": "ISO 53 / DIN 867, ISO 54 / DIN 780, DIN 3960",
+  "base_plane": "XY",
+  "description": "A single-ring compound stepped planetary gear stage with a timed two-section planet, fixed internal ring, sun input, and carrier output.",
+  "source": "BenchCAD issue #186 dimensioned proposal and tooth-count table; ISO 53:1998 / DIN 867 20-degree basic rack; ISO 54:1996 / DIN 780 preferred module series; DIN 3960 gear definitions; Willis-equation ratio derivation recorded in issue #186.",
+  "contributor": "songmingqing36-lang",
+  "components": [
+    {"name": "housing_ring_gear", "quantity": 1},
+    {"name": "sun_shaft", "quantity": 1},
+    {"name": "stepped_planet", "quantity": "n_planets"},
+    {"name": "carrier_output", "quantity": 1}
+  ]
+}
