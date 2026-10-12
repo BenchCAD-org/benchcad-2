@@ -1,0 +1,8 @@
+{
+  "family": "planetary_gear_stage_inline",
+  "standard": "ISO 53 / DIN 867, ISO 54 / DIN 780, DIN 3960, DIN 6885-1, DIN 332 type DR",
+  "base_plane": "XY",
+  "description": "A single-stage inline planetary gear stage with a thin internal ring gear, sun shaft, three planets, and a twin-disc carrier output.",
+  "source": "Neugart PLE060 output-shaft dimensions; ISO 53 / DIN 867 basic rack; ISO 54 / DIN 780 module series; DIN 6885-1 feather keys; DIN 332 type DR centre holes.",
+  "contributor": "songmingqing36-lang"
+}
