@@ -9,8 +9,18 @@ from __future__ import annotations
 
 import inspect
 
+from .standard_components import (
+    iso_metric_fastener_dimensions,
+    make_iso_hex_bolt,
+    make_iso_tapped_hole_cutter,
+)
 
-REGISTRY = {}
+
+REGISTRY = {
+    "iso_metric_fastener_dimensions": iso_metric_fastener_dimensions,
+    "make_iso_hex_bolt": make_iso_hex_bolt,
+    "make_iso_tapped_hole_cutter": make_iso_tapped_hole_cutter,
+}
 
 
 def inline_source(*names: str) -> str:
