@@ -232,7 +232,9 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    invisible in every opaque exterior view), labeled with the component's
    bounding box in mm;
 2. the complete assembly in its true pose, labeled with the instance's
-   parameters;
+   parameters — **see-through by default**, like the highlight rows: opaque, the
+   overview of anything with a housing is a featureless can, and the one row
+   whose job is to show the assembly shows the least of any row on the sheet;
 3. one red-on-gray highlight row per component. The rest of the assembly stays
    in place and is **ghosted (see-through) by default**, so a component that
    lives inside the assembly still reads — a bushing pressed into its bore, a
@@ -241,6 +243,31 @@ parent/child `Location` transform survive. The grid shows, in `family.json`
    `--opaque` if you want them solid. Repeated instances highlight together
    with `quantity=N` by default; `--per-instance` renders one row per instance
    (`bolt_01`, `bolt_02`, …) instead.
+
+**`front` is not where the camera is.** `CAMERA_DISTANCE` is negative, so
+`eye = focal + front × −0.9`: a `front` of `(1,1,1)` is a camera in the
+`(−1,−1,−1)` octant. Reading it the other way is what put benchcad-main's
+CodeGen prompt labels 180° out of step with its own renderer
+([BenchCAD-main #1](https://github.com/BenchCAD/BenchCAD-main/pull/1)), so every
+view set here is written as the **camera position** and negated once, at the
+definition.
+
+The four scored cameras are the vertices of a **regular tetrahedron**:
+
+```
+(1, 1, 1)   (-1, 1, -1)   (-1, -1, 1)   (1, -1, -1)
+```
+
+All six pairwise angles are **109.47°** — the Tammes optimum for four points on
+a sphere; no other four directions separate better. They replace
+`(−1,−1,−1)`, `(1,1,1)`, `(1,−1,1)`, `(−1,1,−1)`, which were two antipodal
+pairs, all satisfied `x = z` (rank 2 — four points on one great circle), and
+were closed under a y-mirror, so a part mirror-symmetric about its own XZ plane
+showed only **two** distinct aspects across all four. The tetrahedron is rank 3
+and no axis mirror maps it onto itself.
+
+The preview-parts sheet uses the same four, so what a reviewer reads is what the
+benchmark scores.
 
 The cutaway is a **fixed** half-section: the +Y half of the shape is removed at
 that shape's own bounding-box centre, the same plane `preview_hard_zoom.png`
