@@ -1,0 +1,27 @@
+{
+  "family": "double_wedge_clamp",
+  "standard": "JW Winco GN 920.1",
+  "base_plane": "XY",
+  "description": "A static four-solid GN 920.1 wedge-clamp assembly with opposed GL, GA, or RF jaws, a centered clamp wedge, and a low-head screw.",
+  "source": "JW Winco GN 920.1 official catalog PDF and product page; undocumented geometry uses declared proportion rules",
+  "contributor": "sunzhenchuan007",
+  "solids": 4,
+  "components": [
+    {
+      "name": "jaw_left",
+      "quantity": 1
+    },
+    {
+      "name": "jaw_right",
+      "quantity": 1
+    },
+    {
+      "name": "center_wedge",
+      "quantity": 1
+    },
+    {
+      "name": "screw",
+      "quantity": 1
+    }
+  ]
+}
