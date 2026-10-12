@@ -14,7 +14,9 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A framework/ change validates EVERY family (see 'pick families'), so this
+    # job's cost scales with the repo. 30 min was already tight at 12 families.
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -97,6 +99,15 @@ jobs:
           # `always()` runs this even when a step BEFORE family scoping failed,
           # so the list may not exist — then there is nothing to render
           [ -f /tmp/fams.txt ] || { echo "no family list — skipping"; exit 0; }
+          # A PR that already SHIPS regenerated renders (a renderer sweep) needs no
+          # preview artifact: the images are right there in the diff. Re-rendering
+          # every family for it is pure duplication, and on a framework change --
+          # which validates all of them -- it is what pushes this job past its
+          # timeout.
+          if grep -qE '^designs/[^/]+/preview[a-z_]*\.png$' /tmp/diff.txt; then
+            echo "PR ships regenerated previews — reviewers read them from the diff; skipping."
+            exit 0
+          fi
           while read -r fam; do
             [ -d "designs/$fam" ] && (uv run bench2 preview "$fam" --per-diff 3 || true)
           done < /tmp/fams.txt

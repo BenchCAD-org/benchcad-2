@@ -38,6 +38,26 @@ def _ocp_hashcode_fix():
             _cls.HashCode = lambda self, ub=2147483647: id(self) % ub
 
 
+# 0.05 mm chord deviation and 0.1 rad on the normals: the benchmark's mesh
+# quality, applied ABSOLUTELY.  cadquery's own Shape.mesh() asks OCCT for a
+# *relative* deflection, which scales the target with each edge's own length --
+# a sliver a boolean leaves behind (e.g. a 0.05 mm arc fragment trimmed off a
+# long arc) then gets a ~0.002 mm target, fails to mesh, and tessellate() dies
+# on its null triangulation even though BRepCheck calls the solid valid.
+# Meshing absolutely first satisfies BRepTools.Triangulation_s, so the
+# tessellate() below reuses this triangulation instead of retrying relatively.
+MESH_DEFLECTION = 0.05
+MESH_ANGLE = 0.1
+
+
+def _tessellate(solid):
+    """`solid.tessellate()` with an absolute-deflection mesh forced first."""
+    from OCP.BRepMesh import BRepMesh_IncrementalMesh
+
+    BRepMesh_IncrementalMesh(solid.wrapped, MESH_DEFLECTION, False, MESH_ANGLE, True)
+    return solid.tessellate(MESH_DEFLECTION)
+
+
 def step_to_mesh(step_path: Path):
     """STEP -> raw (verts, tris) in model units (mm), no normalization."""
     _ocp_hashcode_fix()
@@ -50,7 +70,7 @@ def step_to_mesh(step_path: Path):
         if not solids:
             raise ValueError(f"no solids in {step_path}")
         solid = solids[0]
-    verts_raw, tris_raw = solid.tessellate(0.05)
+    verts_raw, tris_raw = _tessellate(solid)
     verts = np.array([[v.x, v.y, v.z] for v in verts_raw], dtype=np.float64)
     tris = np.array([[t[0], t[1], t[2]] for t in tris_raw], dtype=np.int64)
     if len(verts) == 0 or len(tris) == 0:
@@ -151,7 +171,13 @@ def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
         p.SetOpacity(opacity)
 
         edges = vtk.vtkFeatureEdges()
-        edges.SetInputConnection(normals.GetOutputPort())
+        # feed the CLEANED mesh, not the normals output: vtkPolyDataNormals
+        # splits points along its own 30 deg feature angle so the hard edges
+        # shade hard, and those splits read downstream as *boundary* edges --
+        # SetFeatureAngle(35) below never fired and every crease was drawn
+        # twice, once per torn side. Off the cleaned mesh the angle is honoured
+        # and each crease draws once.
+        edges.SetInputData(pd)
         edges.BoundaryEdgesOn()
         edges.FeatureEdgesOn()
         edges.ManifoldEdgesOff()
@@ -159,6 +185,10 @@ def render_actors(meshes: list, img_size: int = 320, front=ISO_FRONT):
         edges.SetFeatureAngle(35.0)
         em = vtk.vtkPolyDataMapper()
         em.SetInputConnection(edges.GetOutputPort())
+        # colour the overlay by the actor's edge_rgb, not by whatever array
+        # rides along on the polydata (that is why the edges shipped red
+        # instead of the near-black the styles ask for).
+        em.ScalarVisibilityOff()
         ea = vtk.vtkActor()
         ea.SetMapper(em)
         ep = ea.GetProperty()
@@ -273,7 +303,7 @@ def step_cutaway_mesh(step_path: Path):
         .translate(((bb.xmin + bb.xmax) / 2.0, yc + (bb.ylen + 4.0) / 2.0, (bb.zmin + bb.zmax) / 2.0))
     )
     half = solid.cut(cutter.val())
-    verts_raw, tris_raw = half.tessellate(0.05)
+    verts_raw, tris_raw = _tessellate(half)
     verts = np.array([[v.x, v.y, v.z] for v in verts_raw], dtype=np.float64)
     tris = np.array([[a, b, c] for a, b, c in tris_raw], dtype=np.int64)
     if len(verts) == 0 or len(tris) == 0:
@@ -283,7 +313,7 @@ def step_cutaway_mesh(step_path: Path):
         # drop to a mesh-level half-section: tessellate the full solid and
         # keep the triangles that reach the -Y half. No boolean involved;
         # same reviewable half-view, just without the flat cap face.
-        verts_raw, tris_raw = solid.tessellate(0.05)
+        verts_raw, tris_raw = _tessellate(solid)
         verts = np.array([[v.x, v.y, v.z] for v in verts_raw], dtype=np.float64)
         tris = np.array([[a, b, c] for a, b, c in tris_raw], dtype=np.int64)
         keep = (verts[tris][:, :, 1] <= yc + 1e-9).any(axis=1)

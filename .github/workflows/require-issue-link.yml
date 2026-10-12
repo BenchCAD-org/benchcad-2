@@ -1,7 +1,9 @@
 name: require-issue-link
-# Station 3 of the lifecycle (CONTRIBUTING.md): a family PR must link its family issue
-# (`Closes #N`) — otherwise merge won't close the issue and dossier.yml
-# can't post the acceptance evidence back to it.
+# Station 3 of the lifecycle (CONTRIBUTING.md): the PR that INTRODUCES a family must
+# link its family issue (`Closes #N`) — otherwise merge won't close the issue and
+# dossier.yml can't post the acceptance evidence back to it. A follow-up fix to a
+# family already on the base branch is exempt: its issue closed when the family
+# merged, and a closed issue fails the state check below by design.
 #
 # `check` is a REQUIRED status check (repo ruleset), so it must report on EVERY
 # PR. It therefore runs on all PRs (no `paths` filter) and passes immediately for
@@ -36,6 +38,28 @@ jobs:
               pull_number: context.payload.pull_request.number, per_page: 100 });
             if (!files.some(f => f.filename.startsWith('designs/'))) {
               core.info('Not a family PR (no designs/ changes) — issue link not required.');
+              return;
+            }
+            // Station 3 gates the PR that INTRODUCES a family. A follow-up fix
+            // to a family already on the base branch has no OPEN family issue by
+            // construction — merging the family closed it — so demanding a
+            // closing keyword here would make every later bug fix unmergeable
+            // (the state check below fails a closed issue on purpose). Require
+            // the link only for a family dir the base branch does not have.
+            const fams = [...new Set(files.filter(f => f.filename.startsWith('designs/'))
+              .map(f => f.filename.split('/')[1]).filter(Boolean))];
+            const baseSha = context.payload.pull_request.base.sha;
+            const added = [];
+            for (const fam of fams) {
+              try {
+                await github.rest.repos.getContent({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  path: `designs/${fam}/family.json`, ref: baseSha });
+              } catch (e) { added.push(fam); }
+            }
+            if (added.length === 0) {
+              core.info(`Follow-up change to already-merged famil${fams.length > 1 ? 'ies' : 'y'} `
+                + `(${fams.join(', ')}) — no open family issue to link.`);
               return;
             }
             const body = context.payload.pull_request.body || '';

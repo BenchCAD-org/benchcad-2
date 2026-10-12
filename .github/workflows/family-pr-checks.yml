@@ -3,10 +3,13 @@ name: family-pr-checks
 #   validate.yml            — the design actually runs (bench2 validate)
 #   require-issue-link.yml  — the body links its family issue (Closes #N)
 # This job enforces the "one family = one PR" scope and that the family ships a
-# complete package. The one exception is a metadata-only sweep — a diff whose
-# designs/ side is spec.py files only, which can move no geometry and no
-# committed render — so repo-wide upkeep is one PR instead of N identical ones
-# (step 0). Complete package: its three source files AND the three committed renders
+# complete package. The one exception is an artifact-only sweep — a diff whose
+# designs/ side is spec.py and/or preview*.png files only, which can move no
+# geometry (part.py and family.json are untouchable by construction) — so
+# repo-wide upkeep is one PR instead of N identical ones (step 0). A renderer
+# change is exactly that shape: it repaints every family's committed renders
+# and must land with them, or main ships images `bench2 preview` no longer
+# reproduces. Complete package: its three source files AND the three committed renders
 # (the easy/medium/hard grid, the four benchmark views, and the min/max
 # extremes). Requirements a human used to eyeball are now red/green.
 # `preview_hard_zoom.png` (the fourth render, front/side/top/iso of a hard
@@ -52,18 +55,20 @@ jobs:
             exit 0
           fi
 
-          # 0) a metadata-only SWEEP may span families: it changes nothing under
-          # designs/ except spec.py files, so no part.py, no family.json and no
-          # committed render can move — the geometry and the acceptance images
-          # are untouchable by construction. That is what repo-wide upkeep looks
-          # like (dropping a spec key the framework no longer reads), and it
-          # would otherwise arrive as N near-identical PRs that differ only in
-          # the family name. validate still runs on every family in the sweep.
+          # 0) an artifact-only SWEEP may span families: it changes nothing under
+          # designs/ except spec.py and regenerated preview*.png, so no part.py
+          # and no family.json can move — the GEOMETRY is untouchable by
+          # construction, and the renders are regenerated output of the
+          # framework change this PR carries, not hand-edited evidence. That is
+          # what repo-wide upkeep looks like (dropping a spec key the framework
+          # no longer reads; repainting every render after a renderer fix), and
+          # it would otherwise arrive as N near-identical PRs that differ only
+          # in the family name. validate still runs on every family in the sweep.
           # Only designs/ scope is judged here; this gate has never restricted
           # paths outside designs/ (a pure framework PR passes as a no-op above).
-          DESIGN_NONSPEC=$(echo "$DIFF" | grep -E '^designs/' | grep -vE '^designs/[^/]+/spec\.py$' | grep . || true)
+          DESIGN_NONSPEC=$(echo "$DIFF" | grep -E '^designs/' | grep -vE '^designs/[^/]+/(spec\.py|preview[a-z_]*\.png)$' | grep . || true)
           if [ "$NF" -gt 1 ] && [ -z "$DESIGN_NONSPEC" ]; then
-            echo "Metadata-only sweep across ${NF} families ($(echo $FAMS)) — designs/ diff is spec.py only, so one-family scope is waived."
+            echo "Artifact-only sweep across ${NF} families ($(echo $FAMS)) — designs/ diff is spec.py / preview*.png only, so one-family scope is waived."
             exit 0
           fi
 
@@ -135,6 +140,19 @@ jobs:
             const fam = fams[0];
             const body = context.payload.pull_request.body || '';
 
+            // Is this the PR that INTRODUCES the family, or a follow-up fix to
+            // one already on the base branch? The issue-derived evidence below
+            // only exists for the former: once a family merges its issue is
+            // closed, so a later geometry fix has no issue to re-embed from.
+            let isNewFamily = true;
+            try {
+              await github.rest.repos.getContent({
+                owner: context.repo.owner, repo: context.repo.repo,
+                path: `designs/${fam}/family.json`,
+                ref: context.payload.pull_request.base.sha });
+              isNewFamily = false;
+            } catch (e) { core.info(`designs/${fam}/ is new on the base branch`); }
+
             // ── the PR body must SHOW its evidence ─────────────────────────
             // (a) all four renders embedded by name (alt text or URL); the
             //     hard-zoom name is only required once the file exists.
@@ -150,10 +168,12 @@ jobs:
               core.setFailed(
                 `The PR body must embed every render by name (paste the template's image lines; keep the filename in the alt text or URL). Missing: ${missing.join(', ')}. `);
             }
-            // (b) the reference images from the family issue, re-embedded
+            // (b) the reference images from the family issue, re-embedded.
+            // New families only — a follow-up fix has no open issue to pull them
+            // from, and demanding them would make every later fix unmergeable.
             const refSec = body.match(/##\s*Reference[\s\S]*?(?=\n##\s|$)/i);
             const refImgs = refSec ? ((refSec[0].match(/!\[|<img/g)) || []).length : 0;
-            if (refImgs < 2) {
+            if (isNewFamily && refImgs < 2) {
               core.setFailed(
                 'The PR body needs a "## Reference" section re-embedding the family issue\'s dimensioned drawing AND photo (2+ images), so reviewers compare renders against the reference in one place. ');
             }

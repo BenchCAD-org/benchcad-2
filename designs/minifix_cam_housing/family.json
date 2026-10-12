@@ -2,7 +2,7 @@
   "family": "minifix_cam_housing",
   "standard": null,
   "base_plane": "XY",
-  "description": "Häfele Minifix 15 die-cast eccentric-cam connector housing with an open cage, optional seating rim, combination PZ2/flat/SW4 drive, and radial bolt-capture mouth.",
-  "source": "Häfele UK catalogue 14CFC294.pdf and 14CFC295.pdf, pp. 294--295, supplies seven nominal installation rows; Häfele US P-00861332 item 262.25.035 STEP AP214 anchors the 19 mm baseline via a stack of 21 measured cross-sections with a rigid-block axial map (the 19 mm baseline maps to the identity); cross-SKU axial transforms and undocumented die-cast detail remain proportion.",
+  "description": "Minifix-type cam-lock housing with an open ribbed cage, rounded radial neck slot, spherical bolt-head seat, blind cross drive, optional seating flange and recessed direction marks.",
+  "source": "Hafele UK 2014 catalogue pp. 294-295 supplies eight installation rows (12-34 mm panels, 15 mm bore and optional 16.5 x 1 mm rim). Analytic casting geometry is reconstructed from user-supplied minifiks kilidi.SLDPRT, a third-party 14.8 x 13.5 mm unrimmed model measured in SOLIDWORKS 2023 on 2026-09-10; its manufacturer SKU is unverified. Internal dimensions, cross-row extrapolations and exploratory web/neck variation are proportion; see NOTES.md.",
   "contributor": "snowy-void"
 }
