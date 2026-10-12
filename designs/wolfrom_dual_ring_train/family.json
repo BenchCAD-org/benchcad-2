@@ -1,0 +1,15 @@
+{
+  "family": "wolfrom_dual_ring_train",
+  "standard": "ISO 53 / DIN 867 basic rack; ISO 54 module series",
+  "base_plane": "XY",
+  "description": "Two-ring Wolfrom train with fixed R1, output R2, identical rigid stepped planets, and a floating carrier; corrected equal-spacing timing from issue #187.",
+  "source": "BenchCAD issue #187 tooth-count ladder and dimensioned proposal drawing; derived timing and motion; documented proportions.",
+  "contributor": "yangziao56",
+  "components": [
+    {"name": "housing_ring1_fixed", "quantity": 1},
+    {"name": "output_ring2", "quantity": 1},
+    {"name": "sun_shaft", "quantity": 1},
+    {"name": "stepped_planet", "quantity": "n_planets"},
+    {"name": "carrier", "quantity": 1}
+  ]
+}
